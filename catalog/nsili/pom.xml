@@ -25,5 +25,7 @@
     <name>DDF :: Alliance :: NSILI</name>
     <modules>
         <module>catalog-nsili-common</module>
+        <module>catalog-nsili-source</module>
+        <module>nsili-app</module>
     </modules>
 </project>
