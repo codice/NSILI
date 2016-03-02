@@ -24,7 +24,7 @@
 
     <artifactId>nsili-app</artifactId>
     <packaging>pom</packaging>
-    <name>DDF :: Alliance :: NSILI :: App</name>
+    <name>Alliance :: NSILI :: App</name>
 
     <dependencies>
         <dependency>

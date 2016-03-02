@@ -18,17 +18,17 @@
          description="NSILI Federated Source">
 
         <AD description="The ID of the NSILI Source" name="NSILI Source ID" id="id"
-            required="true" type="String" default="STANAG4559 Federated Source"/>
+            required="true" type="String" default="NSILI Federated Source"/>
 
         <AD description="The URL of the IOR File to use for the NSILI CORBA Server"
             name="Ior File URL" id="iorUrl" required="true" type="String"/>
 
         <AD description="The Username to be used for authentication with HTTP server."
-            name="HTTP(s) Username" id="cxfUsername"
+            name="HTTP/S Username" id="cxfUsername"
             required="false" type="String"/>
 
         <AD description="The Password to be used for authentication with HTTP server."
-            name="HTTP(s) Password" id="cxfPassword" required="false" type="String"/>
+            name="HTTP/S Password" id="cxfPassword" required="false" type="String"/>
 
         <AD description="The Maximum Hit Count for Queries to the Source" name="Max Hit Count"
             id="maxHitCount" required="true" type="Integer" default="250"/>
@@ -42,17 +42,17 @@
          description="NSILI Connected Source">
 
         <AD description="The ID of the NSILI Source" name="NSILI Source ID" id="id"
-            required="true" type="String" default="STANAG4559 Federated Source"/>
+            required="true" type="String" default="NSILI Connected Source"/>
 
         <AD description="The URL of the IOR File to use for the NSILI CORBA Server"
             name="Ior File URL" id="iorUrl" required="true" type="String"/>
 
         <AD description="The Username to be used for authentication with HTTP server."
-            name="HTTP(s) Username" id="cxfUsername"
+            name="HTTP/S Username" id="cxfUsername"
             required="false" type="String"/>
 
         <AD description="The Password to be used for authentication with HTTP server."
-            name="HTTP(s) Password" id="cxfPassword" required="false" type="String"/>
+            name="HTTP/S Password" id="cxfPassword" required="false" type="String"/>
 
         <AD description="The Maximum Hit Count for Queries to the Source" name="Max Hit Count"
             id="maxHitCount" required="true" type="Integer" default="250"/>
