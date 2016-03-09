@@ -24,7 +24,7 @@
 
     <artifactId>catalog-nsili-source</artifactId>
     <packaging>bundle</packaging>
-    <name>DDF :: Alliance :: NSILI :: Source</name>
+    <name>Alliance :: NSILI :: Source</name>
 
     <dependencies>
         <dependency>
@@ -40,6 +40,11 @@
         <dependency>
             <groupId>org.codice.alliance.nsili</groupId>
             <artifactId>catalog-nsili-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codice.alliance.nsili</groupId>
+            <artifactId>catalog-nsili-transformer</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -149,6 +154,7 @@
                         <Embed-Dependency>
                             catalog-core-api-impl,
                             catalog-nsili-common,
+                            catalog-nsili-transformer,
                             platform-util,
                             commons-lang,
                             jgrapht-core,
@@ -157,7 +163,8 @@
                             ddf-security-common,
                             platform-util,
                             platform-util-unavailableurls,
-                            joda-time
+                            joda-time,
+                            jts
                         </Embed-Dependency>
                     </instructions>
                 </configuration>
@@ -185,7 +192,7 @@
                                         <limit>
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.69</minimum>
+                                            <minimum>0.68</minimum>
                                         </limit>
                                         <limit>
                                             <counter>BRANCH</counter>

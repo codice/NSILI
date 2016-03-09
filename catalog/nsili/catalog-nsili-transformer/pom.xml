@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 /**
  * Copyright (c) Codice Foundation
@@ -22,20 +22,19 @@
         <version>0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>catalog-nsili-common</artifactId>
-    <name>Alliance :: NSILI :: Common</name>
+    <artifactId>catalog-nsili-transformer</artifactId>
     <packaging>jar</packaging>
+    <name>Alliance :: NSILI :: Input Transformer</name>
 
     <properties>
-        <findbugs.skip>true</findbugs.skip>
-        <checkstyle.skip>true</checkstyle.skip>
+        <project.report.output.directory>reports</project.report.output.directory>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.cxf</groupId>
-            <artifactId>cxf-rt-rs-client</artifactId>
-            <version>${cxf.version}</version>
+            <groupId>org.codice.alliance.nsili</groupId>
+            <artifactId>catalog-nsili-common</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>ddf.catalog.core</groupId>
@@ -47,52 +46,48 @@
             <artifactId>jgrapht-core</artifactId>
             <version>0.9.1</version>
         </dependency>
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <version>1.6.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.vividsolutions</groupId>
+            <artifactId>jts</artifactId>
+            <version>1.12</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>idlj-maven-plugin</artifactId>
-                <version>1.2.1</version>
-                <executions>
-                    <execution>
-                        <id>generate-sources-from-idl</id>
-                        <configuration>
-                            <outputDirectory>${basedir}/target/generated-sources</outputDirectory>
-                            <sources>
-                                <source>
-                                    <additionalArguments>
-                                        <list>-pkgTranslate</list>
-                                        <list>GIAS</list>
-                                        <list>org.codice.alliance.nsili.common.GIAS</list>
-                                        <list>-pkgTranslate</list>
-                                        <list>UCO</list>
-                                        <list>org.codice.alliance.nsili.common.UCO</list>
-                                        <list>-pkgTranslate</list>
-                                        <list>CB</list>
-                                        <list>org.codice.alliance.nsili.common.CB</list>
-                                        <list>-pkgTranslate</list>
-                                        <list>PS</list>
-                                        <list>org.codice.alliance.nsili.common.PS</list>
-                                        <list>-pkgTranslate</list>
-                                        <list>UID</list>
-                                        <list>org.codice.alliance.nsili.common.UID</list>
-                                    </additionalArguments>
-                                    <compatible>false</compatible>
-                                </source>
-                            </sources>
-                        </configuration>
-                        <goals>
-                            <goal>generate</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <executions>
+                    <execution>
+                        <id>default-prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>default-report</id>
+                        <phase>prepare-package</phase>
+                        <configuration>
+                            <outputDirectory>
+                                ${project.build.directory}/site/${project.report.output.directory}/jacoco/
+                            </outputDirectory>
+                        </configuration>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+
                     <execution>
                         <id>default-check</id>
                         <goals>
@@ -112,22 +107,22 @@
                                         <limit>
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.0</minimum>
+                                            <minimum>0.90</minimum>
                                         </limit>
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.0</minimum>
+                                            <minimum>0.70</minimum>
                                         </limit>
                                         <limit>
                                             <counter>COMPLEXITY</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.0</minimum>
+                                            <minimum>0.59</minimum>
                                         </limit>
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.0</minimum>
+                                            <minimum>0.90</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

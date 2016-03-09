@@ -29,6 +29,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.cxf.helpers.IOUtils;
 import org.codice.alliance.nsili.common.GIAS.AccessCriteria;
@@ -52,11 +53,13 @@ import org.codice.alliance.nsili.common.GIAS.SubmitQueryRequest;
 import org.codice.alliance.nsili.common.GIAS.View;
 import org.codice.alliance.nsili.common.Nsili;
 import org.codice.alliance.nsili.common.NsiliConstants;
+import org.codice.alliance.nsili.common.UCO.DAG;
 import org.codice.alliance.nsili.common.UCO.DAGListHolder;
 import org.codice.alliance.nsili.common.UCO.InvalidInputParameter;
 import org.codice.alliance.nsili.common.UCO.NameValue;
 import org.codice.alliance.nsili.common.UCO.ProcessingFault;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
+import org.codice.alliance.nsili.transformer.DAGConverter;
 import org.codice.ddf.cxf.SecureCxfClientFactory;
 import org.codice.ddf.spatial.ogc.catalog.common.AvailabilityCommand;
 import org.codice.ddf.spatial.ogc.catalog.common.AvailabilityTask;
@@ -69,6 +72,7 @@ import org.slf4j.LoggerFactory;
 import ddf.catalog.data.ContentType;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.Result;
+import ddf.catalog.data.impl.ResultImpl;
 import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.operation.Query;
 import ddf.catalog.operation.QueryRequest;
@@ -473,7 +477,7 @@ public class NsiliSource extends MaskableImpl
     public void refresh(Map<String, Object> configuration) {
         LOGGER.debug("Entering Refresh : {}", getId());
 
-        if (configuration == null || configuration.isEmpty()) {
+        if (MapUtils.isEmpty(configuration)) {
             LOGGER.error("{} {} : Received null or empty configuration during refresh.",
                     this.getClass()
                             .getSimpleName(),
@@ -602,6 +606,20 @@ public class NsiliSource extends MaskableImpl
         }
 
         List<Result> results = new ArrayList<>();
+        if (dagListHolder.value != null) {
+            for (DAG dag : dagListHolder.value) {
+                Metacard card = DAGConverter.convertDAG(dag, getId());
+                if (card != null) {
+                    DAGConverter.logMetacard(card, getId());
+                    results.add(new ResultImpl(card));
+                } else {
+                    LOGGER.warn("{} : Unable to convert DAG to metacard, returned card is null",
+                            getId());
+                }
+            }
+        } else {
+            LOGGER.warn("{} : Source returned empty DAG list", getId());
+        }
 
         SourceResponseImpl sourceResponse = new SourceResponseImpl(queryRequest,
                 results,

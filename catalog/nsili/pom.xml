@@ -22,10 +22,11 @@
     <artifactId>nsili</artifactId>
     <groupId>org.codice.alliance.nsili</groupId>
     <packaging>pom</packaging>
-    <name>DDF :: Alliance :: NSILI</name>
+    <name>Alliance :: NSILI</name>
     <modules>
         <module>catalog-nsili-common</module>
         <module>catalog-nsili-source</module>
+        <module>catalog-nsili-transformer</module>
         <module>nsili-app</module>
     </modules>
 </project>

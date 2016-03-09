@@ -57,7 +57,7 @@ public class NsiliCommonUtils {
     }
 
     /**
-     * Set the UCO.Node IDs in DFS order to conform to the STANAG 4459 spec.  The root of the node
+     * Set the UCO.Node IDs in DFS order to conform to the NSILI spec.  The root of the node
      * will be 0.
      *
      * @param graph - the graph representation of the DAG
@@ -75,7 +75,7 @@ public class NsiliCommonUtils {
     }
 
     /**
-     * Set the UCO.Edges of the DAG according to the STANAG 4459 Spec.  This requires the ids
+     * Set the UCO.Edges of the DAG according to the NSILI Spec.  This requires the ids
      * of the Nodes to be set in DFS order.
      *
      * @param root  - the root node of the graph (NSIL_PRODUCT)
