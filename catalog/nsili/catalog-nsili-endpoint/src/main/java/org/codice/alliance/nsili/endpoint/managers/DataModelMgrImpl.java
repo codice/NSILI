@@ -66,19 +66,19 @@ public class DataModelMgrImpl extends DataModelMgrPOA {
     @Override
     public View[] get_view_names(NameValue[] properties)
             throws InvalidInputParameter, ProcessingFault, SystemFault {
-        return null; //TODO TROY AttributeInformationGenerator.generateViewNames();
+        return null; //TODO AttributeInformationGenerator.generateViewNames();
     }
 
     @Override
     public AttributeInformation[] get_attributes(String view_name, NameValue[] properties)
             throws InvalidInputParameter, ProcessingFault, SystemFault {
-        return null; //TODO TROY AttributeInformationGenerator.getAttributesForView(view_name);
+        return null; //TODO AttributeInformationGenerator.getAttributesForView(view_name);
     }
 
     @Override
     public AttributeInformation[] get_queryable_attributes(String view_name, NameValue[] properties)
             throws InvalidInputParameter, ProcessingFault, SystemFault {
-        return null; //TODO TROY AttributeInformationGenerator.getAttributesForView(view_name);
+        return null; //TODO AttributeInformationGenerator.getAttributesForView(view_name);
     }
 
     @Override

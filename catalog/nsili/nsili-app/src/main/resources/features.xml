@@ -17,12 +17,12 @@
           xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.3.0 http://karaf.apache.org/xmlns/features/v1.3.0">
 
     <feature name="catalog-nsili-source" install="manual" version="${project.version}"
-             description="DDF Catalog STANAG 4559 Source">
+             description="Alliance NSILI Source">
         <bundle>mvn:org.codice.alliance.nsili/catalog-nsili-source/${project.version}</bundle>
     </feature>
 
     <feature name="catalog-nsili-endpoint" install="manual" version="${project.version}"
-             description="DDF Catalog STANAG 4559 Endpoint">
+             description="Alliance NSILI Endpoint">
         <bundle>mvn:org.codice.alliance.nsili/catalog-nsili-endpoint/${project.version}</bundle>
     </feature>
 

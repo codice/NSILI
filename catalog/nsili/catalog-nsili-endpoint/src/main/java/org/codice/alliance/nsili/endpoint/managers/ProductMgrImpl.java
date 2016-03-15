@@ -37,6 +37,7 @@ import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
 import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.slf4j.LoggerFactory;
 
 public class ProductMgrImpl extends ProductMgrPOA {
 
@@ -48,6 +49,8 @@ public class ProductMgrImpl extends ProductMgrPOA {
 
     private static final String ENCODING = "UTF-8";
 
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ProductMgrImpl.class);
+
     @Override
     public GetParametersRequest get_parameters(Product prod, String[] desired_parameters,
             NameValue[] properties) throws ProcessingFault, InvalidInputParameter, SystemFault {
@@ -57,7 +60,7 @@ public class ProductMgrImpl extends ProductMgrPOA {
             _poa().activate_object_with_id("get_parameters".getBytes(Charset.forName(ENCODING)),
                     getParametersRequest);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-            System.out.println("get_parameters : Unable to activate getParametersRequest object.");
+            LOGGER.warn("get_parameters : Unable to activate getParametersRequest object.");
         }
 
         org.omg.CORBA.Object obj =
@@ -84,7 +87,7 @@ public class ProductMgrImpl extends ProductMgrPOA {
             _poa().activate_object_with_id("get_related_files".getBytes(Charset.forName(ENCODING)),
                     getRelatedFilesRequest);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-            System.out.println(
+            LOGGER.warn(
                     "get_related_files : Unable to activate getRelatedFilesRequest object.");
         }
 

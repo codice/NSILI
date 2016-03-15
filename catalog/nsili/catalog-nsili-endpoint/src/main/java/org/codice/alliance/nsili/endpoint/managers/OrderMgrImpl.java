@@ -35,6 +35,7 @@ import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
 import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.slf4j.LoggerFactory;
 
 public class OrderMgrImpl extends OrderMgrPOA {
 
@@ -45,6 +46,8 @@ public class OrderMgrImpl extends OrderMgrPOA {
     private static final int TIMEOUT = 1;
 
     private static final String ENCODING = "UTF-8";
+
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(OrderMgrImpl.class);
 
     @Override
     public String[] get_package_specifications() throws ProcessingFault, SystemFault {
@@ -66,7 +69,7 @@ public class OrderMgrImpl extends OrderMgrPOA {
             _poa().activate_object_with_id("order".getBytes(Charset.forName(ENCODING)),
                     orderRequest);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-            System.out.println("order : Unable to activate orderRequest object.");
+            LOGGER.warn("order : Unable to activate orderRequest object.");
         }
 
         org.omg.CORBA.Object obj = _poa().create_reference_with_id("order".getBytes(Charset.forName(

@@ -35,6 +35,7 @@ import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
 import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.slf4j.LoggerFactory;
 
 public class CatalogMgrImpl extends CatalogMgrPOA {
 
@@ -43,6 +44,8 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
     private static final int DEFAULT_TIMEOUT = 1;
 
     private POA poa_;
+
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(CatalogMgrImpl.class);
 
     public CatalogMgrImpl(POA poa) {
         this.poa_ = poa;
@@ -93,7 +96,7 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
             poa_.activate_object_with_id("submit_query".getBytes(Charset.forName(ENCODING)),
                     submitQueryRequest);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-            System.out.println("submit_query : Unable to activate submitQueryRequest object.");
+            LOGGER.warn("submit_query : Unable to activate submitQueryRequest object.");
         }
 
         org.omg.CORBA.Object obj =
@@ -113,7 +116,7 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
             poa_.activate_object_with_id("hit_count".getBytes(Charset.forName(ENCODING)),
                     hitCountRequest);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-            System.out.println("hit_count : Unable to activate hitCountRequest object.");
+            LOGGER.warn("hit_count : Unable to activate hitCountRequest object.");
         }
 
         org.omg.CORBA.Object obj =

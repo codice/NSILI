@@ -21,7 +21,7 @@
         <version>0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-    <name>Codice :: Alliance :: NSILI :: Endpoint</name>
+    <name>Alliance :: NSILI :: Endpoint</name>
     <artifactId>catalog-nsili-endpoint</artifactId>
     <packaging>bundle</packaging>
 
