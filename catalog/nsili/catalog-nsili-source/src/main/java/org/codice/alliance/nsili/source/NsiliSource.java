@@ -13,10 +13,12 @@
  */
 package org.codice.alliance.nsili.source;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -137,6 +139,12 @@ public class NsiliSource extends MaskableImpl
 
     private static final String DEFAULT_USER_INFO = "Alliance";
 
+    private static final String HTTP = "http";
+
+    private static final String HTTPS = "https";
+
+    private static final String FILE = "file";
+
     private static Library library;
 
     private static Properties describableProperties = new Properties();
@@ -234,7 +242,6 @@ public class NsiliSource extends MaskableImpl
     }
 
     public void init() {
-        createClientFactory();
         initCorbaClient();
         setupAvailabilityPoll();
     }
@@ -269,7 +276,7 @@ public class NsiliSource extends MaskableImpl
      * and views that it provides.
      */
     private void initCorbaClient() {
-        getIorFileFromSource();
+        getIorString();
         initLibrary();
         setSourceDescription();
         initMandatoryManagers();
@@ -280,9 +287,50 @@ public class NsiliSource extends MaskableImpl
     }
 
     /**
-     * Uses the SecureClientCxfFactory to obtain the IOR file from the provided URL via HTTP(S).
+     * Determines which protocol is specified and attempts to retrive the IOR String appropriately.
+     * According to ANNEX D Section 2.2, "beginning with Edition 3 FTP is disallowed. CORBA Internet Object
+     * References (IOR) are delivered via HTTP or HTTPS to support client binding."
      */
-    private void getIorFileFromSource() {
+    private void getIorString() {
+        URI uri;
+        try {
+            uri = new URI(iorUrl);
+        } catch (URISyntaxException e) {
+            LOGGER.error("Invalid URL specified for IOR string: {}", iorUrl);
+            return;
+        }
+
+        if (uri.getScheme().equals(HTTP) || uri.getScheme().equals(HTTPS)) {
+            getIorStringFromSource();
+        } else if (uri.getScheme().equals(FILE)) {
+            getIorStringFromLocalDisk();
+        } else {
+            LOGGER.error("Invalid protocol specified for IOR string: {}", iorUrl);
+        }
+    }
+
+    /**
+     * Obtains the IOR string from a local file.
+     */
+    private void getIorStringFromLocalDisk() {
+        try (InputStream inputStream = new FileInputStream(iorUrl.substring(7))) {
+            iorString = IOUtils.toString(inputStream);
+        } catch (IOException e) {
+            LOGGER.error("{} : Unable to process IOR String.", id, e);
+        }
+
+        if (StringUtils.isNotBlank(iorString)) {
+            LOGGER.debug("{} : Successfully obtained IOR file from {}", getId(), iorUrl);
+        } else {
+            LOGGER.error("{} : Received an empty or null IOR String.", id);
+        }
+    }
+
+    /**
+     * Uses the SecureClientCxfFactory to obtain the IOR string from the provided URL via HTTP(S).
+     */
+    private void getIorStringFromSource() {
+        createClientFactory();
         Nsili nsili = factory.getClient();
 
         try (InputStream inputStream = nsili.getIorFile()) {
@@ -938,7 +986,7 @@ public class NsiliSource extends MaskableImpl
 
             // Refresh IOR String when polling for availability in case server conditions change
             try {
-                getIorFileFromSource();
+                getIorString();
                 initLibrary();
                 managers = library.get_manager_types();
             } catch (Exception e) {
