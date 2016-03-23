@@ -24,5 +24,5 @@ public interface NsiliWeb {
 
     @GET
     @Produces(MediaType.TEXT_PLAIN)
-    Response getIORFile();
+    Response getIorFile();
 }

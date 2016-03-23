@@ -24,7 +24,7 @@ import org.codice.alliance.nsili.common.GIAS.AttributeInformation;
 
 import ddf.catalog.filter.FilterDelegate;
 
-public class NsiliFilterDelegate extends FilterDelegate<String> {
+public class  NsiliFilterDelegate extends FilterDelegate<String> {
 
     private NsiliFilterFactory filterFactory;
 
@@ -33,6 +33,8 @@ public class NsiliFilterDelegate extends FilterDelegate<String> {
     public static final String SQ = "'";
 
     public static final String UTC = "UTC";
+
+    public static final String WILDCARD = "%";
 
     private static final String DATE_FORMAT = "yyyy/MM/dd HH:mm:ss";
 
@@ -79,6 +81,7 @@ public class NsiliFilterDelegate extends FilterDelegate<String> {
     public String propertyIsEqualTo(String propertyName, Date literal) {
         String filter = filterFactory.buildPropertyIsEqualTo(propertyName,
                 getStringFromDate(literal));
+
         return filter;
     }
 
@@ -514,13 +517,17 @@ public class NsiliFilterDelegate extends FilterDelegate<String> {
     }
 
     private boolean isSupportedQueryableAttribute(String propertyName) {
-        String mappedProperty = NsiliFilterFactory.mapToNsil(propertyName);
+        List<String> mappedProperties = NsiliFilterFactory.mapToNsilQuery(propertyName);
 
+        boolean supportedQueryAttribute = false;
         for (AttributeInformation attributeInformation : queryableAttributes.get(view)) {
-            if (attributeInformation.attribute_name.equals(mappedProperty)) {
-                return true;
+            for (String mappedProperty : mappedProperties) {
+                if (attributeInformation.attribute_name.equals(mappedProperty)) {
+                    supportedQueryAttribute = true;
+                    break;
+                }
             }
         }
-        return false;
+        return supportedQueryAttribute;
     }
 }

@@ -22,7 +22,7 @@ import ddf.catalog.data.MetacardType;
 import ddf.catalog.data.impl.AttributeDescriptorImpl;
 import ddf.catalog.data.impl.BasicTypes;
 
-public abstract class NsiliMetacardType implements MetacardType {
+public class NsiliMetacardType implements MetacardType {
 
     /**
      * Prefix used for the name of the NSILI Metacard Sub-Type
@@ -33,6 +33,12 @@ public abstract class NsiliMetacardType implements MetacardType {
      * Postfix used for the name of the NSILI Metacard Sub-Type
      */
     public static final String NSILI_METACARD_TYPE_POSTFIX = "metacard";
+
+    /**
+     * The Metacard Type name for NSILI base class
+     */
+    public static final String METACARD_TYPE_NAME =
+            NSILI_METACARD_TYPE_PREFIX + "." + NSILI_METACARD_TYPE_POSTFIX;
 
     /**
      * The date and time upon which information (cataloguing metadata) about the product was last stored or changed in the source IPL.
@@ -100,6 +106,7 @@ public abstract class NsiliMetacardType implements MetacardType {
 
     /**
      * The nature or genre of the content of the resource.
+     *
      * @see NsiliProductType
      */
     public static final String PRODUCT_TYPE = "productType";
@@ -144,7 +151,7 @@ public abstract class NsiliMetacardType implements MetacardType {
     public static final String PRODUCT_CREATE_TIME = "productCreateTime";
 
     /**
-     *  textual description of the performed exploitation.
+     * textual description of the performed exploitation.
      */
     public static final String EXPLOITATION_DESCRIPTION = "exploitationDescription";
 
@@ -191,7 +198,7 @@ public abstract class NsiliMetacardType implements MetacardType {
      * NATO Security markings that determine the physical security given to the information in
      * storage and transmission, its circulation, destruction and the personnel security clearance
      * required for access as required by [C- M(2002)49].
-     *
+     * <p>
      * NOTE: This is a merged classification of the METADATA_SECURITY and SECURITY fields
      */
     public static final String SECURITY_CLASSIFICATION = "securityClassification";
@@ -207,20 +214,20 @@ public abstract class NsiliMetacardType implements MetacardType {
      * Note: Although STANAG 1059 includes the 'XXN' entry for NATO, the full 'NATO' name shall be
      * used to indicate NATO security policy to avoid any confusion from established and common
      * used terms.
-     *
+     * <p>
      * NOTE: This is a merged classification of the METADATA_SECURITY and SECURITY fields
      */
     public static final String SECURITY_POLICY = "securityPolicy";
 
     /**
-     *  An additional marking to further limit the dissemination of classified information in
-     *  accordance with [C-M (2002)49]. Values include one or more three character country codes as
-     *  found in STANAG 1059 separated by a single BCS Comma (code 0x2C). Default value should be
-     *  NATO. Note: Although STANAG 1059 includes the 'XXN' entry for NATO, the full 'NATO' name
-     *  shall be used to indicate NATO releasability to avoid any confusion from established and
-     *  common used terms.
-     *
-     *  NOTE: This is a merged classification of the METADATA_SECURITY and SECURITY fields
+     * An additional marking to further limit the dissemination of classified information in
+     * accordance with [C-M (2002)49]. Values include one or more three character country codes as
+     * found in STANAG 1059 separated by a single BCS Comma (code 0x2C). Default value should be
+     * NATO. Note: Although STANAG 1059 includes the 'XXN' entry for NATO, the full 'NATO' name
+     * shall be used to indicate NATO releasability to avoid any confusion from established and
+     * common used terms.
+     * <p>
+     * NOTE: This is a merged classification of the METADATA_SECURITY and SECURITY fields
      */
     public static final String SECURITY_RELEASABILITY = "securityReleasability";
 
@@ -325,7 +332,6 @@ public abstract class NsiliMetacardType implements MetacardType {
      */
     public static final AttributeType<NsiliSdsOpStatus> NSILI_SDS_OP_STATUS_TYPE;
 
-
     /**
      * AttributeType used to wrap a NsiliApprovalStatus enumeration.
      */
@@ -425,7 +431,7 @@ public abstract class NsiliMetacardType implements MetacardType {
                 true /* stored */,
                 false /* tokenized */,
                 false /* multivalued */,
-                BasicTypes.STRING_TYPE));
+                BasicTypes.LONG_TYPE));
 
         NSILI_DESCRIPTORS.add(new AttributeDescriptorImpl(LANGUAGE,
                 true /* indexed */,
@@ -459,7 +465,8 @@ public abstract class NsiliMetacardType implements MetacardType {
                 true /* indexed */,
                 true /* stored */,
                 true /* tokenized */,
-                false /* multivalued */, NSILI_PRODUCT_TYPE));
+                false /* multivalued */,
+                NSILI_PRODUCT_TYPE));
 
         NSILI_DESCRIPTORS.add(new AttributeDescriptorImpl(COUNTRY_CODE,
                 true /* indexed */,
@@ -528,13 +535,15 @@ public abstract class NsiliMetacardType implements MetacardType {
                 true /* indexed */,
                 true /* stored */,
                 false /* tokenized */,
-                false /* multivalued */, NSILI_EXPLOITATION_SUBJ_QUAL_CD_TYPE));
+                false /* multivalued */,
+                NSILI_EXPLOITATION_SUBJ_QUAL_CD_TYPE));
 
         NSILI_DESCRIPTORS.add(new AttributeDescriptorImpl(SDS_OPERATIONAL_STATUS,
                 true /* indexed */,
                 true /* stored */,
                 false /* tokenized */,
-                false /* multivalued */, NSILI_SDS_OP_STATUS_TYPE));
+                false /* multivalued */,
+                NSILI_SDS_OP_STATUS_TYPE));
 
         NSILI_DESCRIPTORS.add(new AttributeDescriptorImpl(APPROVAL_BY,
                 true /* indexed */,
@@ -554,13 +563,15 @@ public abstract class NsiliMetacardType implements MetacardType {
                 true /* indexed */,
                 true /* stored */,
                 false /* tokenized */,
-                false /* multivalued */, NSILI_APPROVAL_STATUS_TYPE));
+                false /* multivalued */,
+                NSILI_APPROVAL_STATUS_TYPE));
 
         NSILI_DESCRIPTORS.add(new AttributeDescriptorImpl(APPROVAL_STATUS,
                 true /* indexed */,
                 true /* stored */,
                 false /* tokenized */,
-                false /* multivalued */, NSILI_APPROVAL_STATUS_TYPE));
+                false /* multivalued */,
+                NSILI_APPROVAL_STATUS_TYPE));
 
         NSILI_DESCRIPTORS.add(new AttributeDescriptorImpl(SECURITY_CLASSIFICATION,
                 true /* indexed */,
@@ -695,8 +706,7 @@ public abstract class NsiliMetacardType implements MetacardType {
 
     /**
      * NSIL_COMMON Attributes
-     * descriptonAbstract -> Metacard.Description
-     *
+     * descriptionAbstract -> Metacard.Description
      */
 
     public NsiliMetacardType() {
@@ -705,7 +715,9 @@ public abstract class NsiliMetacardType implements MetacardType {
     }
 
     @Override
-    public abstract String getName();
+    public String getName() {
+        return METACARD_TYPE_NAME;
+    }
 
     @Override
     public Set<AttributeDescriptor> getAttributeDescriptors() {
@@ -715,8 +727,9 @@ public abstract class NsiliMetacardType implements MetacardType {
     @Override
     public AttributeDescriptor getAttributeDescriptor(String attributeName) {
         AttributeDescriptor attributeDescriptor = null;
-        for (AttributeDescriptor descriptor:attributeDescriptors) {
-            if (descriptor.getName().equals(attributeName)) {
+        for (AttributeDescriptor descriptor : attributeDescriptors) {
+            if (descriptor.getName()
+                    .equals(attributeName)) {
                 attributeDescriptor = descriptor;
                 break;
             }

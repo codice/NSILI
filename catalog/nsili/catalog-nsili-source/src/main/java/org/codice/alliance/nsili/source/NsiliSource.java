@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -81,6 +82,7 @@ import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.operation.impl.SourceResponseImpl;
 import ddf.catalog.resource.ResourceNotFoundException;
 import ddf.catalog.resource.ResourceNotSupportedException;
+import ddf.catalog.resource.ResourceReader;
 import ddf.catalog.service.ConfiguredService;
 import ddf.catalog.source.ConnectedSource;
 import ddf.catalog.source.FederatedSource;
@@ -133,6 +135,8 @@ public class NsiliSource extends MaskableImpl
 
     private static final String DATA_MODEL_MGR = "DataModelMgr";
 
+    private static final String DEFAULT_USER_INFO = "Alliance";
+
     private static Library library;
 
     private static Properties describableProperties = new Properties();
@@ -167,10 +171,9 @@ public class NsiliSource extends MaskableImpl
 
     private org.omg.CORBA.ORB orb;
 
-    private AccessCriteria accessCriteria =
-            new AccessCriteria(NsiliFilterDelegate.EMPTY_STRING,
-                    NsiliFilterDelegate.EMPTY_STRING,
-                    NsiliFilterDelegate.EMPTY_STRING);
+    private AccessCriteria accessCriteria = new AccessCriteria(NsiliFilterDelegate.EMPTY_STRING,
+            NsiliFilterDelegate.EMPTY_STRING,
+            NsiliFilterDelegate.EMPTY_STRING);
 
     private Set<SourceMonitor> sourceMonitors = new HashSet<>();
 
@@ -198,6 +201,10 @@ public class NsiliSource extends MaskableImpl
 
     private String description;
 
+    private String ddfOrgName = DEFAULT_USER_INFO;
+
+    private ResourceReader resourceReader;
+
     static {
         try (InputStream properties = NsiliSource.class.getResourceAsStream(
                 DESCRIBABLE_PROPERTIES_FILE)) {
@@ -217,6 +224,7 @@ public class NsiliSource extends MaskableImpl
         this.resultAttributes = resultAttributes;
         this.nsiliFilterDelegate = filterDelegate;
         this.sortableAttributes = sortableAttributes;
+        ddfOrgName = System.getProperty("org.codice.ddf.system.organization", DEFAULT_USER_INFO);
         initOrb();
     }
 
@@ -279,6 +287,8 @@ public class NsiliSource extends MaskableImpl
 
         try (InputStream inputStream = nsili.getIorFile()) {
             iorString = IOUtils.toString(inputStream, UTF8);
+            //Remove leading/trailing whitespace as the CORBA init can't handle that.
+            iorString = iorString.trim();
         } catch (IOException e) {
             LOGGER.error("{} : Unable to process IOR String.", id, e);
         }
@@ -529,8 +539,7 @@ public class NsiliSource extends MaskableImpl
 
     @Override
     public SourceResponse query(QueryRequest queryRequest) throws UnsupportedQueryException {
-        org.codice.alliance.nsili.common.GIAS.Query query =
-                createQuery(queryRequest.getQuery());
+        org.codice.alliance.nsili.common.GIAS.Query query = createQuery(queryRequest.getQuery());
 
         String[] results = resultAttributes.get(NsiliConstants.NSIL_ALL_VIEW);
 
@@ -595,10 +604,16 @@ public class NsiliSource extends MaskableImpl
         DAGListHolder dagListHolder = new DAGListHolder();
 
         try {
+            LOGGER.debug("{} : Submit query: " + query, id);
+            LOGGER.debug("{} : Requesting result attributes: " + Arrays.toString(resultAttributes),
+                    id);
+            LOGGER.debug("{} : Sort Attributes: " + Arrays.toString(sortAttributes), id);
+            LOGGER.debug("{} : Properties: " + Arrays.toString(properties), id);
             SubmitQueryRequest submitQueryRequest = catalogMgr.submit_query(query,
                     resultAttributes,
                     sortAttributes,
                     properties);
+            submitQueryRequest.set_user_info(ddfOrgName);
             submitQueryRequest.set_number_of_hits(maxHitCount);
             submitQueryRequest.complete_DAG_results(dagListHolder);
         } catch (ProcessingFault | SystemFault | InvalidInputParameter e) {
@@ -688,7 +703,7 @@ public class NsiliSource extends MaskableImpl
                 resourceUri.getPath(),
                 resourceUri.getPort(),
                 requestProperties.toString());
-        return null;
+        return resourceReader.retrieveResource(resourceUri, requestProperties);
     }
 
     @Override
@@ -749,6 +764,10 @@ public class NsiliSource extends MaskableImpl
 
     public Integer getPollInterval() {
         return pollInterval;
+    }
+
+    public void setResourceReader(ResourceReader resourceReader) {
+        this.resourceReader = resourceReader;
     }
 
     public void setPollInterval(Integer interval) {
@@ -855,7 +874,10 @@ public class NsiliSource extends MaskableImpl
      */
     private SortAttribute[] getSortAttributes(SortBy sortBy) {
         if (sortBy == null || sortableAttributes == null) {
-            return new SortAttribute[0];
+            //Default to sorting by Date/Time modified if no sorting provided
+            return new SortAttribute[] {new SortAttribute(
+                    NsiliConstants.NSIL_CARD + "." + NsiliConstants.DATE_TIME_MODIFIED,
+                    Polarity.DESCENDING)};
         }
 
         String sortAttribute = sortBy.getPropertyName()
@@ -875,8 +897,8 @@ public class NsiliSource extends MaskableImpl
             SortAttribute[] sortAttributeArray =
                     {new SortAttribute(NsiliConstants.DATE_TIME_MODIFIED, sortPolarity)};
             return sortAttributeArray;
-        } else if (sortAttribute.equals(Metacard.CREATED) && isAttributeSupported(
-                NsiliConstants.DATE_TIME_DECLARED)) {
+        } else if (sortAttribute.equals(Metacard.CREATED)
+                && isAttributeSupported(NsiliConstants.DATE_TIME_DECLARED)) {
             SortAttribute[] sortAttributeArray =
                     {new SortAttribute(NsiliConstants.DATE_TIME_DECLARED, sortPolarity)};
             return sortAttributeArray;
