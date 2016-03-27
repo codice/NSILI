@@ -53,7 +53,7 @@
             <version>${ddf.version}</version>
         </dependency>
         <dependency>
-            <groupId>ddf.platform</groupId>
+            <groupId>ddf.platform.util</groupId>
             <artifactId>platform-util</artifactId>
             <version>${ddf.version}</version>
         </dependency>
