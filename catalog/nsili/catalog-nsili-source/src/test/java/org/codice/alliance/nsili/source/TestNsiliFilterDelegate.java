@@ -519,7 +519,8 @@ public class TestNsiliFilterDelegate {
             if (attributeInformation.attribute_type.equals(AttributeType.TEXT)) {
                 result.append(getPrimary(attributeInformation.attribute_name,
                         NsiliFilterFactory.LIKE,
-                        NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)
+                        NsiliFilterDelegate.SQ + NsiliFilterDelegate.WILDCARD + ATTRIBUTE
+                                + NsiliFilterDelegate.WILDCARD + NsiliFilterDelegate.SQ)
                         + NsiliFilterFactory.OR);
             }
 

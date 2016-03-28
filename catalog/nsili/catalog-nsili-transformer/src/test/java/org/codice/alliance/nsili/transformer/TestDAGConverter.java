@@ -165,7 +165,7 @@ public class TestDAGConverter {
 
     private static final String IMAGERY_TITLE = "Imagery Title";
 
-    private static final String WKT_LOCATION = "POLYGON ((1 1, 1 5, 5 5, 5 1, 1 1))";
+    private static final String WKT_LOCATION = "POLYGON ((5 5, 5 1, 1 1, 1 5, 5 5))";
 
     private static final Boolean FILE_ARCHIVED = false;
 
@@ -349,7 +349,7 @@ public class TestDAGConverter {
         assertThat(metacard.getEffectiveDate(), notNullValue());
         assertThat(cal.getTime(), is(metacard.getModifiedDate()));
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
-        assertThat(WKT_LOCATION, is(metacard.getLocation()));
+        assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
                 is(metacard.getResourceURI()
                         .toString()));
@@ -660,7 +660,7 @@ public class TestDAGConverter {
         assertThat(metacard.getEffectiveDate(), notNullValue());
         assertThat(cal.getTime(), is(metacard.getModifiedDate()));
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
-        assertThat(WKT_LOCATION, is(metacard.getLocation()));
+        assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(STREAM_SOURCE_URL,
                 is(metacard.getResourceURI()
                         .toString()));
@@ -757,7 +757,7 @@ public class TestDAGConverter {
         assertThat(metacard.getEffectiveDate(), notNullValue());
         assertThat(cal.getTime(), is(metacard.getModifiedDate()));
         assertThat(MESSAGE_BODY, is(metacard.getDescription()));
-        assertThat(WKT_LOCATION, is(metacard.getLocation()));
+        assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
                 is(metacard.getResourceURI()
                         .toString()));
@@ -856,7 +856,7 @@ public class TestDAGConverter {
         assertThat(metacard.getEffectiveDate(), notNullValue());
         assertThat(cal.getTime(), is(metacard.getModifiedDate()));
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
-        assertThat(WKT_LOCATION, is(metacard.getLocation()));
+        assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
                 is(metacard.getResourceURI()
                         .toString()));
@@ -1146,7 +1146,7 @@ public class TestDAGConverter {
         assertThat(metacard.getEffectiveDate(), notNullValue());
         assertThat(cal.getTime(), is(metacard.getModifiedDate()));
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
-        assertThat(WKT_LOCATION, is(metacard.getLocation()));
+        assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
                 is(metacard.getResourceURI()
                         .toString()));
@@ -1253,7 +1253,7 @@ public class TestDAGConverter {
         assertThat(metacard.getEffectiveDate(), notNullValue());
         assertThat(cal.getTime(), is(metacard.getModifiedDate()));
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
-        assertThat(WKT_LOCATION, is(metacard.getLocation()));
+        assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
                 is(metacard.getResourceURI()
                         .toString()));
@@ -1346,7 +1346,7 @@ public class TestDAGConverter {
         assertThat(metacard.getEffectiveDate(), notNullValue());
         assertThat(cal.getTime(), is(metacard.getModifiedDate()));
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
-        assertThat(WKT_LOCATION, is(metacard.getLocation()));
+        assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
                 is(metacard.getResourceURI()
                         .toString()));
@@ -1435,7 +1435,7 @@ public class TestDAGConverter {
         assertThat(metacard.getEffectiveDate(), notNullValue());
         assertThat(cal.getTime(), is(metacard.getModifiedDate()));
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
-        assertThat(WKT_LOCATION, is(metacard.getLocation()));
+        assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
                 is(metacard.getResourceURI()
                         .toString()));
@@ -1552,7 +1552,7 @@ public class TestDAGConverter {
         assertThat(metacard.getEffectiveDate(), notNullValue());
         assertThat(cal.getTime(), is(metacard.getModifiedDate()));
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
-        assertThat(WKT_LOCATION, is(metacard.getLocation()));
+        assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
                 is(metacard.getResourceURI()
                         .toString()));
@@ -1652,7 +1652,7 @@ public class TestDAGConverter {
         assertThat(metacard.getEffectiveDate(), notNullValue());
         assertThat(cal.getTime(), is(metacard.getModifiedDate()));
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
-        assertThat(WKT_LOCATION, is(metacard.getLocation()));
+        assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
                 is(metacard.getResourceURI()
                         .toString()));

@@ -126,7 +126,7 @@ public class NsiliConstants {
 
     public static final String DATE_TIME_DECLARED = "dateTimeDeclared";
 
-    public static final String PRODUCT_URL = "productUrl";
+    public static final String PRODUCT_URL = "productURL";
 
     public static final String CLASSIFICATION = "classification";
 
@@ -169,6 +169,8 @@ public class NsiliConstants {
     public static final String ARCHIVED = "archived";
 
     public static final String ARCHIVE_INFORMATION = "archiveInformation";
+
+    public static final String ARCHIVAL_INFORMATION = "archivalInformation";
 
     public static final String EXTENT = "extent";
 

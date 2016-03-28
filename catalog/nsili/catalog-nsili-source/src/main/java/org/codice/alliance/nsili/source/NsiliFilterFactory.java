@@ -14,12 +14,14 @@
 package org.codice.alliance.nsili.source;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.codice.alliance.nsili.common.GIAS.AttributeInformation;
 import org.codice.alliance.nsili.common.GIAS.AttributeType;
+import org.codice.alliance.nsili.common.NsiliAttributeMap;
 import org.codice.alliance.nsili.common.NsiliConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,13 +103,34 @@ public class NsiliFilterFactory {
         List<String> filters = new ArrayList<>();
 
         // Replace * with %, since * is not a valid wildcard in BQS
-        value = value.replaceAll("\\*", "%");
-        value = value.replaceAll("\\?", "%");
+        value = value.replaceAll("\\*", NsiliFilterDelegate.WILDCARD);
+        value = value.replaceAll("\\?", NsiliFilterDelegate.WILDCARD);
+        boolean addPrefixWildcard = false;
+        boolean addPostfixWildcard = false;
+
+        if (!value.startsWith(NsiliFilterDelegate.WILDCARD)) {
+            addPrefixWildcard = true;
+        }
+
+        if (!value.endsWith(NsiliFilterDelegate.WILDCARD)) {
+            addPostfixWildcard = true;
+        }
 
         for (AttributeInformation attributeInformation : attributeInformationList) {
             if (isTextAttributeType(attributeInformation)) {
-                filters.add(LP + attributeInformation.attribute_name + LIKE
-                        + NsiliFilterDelegate.SQ + value + NsiliFilterDelegate.SQ + RP);
+                String filterString = LP + attributeInformation.attribute_name + LIKE + NsiliFilterDelegate.SQ;
+                if (addPrefixWildcard) {
+                    filterString = filterString + NsiliFilterDelegate.WILDCARD;
+                }
+
+                filterString = filterString + value;
+
+                if (addPostfixWildcard) {
+                    filterString = filterString + NsiliFilterDelegate.WILDCARD;
+                }
+
+                filterString = filterString + NsiliFilterDelegate.SQ + RP;
+                filters.add(filterString);
             }
         }
         return buildOrFilter(filters);
@@ -119,38 +142,67 @@ public class NsiliFilterFactory {
     }
 
     public String buildPropertyIsEqualTo(String property, String value) {
-        property = mapToNsil(property);
-        return LP + property + EQ + value + RP;
+        List<String> propertyList = mapToNsilQuery(property);
+        List<String> filters = new ArrayList<>();
+        for (String ddfProperty : propertyList) {
+            String filter = LP + ddfProperty + EQ + value + RP;
+            filters.add(filter);
+        }
+        return buildOrFilter(filters);
     }
 
     public String buildPropertyIsNotEqualTo(String property, String value) {
-        property = mapToNsil(property);
         return buildNotFilter(buildPropertyIsEqualTo(property, value));
     }
 
     public String buildPropertyIsGreaterThan(String property, String value) {
-        property = mapToNsil(property);
-        return LP + property + GT + value + RP;
+        List<String> propertyList = mapToNsilQuery(property);
+        List<String> filters = new ArrayList<>();
+        for (String ddfProperty : propertyList) {
+            String filter = LP + ddfProperty + GT + value + RP;
+            filters.add(filter);
+        }
+        return buildOrFilter(filters);
     }
 
     public String buildPropertyIsGreaterThanOrEqual(String property, String value) {
-        property = mapToNsil(property);
-        return LP + property + GTE + value + RP;
+        List<String> propertyList = mapToNsilQuery(property);
+        List<String> filters = new ArrayList<>();
+        for (String ddfProperty : propertyList) {
+            String filter = LP + ddfProperty + GTE + value + RP;
+            filters.add(filter);
+        }
+        return buildOrFilter(filters);
     }
 
     public String buildPropertyIsLessThan(String property, String value) {
-        property = mapToNsil(property);
-        return LP + property + LT + value + RP;
+        List<String> propertyList = mapToNsilQuery(property);
+        List<String> filters = new ArrayList<>();
+        for (String ddfProperty : propertyList) {
+            String filter = LP + ddfProperty + LT + value + RP;
+            filters.add(filter);
+        }
+        return buildOrFilter(filters);
     }
 
     public String buildPropertyIsLessThanOrEqual(String property, String value) {
-        property = mapToNsil(property);
-        return LP + property + LTE + value + RP;
+        List<String> propertyList = mapToNsilQuery(property);
+        List<String> filters = new ArrayList<>();
+        for (String ddfProperty : propertyList) {
+            String filter = LP + ddfProperty + LTE + value + RP;
+            filters.add(filter);
+        }
+        return buildOrFilter(filters);
     }
 
     public String buildPropertyIsBetween(String property, String lowerBound, String upperBound) {
-        property = mapToNsil(property);
-        return LP + property + BTW + lowerBound + COMMA + upperBound + RP;
+        List<String> propertyList = mapToNsilQuery(property);
+        List<String> filters = new ArrayList<>();
+        for (String ddfProperty : propertyList) {
+            String filter = LP + ddfProperty + BTW + lowerBound + COMMA + upperBound + RP;
+            filters.add(filter);
+        }
+        return buildOrFilter(filters);
     }
 
     public String buildOrFilter(List<String> filters) {
@@ -202,69 +254,94 @@ public class NsiliFilterFactory {
         return NOT + filter;
     }
 
-    public String buildIntersectsFilter(String properyName, String wkt) {
+    public String buildIntersectsFilter(String propertyName, String wkt) {
+        List<String> filters = new ArrayList<>();
         String bqsGeo = convertWktToBqs(wkt);
         String filter = NsiliFilterDelegate.EMPTY_STRING;
         if (StringUtils.isNotBlank(bqsGeo)) {
-            String attribute = mapToNsil(properyName);
-            filter = LP + attribute + INTERSECT + convertWktToBqs(wkt) + RP;
+            List<String> propertyList = mapToNsilQuery(propertyName);
+            for (String ddfProperty : propertyList) {
+                filter = LP + ddfProperty + INTERSECT + convertWktToBqs(wkt) + RP;
+                filters.add(filter);
+            }
+        }
+        return buildOrFilter(filters);
+    }
+
+    public String buildDisjointFilter(String propertyName, String wkt) {
+        List<String> filters = new ArrayList<>();
+        String bqsGeo = convertWktToBqs(wkt);
+        String filter = NsiliFilterDelegate.EMPTY_STRING;
+        if (StringUtils.isNotBlank(bqsGeo)) {
+            List<String> propertyList = mapToNsilQuery(propertyName);
+            for (String ddfProperty : propertyList) {
+                filter = LP + ddfProperty + OUTSIDE + convertWktToBqs(wkt) + RP;
+                filters.add(filter);
+            }
+        }
+        return buildOrFilter(filters);
+    }
+
+    public String buildWithinFilter(String propertyName, String wkt) {
+        List<String> filters = new ArrayList<>();
+        String bqsGeo = convertWktToBqs(wkt);
+        String filter = NsiliFilterDelegate.EMPTY_STRING;
+        if (StringUtils.isNotBlank(bqsGeo)) {
+            List<String> propertyList = mapToNsilQuery(propertyName);
+            for (String ddfProperty : propertyList) {
+                filter = LP + ddfProperty + INSIDE + convertWktToBqs(wkt) + RP;
+                filters.add(filter);
+            }
+        }
+        return buildOrFilter(filters);
+    }
+
+    public String buildDWithinFilter(String propertyName, String wkt, double distance) {
+        List<String> filters = new ArrayList<>();
+        String bqsGeo = convertWktToBqs(wkt);
+        String filter = NsiliFilterDelegate.EMPTY_STRING;
+        if (StringUtils.isNotBlank(bqsGeo)) {
+            List<String> propertyList = mapToNsilQuery(propertyName);
+            for (String ddfProperty : propertyList) {
+                filter = LP + ddfProperty + WITHIN + distance + METERS_OF + convertWktToBqs(wkt)
+                        + RP;
+                filters.add(filter);
+            }
+        }
+        return buildOrFilter(filters);
+    }
+
+    public String buildBeyondFilter(String propertyName, String wkt, double distance) {
+        List<String> filters = new ArrayList<>();
+        String bqsGeo = convertWktToBqs(wkt);
+        String filter = NsiliFilterDelegate.EMPTY_STRING;
+        if (StringUtils.isNotBlank(bqsGeo)) {
+            List<String> propertyList = mapToNsilQuery(propertyName);
+            for (String ddfProperty : propertyList) {
+                filter = LP + ddfProperty + BEYOND + distance + METERS_OF + convertWktToBqs(wkt)
+                        + RP;
+                filters.add(filter);
+            }
         }
         return filter;
     }
 
-    public String buildDisjointFilter(String properyName, String wkt) {
-        String bqsGeo = convertWktToBqs(wkt);
-        String filter = NsiliFilterDelegate.EMPTY_STRING;
-        if (StringUtils.isNotBlank(bqsGeo)) {
-            String attribute = mapToNsil(properyName);
-            filter = LP + attribute + OUTSIDE + convertWktToBqs(wkt) + RP;
+    public static List<String> mapToNsil(String attribute) {
+        List<String> nsiliProperties = NsiliAttributeMap.getNsiliAttributeForDdf(attribute);
+        if (nsiliProperties == null) {
+            nsiliProperties = new ArrayList<>();
+            nsiliProperties.add(attribute);
+            LOGGER.warn("Unable to map " + attribute + " to NSILI attribute, using attribute name");
         }
-        return filter;
+        return nsiliProperties;
     }
 
-    public String buildWithinFilter(String properyName, String wkt) {
-        String bqsGeo = convertWktToBqs(wkt);
-        String filter = NsiliFilterDelegate.EMPTY_STRING;
-        if (StringUtils.isNotBlank(bqsGeo)) {
-            String attribute = mapToNsil(properyName);
-            filter = LP + attribute + INSIDE + convertWktToBqs(wkt) + RP;
+    public static List<String> mapToNsilQuery(String attribute) {
+        if (attribute.equals(Metacard.ANY_GEO)) {
+            return Arrays.asList(new String[] {NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX});
+        } else {
+            return mapToNsil(attribute);
         }
-        return filter;
-    }
-
-    public String buildDWithinFilter(String properyName, String wkt, double distance) {
-        String bqsGeo = convertWktToBqs(wkt);
-        String filter = NsiliFilterDelegate.EMPTY_STRING;
-        if (StringUtils.isNotBlank(bqsGeo)) {
-            String attribute = mapToNsil(properyName);
-            filter = LP + attribute + WITHIN + distance + METERS_OF + convertWktToBqs(wkt) + RP;
-        }
-        return filter;
-    }
-
-    public String buildBeyondFilter(String properyName, String wkt, double distance) {
-        String bqsGeo = convertWktToBqs(wkt);
-        String filter = NsiliFilterDelegate.EMPTY_STRING;
-        if (StringUtils.isNotBlank(bqsGeo)) {
-            String attribute = mapToNsil(properyName);
-            filter = LP + attribute + BEYOND + distance + METERS_OF + convertWktToBqs(wkt) + RP;
-        }
-        return filter;
-    }
-
-    public static String mapToNsil(String attribute) {
-        if (attribute.equals(Metacard.CONTENT_TYPE)) {
-            return TYPE;
-        } else if (attribute.equals(Metacard.EFFECTIVE)) {
-            return NsiliConstants.DATE_TIME_DECLARED;
-        } else if (attribute.equals(Metacard.CREATED)) {
-            return NsiliConstants.DATE_TIME_DECLARED;
-        } else if (attribute.equals(Metacard.MODIFIED)) {
-            return NsiliConstants.DATE_TIME_MODIFIED;
-        } else if (attribute.equals(Metacard.ANY_GEO)) {
-            return NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX;
-        }
-        return attribute;
     }
 
     public String convertWktToBqs(String wkt) {

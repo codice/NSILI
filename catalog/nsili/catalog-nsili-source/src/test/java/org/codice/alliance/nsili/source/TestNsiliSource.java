@@ -81,7 +81,7 @@ public class TestNsiliSource {
 
     private static final String GMTI = "GMTI";
 
-    private static final String GMTI_EQ_FILTER = "(type = 'GMTI')";
+    private static final String GMTI_EQ_FILTER = "((NSIL_FILE.format = 'GMTI') or (NSIL_STREAM.standard = 'GMTI'))";
 
     private static final String GMTI_LIKE_FILTER = "(GMTI like '%')";
 
@@ -206,7 +206,8 @@ public class TestNsiliSource {
                 argumentCaptor.capture(),
                 any(NameValue[].class));
 
-        assertThat(argumentCaptor.getValue().length, is(0));
+        //Length is 1, as we force a sort attribute if a valid one is not provided.
+        assertThat(argumentCaptor.getValue().length, is(1));
     }
 
     @Test
@@ -228,7 +229,8 @@ public class TestNsiliSource {
                 argumentCaptor.capture(),
                 any(NameValue[].class));
 
-        assertThat(argumentCaptor.getValue().length, is(0));
+        //Sort attributes are always forced to be at least 1
+        assertThat(argumentCaptor.getValue().length, is(1));
     }
 
     @Test

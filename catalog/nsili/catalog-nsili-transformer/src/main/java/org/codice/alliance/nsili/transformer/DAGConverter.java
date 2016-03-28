@@ -93,8 +93,11 @@ public class DAGConverter {
 
     private static final WKTWriter WKT_WRITER = new WKTWriter();
 
-    public static MetacardImpl convertDAG(DAG dag, String sourceId) {
+    private static String sourceId;
+
+    public static MetacardImpl convertDAG(DAG dag, String logSourceId) {
         MetacardImpl metacard = null;
+        sourceId = logSourceId;
 
         //Need to have at least 2 nodes and an edge for anything useful
         if (dag.nodes != null && dag.edges != null) {
@@ -144,8 +147,8 @@ public class DAGConverter {
         while (depthFirstIterator.hasNext()) {
             Node node = depthFirstIterator.next();
 
-            if (node.node_type == NodeType.ROOT_NODE && node.attribute_name.equals(
-                    NsiliConstants.NSIL_PRODUCT)) {
+            if (node.node_type == NodeType.ROOT_NODE
+                    && node.attribute_name.equals(NsiliConstants.NSIL_PRODUCT)) {
                 //Nothing to process from root node
             } else if (node.node_type == NodeType.ENTITY_NODE) {
                 parentEntity = node;
@@ -350,8 +353,8 @@ public class DAGConverter {
                     getString(node.value)));
             break;
         case NsiliConstants.TARGET_NUMBER:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.TARGET_NUMBER, getString(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.TARGET_NUMBER,
+                    getString(node.value)));
             break;
         case NsiliConstants.TYPE:
             metacard.setAttribute(new AttributeImpl(NsiliMetacardType.PRODUCT_TYPE,
@@ -365,8 +368,8 @@ public class DAGConverter {
     public static void addNsilCoverageAttribute(MetacardImpl metacard, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.SPATIAL_COUNTRY_CODE:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.COUNTRY_CODE, getString(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.COUNTRY_CODE,
+                    getString(node.value)));
             break;
         case NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX:
             metacard.setLocation(convertShape(node.value));
@@ -377,8 +380,7 @@ public class DAGConverter {
             break;
         case NsiliConstants.TEMPORAL_END:
             Date temporalEnd = convertDate(node.value);
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.END_DATETIME,
-                    temporalEnd));
+            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.END_DATETIME, temporalEnd));
             metacard.setEffectiveDate(temporalEnd);
             break;
         default:
@@ -449,8 +451,8 @@ public class DAGConverter {
             metacard.setResourceSize(String.valueOf(convertMegabytesToBytes(node.value.extract_double())));
             break;
         case NsiliConstants.FORMAT:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.FILE_FORMAT, getString(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.FILE_FORMAT,
+                    getString(node.value)));
             break;
         case NsiliConstants.FORMAT_VERSION:
             metacard.setAttribute(new AttributeImpl(NsiliMetacardType.FILE_FORMAT_VER,
@@ -514,20 +516,20 @@ public class DAGConverter {
                     getString(node.value)));
             break;
         case NsiliConstants.NIIRS:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.NIIRS, getShort(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.NIIRS,
+                    getShort(node.value)));
             break;
         case NsiliConstants.NUMBER_OF_BANDS:
             metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.NUM_BANDS,
                     getLong(node.value)));
             break;
         case NsiliConstants.NUMBER_OF_ROWS:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.NUM_ROWS, getLong(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.NUM_ROWS,
+                    getLong(node.value)));
             break;
         case NsiliConstants.NUMBER_OF_COLS:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.NUM_COLS, getLong(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.NUM_COLS,
+                    getLong(node.value)));
             break;
         case NsiliConstants.TITLE:
             metacard.setTitle(getString(node.value));
@@ -590,8 +592,8 @@ public class DAGConverter {
 
         switch (node.attribute_name) {
         case NsiliConstants.FOR_ACTION:
-            metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.FOR_ACTION, getString(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.FOR_ACTION,
+                    getString(node.value)));
             break;
         case NsiliConstants.FOR_INFORMATION:
             metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.FOR_INFORMATION,
@@ -694,7 +696,8 @@ public class DAGConverter {
         metacard.setContentTypeName(NsiliProductType.TASK.toString());
         switch (node.attribute_name) {
         case NsiliConstants.COMMENTS:
-            metacard.setAttribute(new AttributeImpl(NsiliTaskMetacardType.COMMENTS, getString(node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliTaskMetacardType.COMMENTS,
+                    getString(node.value)));
             break;
         case NsiliConstants.STATUS:
             metacard.setAttribute(new AttributeImpl(NsiliTaskMetacardType.STATUS,
@@ -711,8 +714,8 @@ public class DAGConverter {
 
         switch (node.attribute_name) {
         case NsiliConstants.ACTIVITY:
-            metacard.setAttribute(new AttributeImpl(NsiliTdlMetacardType.ACTIVITY, getShort(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliTdlMetacardType.ACTIVITY,
+                    getShort(node.value)));
             break;
 
         case NsiliConstants.MESSAGE_NUM:
@@ -720,12 +723,12 @@ public class DAGConverter {
                     getString(node.value)));
             break;
         case NsiliConstants.PLATFORM:
-            metacard.setAttribute(new AttributeImpl(NsiliTdlMetacardType.PLATFORM, getShort(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliTdlMetacardType.PLATFORM,
+                    getShort(node.value)));
             break;
         case NsiliConstants.TRACK_NUM:
-            metacard.setAttribute(new AttributeImpl(NsiliTdlMetacardType.TRACK_NUM, getString(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliTdlMetacardType.TRACK_NUM,
+                    getString(node.value)));
             break;
         default:
             break;
@@ -754,12 +757,12 @@ public class DAGConverter {
                     node.value.extract_double()));
             break;
         case NsiliConstants.NUMBER_OF_ROWS:
-            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.NUM_ROWS, getLong(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.NUM_ROWS,
+                    getLong(node.value)));
             break;
         case NsiliConstants.NUMBER_OF_COLS:
-            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.NUM_COLS, getLong(
-                    node.value)));
+            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.NUM_COLS,
+                    getLong(node.value)));
             break;
         case NsiliConstants.METADATA_ENC_SCHEME:
             metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.METADATA_ENCODING_SCHEME,
@@ -788,8 +791,7 @@ public class DAGConverter {
         }
     }
 
-    public static void addMergedSecurityDescriptor(MetacardImpl metacard,
-            NsiliSecurity security) {
+    public static void addMergedSecurityDescriptor(MetacardImpl metacard, NsiliSecurity security) {
         metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SECURITY_CLASSIFICATION,
                 security.getClassification()));
         metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SECURITY_POLICY,
@@ -805,16 +807,14 @@ public class DAGConverter {
             metacard.setResourceURI(convertURI(fileProductURLAttr.getValue()
                     .toString()));
 
-            Attribute fileFormatVerAttr =
-                    metacard.getAttribute(NsiliMetacardType.FILE_FORMAT_VER);
+            Attribute fileFormatVerAttr = metacard.getAttribute(NsiliMetacardType.FILE_FORMAT_VER);
             if (fileFormatVerAttr != null) {
                 metacard.setContentTypeVersion(fileFormatVerAttr.getValue()
                         .toString());
             }
         } else {
             //Else use stream info
-            Attribute streamURLAttr =
-                    metacard.getAttribute(NsiliMetacardType.STREAM_SOURCE_URL);
+            Attribute streamURLAttr = metacard.getAttribute(NsiliMetacardType.STREAM_SOURCE_URL);
             if (streamURLAttr != null) {
                 metacard.setResourceURI(convertURI(streamURLAttr.getValue()
                         .toString()));
@@ -832,8 +832,7 @@ public class DAGConverter {
                 .equals(metacard.getMetacardType()
                         .getClass()
                         .getCanonicalName())) {
-            Attribute subjAttr =
-                    metacard.getAttribute(NsiliMessageMetacardType.MESSAGE_SUBJECT);
+            Attribute subjAttr = metacard.getAttribute(NsiliMessageMetacardType.MESSAGE_SUBJECT);
             if (subjAttr != null) {
                 metacard.setTitle(subjAttr.getValue()
                         .toString());
@@ -863,7 +862,7 @@ public class DAGConverter {
         }
 
         /// Content Type Name Fall Back
-        if(metacard.getContentTypeName() == null) {
+        if (metacard.getContentTypeName() == null) {
             metacard.setContentTypeName(NsiliProductType.DOCUMENT.toString());
         }
     }
@@ -889,32 +888,38 @@ public class DAGConverter {
     }
 
     public static String convertShape(Any any) {
-        org.codice.alliance.nsili.common.UCO.Rectangle rectangle =
-                RectangleHelper.extract(any);
-        org.codice.alliance.nsili.common.UCO.Coordinate2d upperLeft =
-                rectangle.upper_left;
-        org.codice.alliance.nsili.common.UCO.Coordinate2d lowerRight =
-                rectangle.lower_right;
+        org.codice.alliance.nsili.common.UCO.Rectangle rectangle = RectangleHelper.extract(any);
+        org.codice.alliance.nsili.common.UCO.Coordinate2d upperLeft = rectangle.upper_left;
+        org.codice.alliance.nsili.common.UCO.Coordinate2d lowerRight = rectangle.lower_right;
 
-        //UCO Specifies Coordinate2d.x = lat, Coordinate2d.y = lon
-        //WKT Uses Coordinate.x = lon, Coordinate.y = lat
-        //Need to swap x & y
-        Coordinate[] coordinates = new Coordinate[5];
+        Geometry geom;
         GeometryFactory geometryFactory = new GeometryFactory();
 
-        Coordinate lowerLeftCoord = new Coordinate(upperLeft.y, lowerRight.x);
-        Coordinate upperLeftCoord = new Coordinate(upperLeft.y, upperLeft.x);
-        Coordinate upperRightCoord = new Coordinate(lowerRight.y, upperLeft.x);
-        Coordinate lowerRightCoord = new Coordinate(lowerRight.y, lowerRight.x);
+        if (upperLeft.x == lowerRight.x && upperLeft.y == lowerRight.y) {
+            //Build a Point vs Polygon
+            Coordinate pointCoord = new Coordinate(upperLeft.x, upperLeft.y);
+            geom = geometryFactory.createPoint(pointCoord);
+        } else {
 
-        coordinates[0] = lowerLeftCoord;
-        coordinates[1] = upperLeftCoord;
-        coordinates[2] = upperRightCoord;
-        coordinates[3] = lowerRightCoord;
-        coordinates[4] = lowerLeftCoord;
+            //UCO Specifies Coordinate2d.x = lat, Coordinate2d.y = lon
+            //WKT Uses Coordinate.x = lon, Coordinate.y = lat
+            //Need to swap x & y
+            Coordinate[] coordinates = new Coordinate[5];
 
-        LinearRing shell = geometryFactory.createLinearRing(coordinates);
-        Geometry geom = new Polygon(shell, null, geometryFactory);
+            Coordinate lowerLeftCoord = new Coordinate(upperLeft.x, lowerRight.y);
+            Coordinate upperLeftCoord = new Coordinate(upperLeft.x, upperLeft.y);
+            Coordinate upperRightCoord = new Coordinate(lowerRight.x, upperLeft.y);
+            Coordinate lowerRightCoord = new Coordinate(lowerRight.x, lowerRight.y);
+
+            coordinates[0] = lowerLeftCoord;
+            coordinates[1] = upperLeftCoord;
+            coordinates[2] = upperRightCoord;
+            coordinates[3] = lowerRightCoord;
+            coordinates[4] = lowerLeftCoord;
+
+            LinearRing shell = geometryFactory.createLinearRing(coordinates);
+            geom = new Polygon(shell, null, geometryFactory);
+        }
 
         return WKT_WRITER.write(geom);
     }
@@ -1135,22 +1140,24 @@ public class DAGConverter {
 
     public static void logMetacard(Metacard metacard, String id) {
         MetacardType metacardType = metacard.getMetacardType();
-        LOGGER.debug("{} : Metacard Type : " + metacardType.getClass()
-                .getCanonicalName(), id);
         LOGGER.debug("{} : ID : " + metacard.getId(), id);
-        LOGGER.debug("{} : Title : " + metacard.getTitle(), id);
+        LOGGER.debug("{} :  Metacard Type : " + metacardType.getClass()
+                .getCanonicalName(), id);
+        LOGGER.debug("{} :  Title : " + metacard.getTitle(), id);
         if (metacard instanceof MetacardImpl) {
-            LOGGER.debug("{} : Description : " + ((MetacardImpl) metacard).getDescription(), id);
+            LOGGER.debug("{} :  Description : " + ((MetacardImpl) metacard).getDescription(), id);
         }
-        LOGGER.debug("{} : Content Type Name : " + metacard.getContentTypeName(), id);
-        LOGGER.debug("{} : Content Type Version : " + metacard.getContentTypeVersion(), id);
-        LOGGER.debug("{} : Created Date : " + metacard.getCreatedDate(), id);
-        LOGGER.debug("{} : Effective Date : " + metacard.getEffectiveDate(), id);
-        LOGGER.debug("{} : Location : " + metacard.getLocation(), id);
-        LOGGER.debug("{} : SourceID : " + metacard.getSourceId(), id);
-        LOGGER.debug("{} : Modified Date : " + metacard.getModifiedDate(), id);
-        LOGGER.debug("{} : Resource URI : " + metacard.getResourceURI()
-                .toString(), id);
+        LOGGER.debug("{} :  Content Type Name : " + metacard.getContentTypeName(), id);
+        LOGGER.debug("{} :  Content Type Version : " + metacard.getContentTypeVersion(), id);
+        LOGGER.debug("{} :  Created Date : " + metacard.getCreatedDate(), id);
+        LOGGER.debug("{} :  Effective Date : " + metacard.getEffectiveDate(), id);
+        LOGGER.debug("{} :  Location : " + metacard.getLocation(), id);
+        LOGGER.debug("{} :  SourceID : " + metacard.getSourceId(), id);
+        LOGGER.debug("{} :  Modified Date : " + metacard.getModifiedDate(), id);
+        if (metacard.getResourceURI() != null) {
+            LOGGER.debug("{} :  Resource URI : " + metacard.getResourceURI()
+                    .toString(), id);
+        }
 
         Set<AttributeDescriptor> descriptors = metacardType.getAttributeDescriptors();
         for (AttributeDescriptor descriptor : descriptors) {
@@ -1174,4 +1181,33 @@ public class DAGConverter {
                 .sorted()
                 .collect(Collectors.joining(", "));
     }
+
+    private static void printNode(Node node) {
+        String attrName = node.attribute_name;
+        String value = "NOT PARSED";
+        if (node.value != null && node.value.type() != null) {
+            if (node.value.type()
+                    .kind() == TCKind.tk_wstring) {
+                value = node.value.extract_wstring();
+            } else if (node.value.type()
+                    .kind() == TCKind.tk_string) {
+                value = node.value.extract_string();
+            } else if (node.value.type()
+                    .kind() == TCKind.tk_long) {
+                value = String.valueOf(node.value.extract_long());
+            } else if (node.value.type()
+                    .kind() == TCKind.tk_ulong) {
+                value = String.valueOf(node.value.extract_ulong());
+            } else if (node.value.type()
+                    .kind() == TCKind.tk_short) {
+                value = String.valueOf(node.value.extract_short());
+            } else if (node.value.type()
+                    .kind() == TCKind.tk_ushort) {
+                value = String.valueOf(node.value.extract_ushort());
+            }
+
+            LOGGER.debug("{} : **** NODE: " + attrName + "=" + value);
+        }
+    }
+
 }

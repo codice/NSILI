@@ -27,7 +27,7 @@
     </feature>
 
     <feature name="nsili-app" install="auto" version="${project.version}"
-             description="The Alliance NSILI App is used to connect a NSILI (STANAG 4559) complaint federated sources to DDF and expose their data in the UI.  This includes spatial, temporal and textual searches. ::Alliance NSILI">
+             description="The Alliance NSILI App provides interoperability with STANAG 45559 compliant services. ::Alliance NSILI">
         <feature prerequisite="true">catalog-app</feature>
         <feature>catalog-nsili-source</feature>
         <feature>catalog-nsili-endpoint</feature>
