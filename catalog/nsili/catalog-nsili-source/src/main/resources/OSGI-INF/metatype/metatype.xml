@@ -20,7 +20,7 @@
         <AD description="The ID of the NSILI Source" name="NSILI Source ID" id="id"
             required="true" type="String" default="NSILI Federated Source"/>
 
-        <AD description="The URL of the IOR File to use for the NSILI CORBA Server"
+        <AD description="The URL of the IOR File to use for the NSILI CORBA Server.  For local files, use 'file://'"
             name="Ior File URL" id="iorUrl" required="true" type="String"/>
 
         <AD description="The Username to be used for authentication with HTTP server."
@@ -44,7 +44,7 @@
         <AD description="The ID of the NSILI Source" name="NSILI Source ID" id="id"
             required="true" type="String" default="NSILI Connected Source"/>
 
-        <AD description="The URL of the IOR File to use for the NSILI CORBA Server"
+        <AD description="The URL of the IOR File to use for the NSILI CORBA Server.  For local files, use 'file://'"
             name="Ior File URL" id="iorUrl" required="true" type="String"/>
 
         <AD description="The Username to be used for authentication with HTTP server."
