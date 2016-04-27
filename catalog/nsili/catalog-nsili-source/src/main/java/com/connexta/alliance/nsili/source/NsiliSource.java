@@ -278,13 +278,15 @@ public class NsiliSource extends MaskableImpl
      */
     private void initCorbaClient() {
         getIorString();
-        initLibrary();
-        setSourceDescription();
-        initMandatoryManagers();
-        initServerViews();
-        initQueryableAttributes();
-        initSortableAndResultAttributes();
-        setFilterDelegate();
+        if (iorString != null) {
+            initLibrary();
+            setSourceDescription();
+            initMandatoryManagers();
+            initServerViews();
+            initQueryableAttributes();
+            initSortableAndResultAttributes();
+            setFilterDelegate();
+        }
     }
 
     /**
@@ -301,9 +303,12 @@ public class NsiliSource extends MaskableImpl
             return;
         }
 
-        if (uri.getScheme().equals(HTTP) || uri.getScheme().equals(HTTPS)) {
+        if (uri.getScheme()
+                .equals(HTTP) || uri.getScheme()
+                .equals(HTTPS)) {
             getIorStringFromSource();
-        } else if (uri.getScheme().equals(FILE)) {
+        } else if (uri.getScheme()
+                .equals(FILE)) {
             getIorStringFromLocalDisk();
         } else {
             LOGGER.error("Invalid protocol specified for IOR string: {}", iorUrl);
@@ -339,7 +344,11 @@ public class NsiliSource extends MaskableImpl
             //Remove leading/trailing whitespace as the CORBA init can't handle that.
             iorString = iorString.trim();
         } catch (IOException e) {
-            LOGGER.error("{} : Unable to process IOR String.", id, e);
+            LOGGER.error("{} : Unable to process IOR String. {}", id, e.getMessage());
+            LOGGER.debug("{} : Unable to process IOR String.", id, e);
+        } catch (Exception e) {
+            LOGGER.warn("{} : Error retrieving IOR file for {}. {}", id, iorUrl, e.getMessage());
+            LOGGER.debug("{} : Error retrieving IOR file for {}. {}", id, iorUrl, e);
         }
 
         if (StringUtils.isNotBlank(iorString)) {
@@ -365,12 +374,15 @@ public class NsiliSource extends MaskableImpl
      * Initializes the Root STANAG 4559 Library Interface
      */
     private void initLibrary() {
-        org.omg.CORBA.Object obj = orb.string_to_object(iorString);
-        library = LibraryHelper.narrow(obj);
-        if (library != null) {
-            LOGGER.debug("{} : Initialized Library Interface", getId());
-        } else {
-            LOGGER.error("{} : Unable to initialize the library interface.", getId());
+        if (iorString != null) {
+            org.omg.CORBA.Object obj = orb.string_to_object(iorString);
+
+            library = LibraryHelper.narrow(obj);
+            if (library != null) {
+                LOGGER.debug("{} : Initialized Library Interface", getId());
+            } else {
+                LOGGER.error("{} : Unable to initialize the library interface.", getId());
+            }
         }
     }
 
@@ -518,7 +530,8 @@ public class NsiliSource extends MaskableImpl
             stringBuilder.append(libraryDescription.library_name + " : ");
             stringBuilder.append(libraryDescription.library_description);
         } catch (ProcessingFault | SystemFault e) {
-            LOGGER.error("{} : Unable to retrieve source description.", id, e);
+            LOGGER.error("{} : Unable to retrieve source description. {}", id, e.getMessage());
+            LOGGER.debug("{} : Unable to retrieve source description.", id, e);
         }
         String description = stringBuilder.toString();
         if (StringUtils.isBlank(description)) {
@@ -991,7 +1004,8 @@ public class NsiliSource extends MaskableImpl
                 initLibrary();
                 managers = library.get_manager_types();
             } catch (Exception e) {
-                LOGGER.error("{} : Connection Failure for source.", getId(), e);
+                LOGGER.error("{} : Connection Failure for source. {}", getId(), e.getMessage());
+                LOGGER.debug("{} : Connection Failure for source.", getId(), e);
             }
 
             // If the IOR string is not valid, or the source cannot communicate with the library, the
