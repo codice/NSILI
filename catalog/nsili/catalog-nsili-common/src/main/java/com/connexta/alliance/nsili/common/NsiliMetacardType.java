@@ -337,6 +337,11 @@ public class NsiliMetacardType implements MetacardType {
      */
     public static final AttributeType<NsiliApprovalStatus> NSILI_APPROVAL_STATUS_TYPE;
 
+    /**
+     * AttributeType used to wrap a NsiliStreamStandard enumeration.
+     */
+    public static final AttributeType<NsiliStreamStandard> NSILI_STREAM_STANDARD_TYPE;
+
     protected Set<AttributeDescriptor> attributeDescriptors = new HashSet<>();
 
     private static final Set<AttributeDescriptor> NSILI_DESCRIPTORS = new HashSet<>();
@@ -395,6 +400,20 @@ public class NsiliMetacardType implements MetacardType {
             @Override
             public Class<NsiliApprovalStatus> getBinding() {
                 return NsiliApprovalStatus.class;
+            }
+        };
+
+        NSILI_STREAM_STANDARD_TYPE = new AttributeType<NsiliStreamStandard>() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public AttributeFormat getAttributeFormat() {
+                return AttributeFormat.STRING;
+            }
+
+            @Override
+            public Class<NsiliStreamStandard> getBinding() {
+                return NsiliStreamStandard.class;
             }
         };
 
@@ -641,7 +660,7 @@ public class NsiliMetacardType implements MetacardType {
                 true /* stored */,
                 false /* tokenized */,
                 false /* multivalued */,
-                BasicTypes.STRING_TYPE));
+                NSILI_STREAM_STANDARD_TYPE));
 
         NSILI_DESCRIPTORS.add(new AttributeDescriptorImpl(STREAM_STANDARD_VER,
                 true /* indexed */,

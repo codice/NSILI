@@ -30,7 +30,7 @@ public class OrderRequestImpl extends OrderRequestPOA {
 
     @Override
     public State complete(DeliveryManifestHolder prods) throws ProcessingFault, SystemFault {
-        prods.value = null; //TODO TROY DeliveryManifestGenerator.getManifest();
+        prods.value = null; //TODO DeliveryManifestGenerator.getManifest();
         return State.COMPLETED;
     }
 

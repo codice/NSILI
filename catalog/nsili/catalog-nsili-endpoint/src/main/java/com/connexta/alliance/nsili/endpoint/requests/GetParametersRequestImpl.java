@@ -31,7 +31,7 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
 
     @Override
     public State complete(DAGHolder parameters) throws ProcessingFault, SystemFault {
-        parameters.value = null; //TODO TROY DAGGenerator.generateDAGResultNSILAllView(_orb())[0];
+        parameters.value = null; //TODO DAGGenerator.generateDAGResultNSILAllView(_orb())[0];
         return State.COMPLETED;
     }
 
@@ -49,7 +49,6 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
     @Override
     public void set_user_info(String message)
             throws InvalidInputParameter, ProcessingFault, SystemFault {
-        return;
     }
 
     @Override
@@ -64,7 +63,6 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
 
     @Override
     public void cancel() throws ProcessingFault, SystemFault {
-        return;
     }
 
     @Override
@@ -76,7 +74,6 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
     @Override
     public void free_callback(String id)
             throws InvalidInputParameter, ProcessingFault, SystemFault {
-        return;
     }
 
     @Override

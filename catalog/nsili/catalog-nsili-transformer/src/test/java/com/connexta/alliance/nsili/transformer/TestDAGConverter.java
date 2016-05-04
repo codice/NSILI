@@ -65,6 +65,7 @@ import com.connexta.alliance.nsili.common.NsiliTdlMetacardType;
 import com.connexta.alliance.nsili.common.NsiliVideoCategoryType;
 import com.connexta.alliance.nsili.common.NsiliVideoEncodingScheme;
 import com.connexta.alliance.nsili.common.NsiliVideoMetacardType;
+import com.connexta.alliance.nsili.common.ResultDAGConverter;
 import com.connexta.alliance.nsili.common.UCO.AbsTime;
 import com.connexta.alliance.nsili.common.UCO.AbsTimeHelper;
 import com.connexta.alliance.nsili.common.UCO.DAG;
@@ -76,6 +77,7 @@ import com.connexta.alliance.nsili.common.UCO.Time;
 
 import ddf.catalog.data.Attribute;
 import ddf.catalog.data.AttributeDescriptor;
+import ddf.catalog.data.Metacard;
 import ddf.catalog.data.MetacardType;
 import ddf.catalog.data.impl.MetacardImpl;
 
@@ -352,7 +354,8 @@ public class TestDAGConverter {
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
-                is(metacard.getResourceURI()
+                is(metacard.getAttribute(Metacard.RESOURCE_URI)
+                        .getValue()
                         .toString()));
 
         checkCommonAttributes(metacard);
@@ -663,7 +666,8 @@ public class TestDAGConverter {
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(STREAM_SOURCE_URL,
-                is(metacard.getResourceURI()
+                is(metacard.getAttribute(Metacard.RESOURCE_URI)
+                        .getValue()
                         .toString()));
 
         checkCommonAttributes(metacard);
@@ -760,7 +764,8 @@ public class TestDAGConverter {
         assertThat(MESSAGE_BODY, is(metacard.getDescription()));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
-                is(metacard.getResourceURI()
+                is(metacard.getAttribute(Metacard.RESOURCE_URI)
+                        .getValue()
                         .toString()));
 
         checkCommonAttributes(metacard);
@@ -859,7 +864,8 @@ public class TestDAGConverter {
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
-                is(metacard.getResourceURI()
+                is(metacard.getAttribute(Metacard.RESOURCE_URI)
+                        .getValue()
                         .toString()));
 
         checkCommonAttributes(metacard);
@@ -1149,7 +1155,8 @@ public class TestDAGConverter {
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
-                is(metacard.getResourceURI()
+                is(metacard.getAttribute(Metacard.RESOURCE_URI)
+                        .getValue()
                         .toString()));
 
         checkCommonAttributes(metacard);
@@ -1256,7 +1263,8 @@ public class TestDAGConverter {
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
-                is(metacard.getResourceURI()
+                is(metacard.getAttribute(Metacard.RESOURCE_URI)
+                        .getValue()
                         .toString()));
 
         checkCommonAttributes(metacard);
@@ -1349,7 +1357,8 @@ public class TestDAGConverter {
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
-                is(metacard.getResourceURI()
+                is(metacard.getAttribute(Metacard.RESOURCE_URI)
+                        .getValue()
                         .toString()));
 
         checkCommonAttributes(metacard);
@@ -1438,7 +1447,8 @@ public class TestDAGConverter {
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
-                is(metacard.getResourceURI()
+                is(metacard.getAttribute(Metacard.RESOURCE_URI)
+                        .getValue()
                         .toString()));
 
         checkCommonAttributes(metacard);
@@ -1555,7 +1565,8 @@ public class TestDAGConverter {
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
-                is(metacard.getResourceURI()
+                is(metacard.getAttribute(Metacard.RESOURCE_URI)
+                        .getValue()
                         .toString()));
 
         checkCommonAttributes(metacard);
@@ -1655,7 +1666,8 @@ public class TestDAGConverter {
         assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
         assertThat(FILE_PRODUCT_URL,
-                is(metacard.getResourceURI()
+                is(metacard.getAttribute(Metacard.RESOURCE_URI)
+                        .getValue()
                         .toString()));
 
         checkCommonAttributes(metacard);
@@ -1698,11 +1710,23 @@ public class TestDAGConverter {
         graph.addVertex(cardNode);
         graph.addEdge(productNode, cardNode);
 
-        addStringAttribute(graph, cardNode, NsiliConstants.IDENTIFIER, CARD_ID);
-        addDateAttribute(graph, cardNode, NsiliConstants.SOURCE_DATE_TIME_MODIFIED);
-        addDateAttribute(graph, cardNode, NsiliConstants.DATE_TIME_MODIFIED);
-        addStringAttribute(graph, cardNode, NsiliConstants.PUBLISHER, SOURCE_PUBLISHER);
-        addStringAttribute(graph, cardNode, NsiliConstants.SOURCE_LIBRARY, SOURCE_LIBRARY);
+        ResultDAGConverter.addStringAttribute(graph,
+                cardNode,
+                NsiliConstants.IDENTIFIER,
+                CARD_ID,
+                orb);
+        addTestDateAttribute(graph, cardNode, NsiliConstants.SOURCE_DATE_TIME_MODIFIED, orb);
+        addTestDateAttribute(graph, cardNode, NsiliConstants.DATE_TIME_MODIFIED, orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                cardNode,
+                NsiliConstants.PUBLISHER,
+                SOURCE_PUBLISHER,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                cardNode,
+                NsiliConstants.SOURCE_LIBRARY,
+                SOURCE_LIBRARY,
+                orb);
     }
 
     private void addFileNode(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
@@ -1711,15 +1735,47 @@ public class TestDAGConverter {
         graph.addVertex(fileNode);
         graph.addEdge(productNode, fileNode);
 
-        addBooleanAttribute(graph, fileNode, NsiliConstants.ARCHIVED, FILE_ARCHIVED);
-        addStringAttribute(graph, fileNode, NsiliConstants.ARCHIVE_INFORMATION, FILE_ARCHIVE_INFO);
-        addStringAttribute(graph, fileNode, NsiliConstants.CREATOR, FILE_CREATOR);
-        addDateAttribute(graph, fileNode, NsiliConstants.DATE_TIME_DECLARED);
-        addDoubleAttribute(graph, fileNode, NsiliConstants.EXTENT, FILE_EXTENT);
-        addStringAttribute(graph, fileNode, NsiliConstants.FORMAT, FILE_FORMAT);
-        addStringAttribute(graph, fileNode, NsiliConstants.FORMAT_VERSION, FILE_FORMAT_VER);
-        addStringAttribute(graph, fileNode, NsiliConstants.PRODUCT_URL, FILE_PRODUCT_URL);
-        addStringAttribute(graph, fileNode, NsiliConstants.TITLE, FILE_TITLE);
+        ResultDAGConverter.addBooleanAttribute(graph,
+                fileNode,
+                NsiliConstants.ARCHIVED,
+                FILE_ARCHIVED,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                fileNode,
+                NsiliConstants.ARCHIVE_INFORMATION,
+                FILE_ARCHIVE_INFO,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                fileNode,
+                NsiliConstants.CREATOR,
+                FILE_CREATOR,
+                orb);
+        addTestDateAttribute(graph, fileNode, NsiliConstants.DATE_TIME_DECLARED, orb);
+        ResultDAGConverter.addDoubleAttribute(graph,
+                fileNode,
+                NsiliConstants.EXTENT,
+                FILE_EXTENT,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                fileNode,
+                NsiliConstants.FORMAT,
+                FILE_FORMAT,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                fileNode,
+                NsiliConstants.FORMAT_VERSION,
+                FILE_FORMAT_VER,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                fileNode,
+                NsiliConstants.PRODUCT_URL,
+                FILE_PRODUCT_URL,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                fileNode,
+                NsiliConstants.TITLE,
+                FILE_TITLE,
+                orb);
     }
 
     private void addStreamNode(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
@@ -1728,17 +1784,42 @@ public class TestDAGConverter {
         graph.addVertex(streamNode);
         graph.addEdge(productNode, streamNode);
 
-        addBooleanAttribute(graph, streamNode, NsiliConstants.ARCHIVED, STREAM_ARCHIVED);
-        addStringAttribute(graph,
+        ResultDAGConverter.addBooleanAttribute(graph,
+                streamNode,
+                NsiliConstants.ARCHIVED,
+                STREAM_ARCHIVED,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
                 streamNode,
                 NsiliConstants.ARCHIVE_INFORMATION,
-                ARCHIVE_INFORMATION);
-        addStringAttribute(graph, streamNode, NsiliConstants.CREATOR, STREAM_CREATOR);
-        addDateAttribute(graph, streamNode, NsiliConstants.DATE_TIME_DECLARED);
-        addStringAttribute(graph, streamNode, NsiliConstants.STANDARD, STREAM_STANDARD);
-        addStringAttribute(graph, streamNode, NsiliConstants.STANDARD_VERSION, STREAM_STANDARD_VER);
-        addStringAttribute(graph, streamNode, NsiliConstants.SOURCE_URL, STREAM_SOURCE_URL);
-        addShortAttribute(graph, streamNode, NsiliConstants.PROGRAM_ID, STREAM_PROGRAM_ID);
+                ARCHIVE_INFORMATION,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                streamNode,
+                NsiliConstants.CREATOR,
+                STREAM_CREATOR,
+                orb);
+        addTestDateAttribute(graph, streamNode, NsiliConstants.DATE_TIME_DECLARED, orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                streamNode,
+                NsiliConstants.STANDARD,
+                STREAM_STANDARD,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                streamNode,
+                NsiliConstants.STANDARD_VERSION,
+                STREAM_STANDARD_VER,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                streamNode,
+                NsiliConstants.SOURCE_URL,
+                STREAM_SOURCE_URL,
+                orb);
+        ResultDAGConverter.addShortAttribute(graph,
+                streamNode,
+                NsiliConstants.PROGRAM_ID,
+                STREAM_PROGRAM_ID,
+                orb);
     }
 
     private void addMetadataSecurity(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
@@ -1750,15 +1831,21 @@ public class TestDAGConverter {
         graph.addVertex(metadataSecurityNode);
         graph.addEdge(productNode, metadataSecurityNode);
 
-        addStringAttribute(graph, metadataSecurityNode, NsiliConstants.POLICY, CLASS_POLICY);
-        addStringAttribute(graph,
+        ResultDAGConverter.addStringAttribute(graph,
+                metadataSecurityNode,
+                NsiliConstants.POLICY,
+                CLASS_POLICY,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
                 metadataSecurityNode,
                 NsiliConstants.RELEASABILITY,
-                CLASS_RELEASABILITY);
-        addStringAttribute(graph,
+                CLASS_RELEASABILITY,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
                 metadataSecurityNode,
                 NsiliConstants.CLASSIFICATION,
-                CLASS_CLASSIFICATION);
+                CLASS_CLASSIFICATION,
+                orb);
     }
 
     private void addSecurityNode(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
@@ -1767,12 +1854,21 @@ public class TestDAGConverter {
         graph.addVertex(securityNode);
         graph.addEdge(productNode, securityNode);
 
-        addStringAttribute(graph, securityNode, NsiliConstants.POLICY, CLASS_POLICY);
-        addStringAttribute(graph, securityNode, NsiliConstants.RELEASABILITY, CLASS_RELEASABILITY);
-        addStringAttribute(graph,
+        ResultDAGConverter.addStringAttribute(graph,
+                securityNode,
+                NsiliConstants.POLICY,
+                CLASS_POLICY,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                securityNode,
+                NsiliConstants.RELEASABILITY,
+                CLASS_RELEASABILITY,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
                 securityNode,
                 NsiliConstants.CLASSIFICATION,
-                CLASS_CLASSIFICATION);
+                CLASS_CLASSIFICATION,
+                orb);
     }
 
     private void addAssocationNode(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
@@ -1800,15 +1896,24 @@ public class TestDAGConverter {
             graph.addVertex(cardNode);
             graph.addEdge(destinationNode, cardNode);
 
-            addStringAttribute(graph,
+            ResultDAGConverter.addStringAttribute(graph,
                     cardNode,
                     NsiliConstants.IDENTIFIER,
                     UUID.randomUUID()
-                            .toString());
-            addDateAttribute(graph, cardNode, NsiliConstants.SOURCE_DATE_TIME_MODIFIED);
-            addDateAttribute(graph, cardNode, NsiliConstants.DATE_TIME_MODIFIED);
-            addStringAttribute(graph, cardNode, NsiliConstants.PUBLISHER, SOURCE_PUBLISHER);
-            addStringAttribute(graph, cardNode, NsiliConstants.SOURCE_LIBRARY, SOURCE_LIBRARY);
+                            .toString(),
+                    orb);
+            addTestDateAttribute(graph, cardNode, NsiliConstants.SOURCE_DATE_TIME_MODIFIED, orb);
+            addTestDateAttribute(graph, cardNode, NsiliConstants.DATE_TIME_MODIFIED, orb);
+            ResultDAGConverter.addStringAttribute(graph,
+                    cardNode,
+                    NsiliConstants.PUBLISHER,
+                    SOURCE_PUBLISHER,
+                    orb);
+            ResultDAGConverter.addStringAttribute(graph,
+                    cardNode,
+                    NsiliConstants.SOURCE_LIBRARY,
+                    SOURCE_LIBRARY,
+                    orb);
         }
     }
 
@@ -1821,12 +1926,17 @@ public class TestDAGConverter {
         graph.addVertex(approvalNode);
         graph.addEdge(productNode, approvalNode);
 
-        addStringAttribute(graph, approvalNode, NsiliConstants.APPROVED_BY, APPROVED_BY);
-        addDateAttribute(graph, approvalNode, NsiliConstants.DATE_TIME_MODIFIED);
-        addStringAttribute(graph,
+        ResultDAGConverter.addStringAttribute(graph,
+                approvalNode,
+                NsiliConstants.APPROVED_BY,
+                APPROVED_BY,
+                orb);
+        addTestDateAttribute(graph, approvalNode, NsiliConstants.DATE_TIME_MODIFIED, orb);
+        ResultDAGConverter.addStringAttribute(graph,
                 approvalNode,
                 NsiliConstants.STATUS,
-                APPROVAL_STATUS.getSpecName());
+                APPROVAL_STATUS.getSpecName(),
+                orb);
     }
 
     private void addSdsNode(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
@@ -1835,10 +1945,11 @@ public class TestDAGConverter {
         graph.addVertex(sdsNode);
         graph.addEdge(productNode, sdsNode);
 
-        addStringAttribute(graph,
+        ResultDAGConverter.addStringAttribute(graph,
                 sdsNode,
                 NsiliConstants.OPERATIONAL_STATUS,
-                SDS_OP_STATUS.getSpecName());
+                SDS_OP_STATUS.getSpecName(),
+                orb);
     }
 
     private Node addPartNode(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
@@ -2025,21 +2136,51 @@ public class TestDAGConverter {
         graph.addVertex(commonNode);
         graph.addEdge(parentNode, commonNode);
 
-        addStringAttribute(graph,
+        ResultDAGConverter.addStringAttribute(graph,
                 commonNode,
                 NsiliConstants.DESCRIPTION_ABSTRACT,
-                COM_DESCRIPTION_ABSTRACT);
-        addStringAttribute(graph, commonNode, NsiliConstants.IDENTIFIER_MISSION, COM_ID_MSN);
-        addStringAttribute(graph, commonNode, NsiliConstants.IDENTIFIER_UUID, COM_ID_UUID);
-        addIntegerAttribute(graph, commonNode, NsiliConstants.IDENTIFIER_JC3IEDM, COM_JC3ID);
-        addStringAttribute(graph, commonNode, NsiliConstants.LANGUAGE, COM_LANGUAGE);
-        addStringAttribute(graph, commonNode, NsiliConstants.SOURCE, COM_SOURCE);
-        addStringAttribute(graph,
+                COM_DESCRIPTION_ABSTRACT,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                commonNode,
+                NsiliConstants.IDENTIFIER_MISSION,
+                COM_ID_MSN,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                commonNode,
+                NsiliConstants.IDENTIFIER_UUID,
+                COM_ID_UUID,
+                orb);
+        ResultDAGConverter.addIntegerAttribute(graph,
+                commonNode,
+                NsiliConstants.IDENTIFIER_JC3IEDM,
+                COM_JC3ID,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                commonNode,
+                NsiliConstants.LANGUAGE,
+                COM_LANGUAGE,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                commonNode,
+                NsiliConstants.SOURCE,
+                COM_SOURCE,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
                 commonNode,
                 NsiliConstants.SUBJECT_CATEGORY_TARGET,
-                COM_SUBJECT_CATEGORY_TARGET);
-        addStringAttribute(graph, commonNode, NsiliConstants.TARGET_NUMBER, COM_TARGET_NUMBER);
-        addStringAttribute(graph, commonNode, NsiliConstants.TYPE, COM_TYPE.getSpecName());
+                COM_SUBJECT_CATEGORY_TARGET,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                commonNode,
+                NsiliConstants.TARGET_NUMBER,
+                COM_TARGET_NUMBER,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                commonNode,
+                NsiliConstants.TYPE,
+                COM_TYPE.getSpecName(),
+                orb);
     }
 
     private void addImageryNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2051,22 +2192,56 @@ public class TestDAGConverter {
         graph.addVertex(imageryNode);
         graph.addEdge(parentNode, imageryNode);
 
-        addStringAttribute(graph, imageryNode, NsiliConstants.CATEGORY, IMAGERY_CATEGORY);
-        addShortAttribute(graph,
+        ResultDAGConverter.addStringAttribute(graph,
+                imageryNode,
+                NsiliConstants.CATEGORY,
+                IMAGERY_CATEGORY,
+                orb);
+        ResultDAGConverter.addShortAttribute(graph,
                 imageryNode,
                 NsiliConstants.CLOUD_COVER_PCT,
-                IMAGERY_CLOUD_COVER_PCT);
-        addStringAttribute(graph, imageryNode, NsiliConstants.COMMENTS, IMAGERY_COMMENTS);
-        addStringAttribute(graph,
+                IMAGERY_CLOUD_COVER_PCT,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                imageryNode,
+                NsiliConstants.COMMENTS,
+                IMAGERY_COMMENTS,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
                 imageryNode,
                 NsiliConstants.DECOMPRESSION_TECHNIQUE,
-                IMAGERY_DECOMPRESSION_TECH);
-        addStringAttribute(graph, imageryNode, NsiliConstants.IDENTIFIER, IMAGERY_IDENTIFIER);
-        addShortAttribute(graph, imageryNode, NsiliConstants.NIIRS, IMAGERY_NIIRS);
-        addIntegerAttribute(graph, imageryNode, NsiliConstants.NUMBER_OF_BANDS, IMAGERY_NUM_BANDS);
-        addIntegerAttribute(graph, imageryNode, NsiliConstants.NUMBER_OF_ROWS, IMAGERY_NUM_ROWS);
-        addIntegerAttribute(graph, imageryNode, NsiliConstants.NUMBER_OF_COLS, IMAGERY_NUM_COLS);
-        addStringAttribute(graph, imageryNode, NsiliConstants.TITLE, IMAGERY_TITLE);
+                IMAGERY_DECOMPRESSION_TECH,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                imageryNode,
+                NsiliConstants.IDENTIFIER,
+                IMAGERY_IDENTIFIER,
+                orb);
+        ResultDAGConverter.addShortAttribute(graph,
+                imageryNode,
+                NsiliConstants.NIIRS,
+                IMAGERY_NIIRS,
+                orb);
+        ResultDAGConverter.addIntegerAttribute(graph,
+                imageryNode,
+                NsiliConstants.NUMBER_OF_BANDS,
+                IMAGERY_NUM_BANDS,
+                orb);
+        ResultDAGConverter.addIntegerAttribute(graph,
+                imageryNode,
+                NsiliConstants.NUMBER_OF_ROWS,
+                IMAGERY_NUM_ROWS,
+                orb);
+        ResultDAGConverter.addIntegerAttribute(graph,
+                imageryNode,
+                NsiliConstants.NUMBER_OF_COLS,
+                IMAGERY_NUM_COLS,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                imageryNode,
+                NsiliConstants.TITLE,
+                IMAGERY_TITLE,
+                orb);
     }
 
     private void addGmtiNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2075,11 +2250,16 @@ public class TestDAGConverter {
         graph.addVertex(gmtiNode);
         graph.addEdge(parentNode, gmtiNode);
 
-        addDoubleAttribute(graph, gmtiNode, NsiliConstants.IDENTIFIER_JOB, GMTI_JOB_ID);
-        addIntegerAttribute(graph,
+        ResultDAGConverter.addDoubleAttribute(graph,
+                gmtiNode,
+                NsiliConstants.IDENTIFIER_JOB,
+                GMTI_JOB_ID,
+                orb);
+        ResultDAGConverter.addIntegerAttribute(graph,
                 gmtiNode,
                 NsiliConstants.NUMBER_OF_TARGET_REPORTS,
-                GMTI_TARGET_REPORTS);
+                GMTI_TARGET_REPORTS,
+                orb);
     }
 
     private void addMessageNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2091,10 +2271,26 @@ public class TestDAGConverter {
         graph.addVertex(messageNode);
         graph.addEdge(parentNode, messageNode);
 
-        addStringAttribute(graph, messageNode, NsiliConstants.RECIPIENT, MESSAGE_RECIPIENT);
-        addStringAttribute(graph, messageNode, NsiliConstants.SUBJECT, MESSAGE_SUBJECT);
-        addStringAttribute(graph, messageNode, NsiliConstants.MESSAGE_BODY, MESSAGE_BODY);
-        addStringAttribute(graph, messageNode, NsiliConstants.MESSAGE_TYPE, MESSAGE_TYPE);
+        ResultDAGConverter.addStringAttribute(graph,
+                messageNode,
+                NsiliConstants.RECIPIENT,
+                MESSAGE_RECIPIENT,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                messageNode,
+                NsiliConstants.SUBJECT,
+                MESSAGE_SUBJECT,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                messageNode,
+                NsiliConstants.MESSAGE_BODY,
+                MESSAGE_BODY,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                messageNode,
+                NsiliConstants.MESSAGE_TYPE,
+                MESSAGE_TYPE,
+                orb);
     }
 
     private void addVideoNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2103,21 +2299,51 @@ public class TestDAGConverter {
         graph.addVertex(videoNode);
         graph.addEdge(parentNode, videoNode);
 
-        addDoubleAttribute(graph, videoNode, NsiliConstants.AVG_BIT_RATE, VIDEO_AVG_BIT_RATE);
-        addStringAttribute(graph, videoNode, NsiliConstants.CATEGORY, VIDEO_CATEGORY);
-        addStringAttribute(graph,
+        ResultDAGConverter.addDoubleAttribute(graph,
+                videoNode,
+                NsiliConstants.AVG_BIT_RATE,
+                VIDEO_AVG_BIT_RATE,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                videoNode,
+                NsiliConstants.CATEGORY,
+                VIDEO_CATEGORY,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
                 videoNode,
                 NsiliConstants.ENCODING_SCHEME,
-                VIDEO_ENCODING_SCHEME.getSpecName());
-        addDoubleAttribute(graph, videoNode, NsiliConstants.FRAME_RATE, VIDEO_FRAME_RATE);
-        addIntegerAttribute(graph, videoNode, NsiliConstants.NUMBER_OF_ROWS, VIDEO_NUM_ROWS);
-        addIntegerAttribute(graph, videoNode, NsiliConstants.NUMBER_OF_COLS, VIDEO_NUM_COLS);
-        addStringAttribute(graph,
+                VIDEO_ENCODING_SCHEME.getSpecName(),
+                orb);
+        ResultDAGConverter.addDoubleAttribute(graph,
+                videoNode,
+                NsiliConstants.FRAME_RATE,
+                VIDEO_FRAME_RATE,
+                orb);
+        ResultDAGConverter.addIntegerAttribute(graph,
+                videoNode,
+                NsiliConstants.NUMBER_OF_ROWS,
+                VIDEO_NUM_ROWS,
+                orb);
+        ResultDAGConverter.addIntegerAttribute(graph,
+                videoNode,
+                NsiliConstants.NUMBER_OF_COLS,
+                VIDEO_NUM_COLS,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
                 videoNode,
                 NsiliConstants.METADATA_ENC_SCHEME,
-                VIDEO_METADATA_ENC_SCHEME);
-        addShortAttribute(graph, videoNode, NsiliConstants.MISM_LEVEL, VIDEO_MISM_LEVEL);
-        addStringAttribute(graph, videoNode, NsiliConstants.SCANNING_MODE, VIDEO_SCANNING_MODE);
+                VIDEO_METADATA_ENC_SCHEME,
+                orb);
+        ResultDAGConverter.addShortAttribute(graph,
+                videoNode,
+                NsiliConstants.MISM_LEVEL,
+                VIDEO_MISM_LEVEL,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                videoNode,
+                NsiliConstants.SCANNING_MODE,
+                VIDEO_SCANNING_MODE,
+                orb);
     }
 
     private void addReportNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2126,12 +2352,21 @@ public class TestDAGConverter {
         graph.addVertex(reportNode);
         graph.addEdge(parentNode, reportNode);
 
-        addStringAttribute(graph,
+        ResultDAGConverter.addStringAttribute(graph,
                 reportNode,
                 NsiliConstants.ORIGINATORS_REQ_SERIAL_NUM,
-                REPORT_REQ_SERIAL_NUM);
-        addStringAttribute(graph, reportNode, NsiliConstants.PRIORITY, REPORT_PRIORITY);
-        addStringAttribute(graph, reportNode, NsiliConstants.TYPE, REPORT_TYPE);
+                REPORT_REQ_SERIAL_NUM,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                reportNode,
+                NsiliConstants.PRIORITY,
+                REPORT_PRIORITY,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                reportNode,
+                NsiliConstants.TYPE,
+                REPORT_TYPE,
+                orb);
     }
 
     private void addTdlNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2140,10 +2375,26 @@ public class TestDAGConverter {
         graph.addVertex(tdlNode);
         graph.addEdge(parentNode, tdlNode);
 
-        addShortAttribute(graph, tdlNode, NsiliConstants.ACTIVITY, TDL_ACTIVITY);
-        addStringAttribute(graph, tdlNode, NsiliConstants.MESSAGE_NUM, TDL_MESSAGE_NUM);
-        addShortAttribute(graph, tdlNode, NsiliConstants.PLATFORM, TDL_PLATFORM_NUM);
-        addStringAttribute(graph, tdlNode, NsiliConstants.TRACK_NUM, TDL_TRACK_NUM);
+        ResultDAGConverter.addShortAttribute(graph,
+                tdlNode,
+                NsiliConstants.ACTIVITY,
+                TDL_ACTIVITY,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                tdlNode,
+                NsiliConstants.MESSAGE_NUM,
+                TDL_MESSAGE_NUM,
+                orb);
+        ResultDAGConverter.addShortAttribute(graph,
+                tdlNode,
+                NsiliConstants.PLATFORM,
+                TDL_PLATFORM_NUM,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                tdlNode,
+                NsiliConstants.TRACK_NUM,
+                TDL_TRACK_NUM,
+                orb);
     }
 
     private void addCxpNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2152,7 +2403,11 @@ public class TestDAGConverter {
         graph.addVertex(cxpNode);
         graph.addEdge(parentNode, cxpNode);
 
-        addStringAttribute(graph, cxpNode, NsiliConstants.STATUS, CXP_STATUS);
+        ResultDAGConverter.addStringAttribute(graph,
+                cxpNode,
+                NsiliConstants.STATUS,
+                CXP_STATUS,
+                orb);
     }
 
     private void addIRNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2168,11 +2423,31 @@ public class TestDAGConverter {
         graph.addVertex(rfiNode);
         graph.addEdge(parentNode, rfiNode);
 
-        addStringAttribute(graph, rfiNode, NsiliConstants.FOR_ACTION, RFI_FOR_ACTION);
-        addStringAttribute(graph, rfiNode, NsiliConstants.FOR_INFORMATION, RFI_FOR_INFORMATION);
-        addStringAttribute(graph, rfiNode, NsiliConstants.SERIAL_NUMBER, RFI_SERIAL_NUM);
-        addStringAttribute(graph, rfiNode, NsiliConstants.STATUS, RFI_STATUS);
-        addStringAttribute(graph, rfiNode, NsiliConstants.WORKFLOW_STATUS, RFI_WORKFLOW_STATUS);
+        ResultDAGConverter.addStringAttribute(graph,
+                rfiNode,
+                NsiliConstants.FOR_ACTION,
+                RFI_FOR_ACTION,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                rfiNode,
+                NsiliConstants.FOR_INFORMATION,
+                RFI_FOR_INFORMATION,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                rfiNode,
+                NsiliConstants.SERIAL_NUMBER,
+                RFI_SERIAL_NUM,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                rfiNode,
+                NsiliConstants.STATUS,
+                RFI_STATUS,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                rfiNode,
+                NsiliConstants.WORKFLOW_STATUS,
+                RFI_WORKFLOW_STATUS,
+                orb);
     }
 
     private void addTaskNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2181,8 +2456,16 @@ public class TestDAGConverter {
         graph.addVertex(taskNode);
         graph.addEdge(parentNode, taskNode);
 
-        addStringAttribute(graph, taskNode, NsiliConstants.COMMENTS, TASK_COMMENTS);
-        addStringAttribute(graph, taskNode, NsiliConstants.STATUS, TASK_STATUS);
+        ResultDAGConverter.addStringAttribute(graph,
+                taskNode,
+                NsiliConstants.COMMENTS,
+                TASK_COMMENTS,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                taskNode,
+                NsiliConstants.STATUS,
+                TASK_STATUS,
+                orb);
     }
 
     private void addCoverageNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2194,12 +2477,13 @@ public class TestDAGConverter {
         graph.addVertex(coverageNode);
         graph.addEdge(parentNode, coverageNode);
 
-        addStringAttribute(graph,
+        ResultDAGConverter.addStringAttribute(graph,
                 coverageNode,
                 NsiliConstants.SPATIAL_COUNTRY_CODE,
-                COVERAGE_COUNTRY_CD);
-        addDateAttribute(graph, coverageNode, NsiliConstants.TEMPORAL_START);
-        addDateAttribute(graph, coverageNode, NsiliConstants.TEMPORAL_END);
+                COVERAGE_COUNTRY_CD,
+                orb);
+        addTestDateAttribute(graph, coverageNode, NsiliConstants.TEMPORAL_START, orb);
+        addTestDateAttribute(graph, coverageNode, NsiliConstants.TEMPORAL_END, orb);
 
         com.connexta.alliance.nsili.common.UCO.Coordinate2d upperLeft =
                 new com.connexta.alliance.nsili.common.UCO.Coordinate2d(UPPER_LEFT_LAT,
@@ -2211,10 +2495,11 @@ public class TestDAGConverter {
                 new com.connexta.alliance.nsili.common.UCO.Rectangle(upperLeft, lowerRight);
         Any spatialCoverage = orb.create_any();
         RectangleHelper.insert(spatialCoverage, rectangle);
-        addAnyAttribute(graph,
+        ResultDAGConverter.addAnyAttribute(graph,
                 coverageNode,
                 NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX,
-                spatialCoverage);
+                spatialCoverage,
+                orb);
     }
 
     private void addExpoloitationInfoNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2226,85 +2511,26 @@ public class TestDAGConverter {
         graph.addVertex(exploitationNode);
         graph.addEdge(parentNode, exploitationNode);
 
-        addStringAttribute(graph, exploitationNode, NsiliConstants.DESCRIPTION, EXPLOITATION_DESC);
-        addShortAttribute(graph, exploitationNode, NsiliConstants.LEVEL, EXPLOITATION_LEVEL);
-        addBooleanAttribute(graph,
+        ResultDAGConverter.addStringAttribute(graph,
+                exploitationNode,
+                NsiliConstants.DESCRIPTION,
+                EXPLOITATION_DESC,
+                orb);
+        ResultDAGConverter.addShortAttribute(graph,
+                exploitationNode,
+                NsiliConstants.LEVEL,
+                EXPLOITATION_LEVEL,
+                orb);
+        ResultDAGConverter.addBooleanAttribute(graph,
                 exploitationNode,
                 NsiliConstants.AUTO_GENERATED,
-                EXPLOITATION_AUTO_GEN);
-        addStringAttribute(graph,
+                EXPLOITATION_AUTO_GEN,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
                 exploitationNode,
                 NsiliConstants.SUBJ_QUALITY_CODE,
-                EXPLOITATION_SUBJ_QUAL_CODE);
-    }
-
-    private void addStringAttribute(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode,
-            String key, String value) {
-        Any any = orb.create_any();
-        any.insert_wstring(value);
-        Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
-        graph.addVertex(node);
-        graph.addEdge(parentNode, node);
-    }
-
-    private void addIntegerAttribute(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode,
-            String key, Integer integer) {
-        Any any = orb.create_any();
-        any.insert_ulong(integer);
-        Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
-        graph.addVertex(node);
-        graph.addEdge(parentNode, node);
-    }
-
-    private void addShortAttribute(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode,
-            String key, Short shortVal) {
-        Any any = orb.create_any();
-        any.insert_short(shortVal);
-        Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
-        graph.addVertex(node);
-        graph.addEdge(parentNode, node);
-    }
-
-    private void addDoubleAttribute(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode,
-            String key, Double doubleVal) {
-        Any any = orb.create_any();
-        any.insert_double(doubleVal);
-        Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
-        graph.addVertex(node);
-        graph.addEdge(parentNode, node);
-    }
-
-    private void addBooleanAttribute(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode,
-            String key, Boolean boolVal) {
-        Any any = orb.create_any();
-        any.insert_boolean(boolVal);
-        Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
-        graph.addVertex(node);
-        graph.addEdge(parentNode, node);
-    }
-
-    private void addAnyAttribute(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode,
-            String key, Any any) {
-        Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
-        graph.addVertex(node);
-        graph.addEdge(parentNode, node);
-    }
-
-    private void addDateAttribute(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode,
-            String key) {
-        Any any = orb.create_any();
-
-        AbsTime absTime = new AbsTime(new com.connexta.alliance.nsili.common.UCO.Date((short) cal.get(
-                Calendar.YEAR),
-                (short) (cal.get(Calendar.MONTH) + 1),
-                (short) cal.get(Calendar.DAY_OF_MONTH)),
-                new Time((short) cal.get(Calendar.HOUR_OF_DAY),
-                        (short) cal.get(Calendar.MINUTE),
-                        (short) cal.get(Calendar.SECOND)));
-        AbsTimeHelper.insert(any, absTime);
-        Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
-        graph.addVertex(node);
-        graph.addEdge(parentNode, node);
+                EXPLOITATION_SUBJ_QUAL_CODE,
+                orb);
     }
 
     private void printMetacard(MetacardImpl metacard, PrintStream outStream) {
@@ -2321,7 +2547,8 @@ public class TestDAGConverter {
         outStream.println("Location : " + metacard.getLocation());
         outStream.println("SourceID : " + metacard.getSourceId());
         outStream.println("Modified Date : " + metacard.getModifiedDate());
-        outStream.println("Resource URI : " + metacard.getResourceURI()
+        outStream.println("Resource URI : " + metacard.getAttribute(Metacard.RESOURCE_DOWNLOAD_URL)
+                .getValue()
                 .toString());
 
         Set<AttributeDescriptor> descriptors = metacardType.getAttributeDescriptors();
@@ -2345,5 +2572,33 @@ public class TestDAGConverter {
                 .map(Object::toString)
                 .sorted()
                 .collect(Collectors.joining(", "));
+    }
+
+    public static void addTestDateAttribute(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode,
+            String key, ORB orb) {
+        Calendar cal = getDefaultCalendar();
+        Any any = orb.create_any();
+
+        AbsTime absTime = new AbsTime(new com.connexta.alliance.nsili.common.UCO.Date((short) cal.get(
+                Calendar.YEAR),
+                (short) (cal.get(Calendar.MONTH) + 1),
+                (short) cal.get(Calendar.DAY_OF_MONTH)),
+                new Time((short) cal.get(Calendar.HOUR_OF_DAY),
+                        (short) cal.get(Calendar.MINUTE),
+                        (short) cal.get(Calendar.SECOND)));
+        AbsTimeHelper.insert(any, absTime);
+        Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
+        graph.addVertex(node);
+        graph.addEdge(parentNode, node);
+    }
+
+    private static Calendar getDefaultCalendar() {
+        int year = 2016;
+        int month = 01;
+        int dayOfMonth = 29;
+        int hourOfDay = 17;
+        int minute = 05;
+        int second = 10;
+        return new GregorianCalendar(year, month, dayOfMonth, hourOfDay, minute, second);
     }
 }

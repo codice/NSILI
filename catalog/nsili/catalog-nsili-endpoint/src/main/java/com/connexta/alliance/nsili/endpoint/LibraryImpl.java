@@ -14,25 +14,10 @@
 package com.connexta.alliance.nsili.endpoint;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 
-import com.connexta.alliance.nsili.common.GIAS.AccessCriteria;
-import com.connexta.alliance.nsili.common.GIAS.CatalogMgrHelper;
-import com.connexta.alliance.nsili.common.GIAS.DataModelMgrHelper;
-import com.connexta.alliance.nsili.common.GIAS.LibraryDescription;
-import com.connexta.alliance.nsili.common.GIAS.LibraryManager;
-import com.connexta.alliance.nsili.common.GIAS.LibraryManagerHelper;
-import com.connexta.alliance.nsili.common.GIAS.LibraryPOA;
-import com.connexta.alliance.nsili.common.GIAS.OrderMgrHelper;
-import com.connexta.alliance.nsili.common.GIAS.ProductMgrHelper;
-import com.connexta.alliance.nsili.common.NsiliManagerType;
-import com.connexta.alliance.nsili.common.UCO.InvalidInputParameter;
-import com.connexta.alliance.nsili.common.UCO.ProcessingFault;
-import com.connexta.alliance.nsili.common.UCO.SystemFault;
-import com.connexta.alliance.nsili.common.UCO.exception_details;
-import com.connexta.alliance.nsili.endpoint.managers.CatalogMgrImpl;
-import com.connexta.alliance.nsili.endpoint.managers.DataModelMgrImpl;
-import com.connexta.alliance.nsili.endpoint.managers.OrderMgrImpl;
-import com.connexta.alliance.nsili.endpoint.managers.ProductMgrImpl;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
@@ -40,35 +25,81 @@ import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
 import org.slf4j.LoggerFactory;
 
+import com.connexta.alliance.nsili.common.GIAS.AccessCriteria;
+import com.connexta.alliance.nsili.common.GIAS.CatalogMgrHelper;
+import com.connexta.alliance.nsili.common.GIAS.CreationMgrHelper;
+import com.connexta.alliance.nsili.common.GIAS.DataModelMgrHelper;
+import com.connexta.alliance.nsili.common.GIAS.LibraryDescription;
+import com.connexta.alliance.nsili.common.GIAS.LibraryManager;
+import com.connexta.alliance.nsili.common.GIAS.LibraryManagerHelper;
+import com.connexta.alliance.nsili.common.GIAS.LibraryPOA;
+import com.connexta.alliance.nsili.common.GIAS.OrderMgrHelper;
+import com.connexta.alliance.nsili.common.GIAS.ProductMgrHelper;
+import com.connexta.alliance.nsili.common.GIAS.StandingQueryMgrHelper;
+import com.connexta.alliance.nsili.common.NsiliManagerType;
+import com.connexta.alliance.nsili.common.UCO.InvalidInputParameter;
+import com.connexta.alliance.nsili.common.UCO.ProcessingFault;
+import com.connexta.alliance.nsili.common.UCO.SystemFault;
+import com.connexta.alliance.nsili.common.UCO.exception_details;
+import com.connexta.alliance.nsili.endpoint.managers.CatalogMgrImpl;
+import com.connexta.alliance.nsili.endpoint.managers.CreationMgrImpl;
+import com.connexta.alliance.nsili.endpoint.managers.DataModelMgrImpl;
+import com.connexta.alliance.nsili.endpoint.managers.OrderMgrImpl;
+import com.connexta.alliance.nsili.endpoint.managers.ProductMgrImpl;
+import com.connexta.alliance.nsili.endpoint.managers.StandingQueryMgrImpl;
+
+import ddf.catalog.CatalogFramework;
+import ddf.catalog.filter.FilterBuilder;
+import ddf.security.Subject;
+
 public class LibraryImpl extends LibraryPOA {
 
     private static final String LIBRARY_VERSION = "NSILI|1.0";
-    //
-    //    private List<String> manager = Arrays.asList("OrderMgr",
-    //            "CatalogMgr",
-    //            "ProductMgr",
-    //            "DataModelMgr"
-    //            /* Optional :
-    //            "QueryOrderMgr",
-    //            "StandingQueryMgr",
-    //            "CreationMgr",
-    //            "UpdateMgr" */);
+
+    private List<String> managers = Arrays.asList(
+            //                NsiliManagerType.ORDER_MGR.getSpecName(),
+            NsiliManagerType.CATALOG_MGR.getSpecName(),
+            NsiliManagerType.CREATION_MGR.getSpecName(),
+            NsiliManagerType.PRODUCT_MGR.getSpecName(),
+            NsiliManagerType.DATA_MODEL_MGR.getSpecName()
+//            NsiliManagerType.STANDING_QUERY_MGR.getSpecName()
+                /* Optional :
+                "QueryOrderMgr",
+                "StandingQueryMgr",
+                "UpdateMgr" */);
 
     private static final String ENCODING = "UTF-8";
 
     private POA poa;
 
+    private CatalogFramework catalogFramework;
+
+    private Subject guestSubject;
+
+    private FilterBuilder filterBuilder;
+
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(LibraryImpl.class);
+
     public LibraryImpl(POA poa) {
         this.poa = poa;
     }
 
-    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(LibraryImpl.class);
+    public void setCatalogFramework(CatalogFramework catalogFramework) {
+        this.catalogFramework = catalogFramework;
+    }
+
+    public void setGuestSubject(Subject guestSubject) {
+        this.guestSubject = guestSubject;
+    }
+
+    public void setFilterBuilder(FilterBuilder filterBuilder) {
+        this.filterBuilder = filterBuilder;
+    }
 
     @Override
     public String[] get_manager_types() throws ProcessingFault, SystemFault {
-        // return (String[]) manager.toArray();
-        //No Managers currently implemented, return empty array
-        return new String[] {};
+        String[] managerArr = new String[managers.size()];
+        return managers.toArray(managerArr);
     }
 
     @Override
@@ -76,51 +107,76 @@ public class LibraryImpl extends LibraryPOA {
             throws ProcessingFault, InvalidInputParameter, SystemFault {
 
         org.omg.CORBA.Object obj;
+        String managerId = UUID.randomUUID().toString();
 
         if (manager_type.equals(NsiliManagerType.CATALOG_MGR.getSpecName())) {
-            CatalogMgrImpl catalogMgr = new CatalogMgrImpl(poa);
+            CatalogMgrImpl catalogMgr = new CatalogMgrImpl(poa, filterBuilder);
+            catalogMgr.setCatalogFramework(catalogFramework);
+            catalogMgr.setGuestSubject(guestSubject);
             try {
-                poa.activate_object_with_id(manager_type.getBytes(Charset.forName(ENCODING)),
+                poa.activate_object_with_id(managerId.getBytes(Charset.forName(ENCODING)),
                         catalogMgr);
             } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-                LOGGER.error("Error activating CatalogMgr", e);
+                LOGGER.error("Error activating CatalogMgr: {}", e);
             }
 
-            obj = poa.create_reference_with_id(manager_type.getBytes(Charset.forName(ENCODING)),
+            obj = poa.create_reference_with_id(managerId.getBytes(Charset.forName(ENCODING)),
                     CatalogMgrHelper.id());
         } else if (manager_type.equals(NsiliManagerType.ORDER_MGR.getSpecName())) {
             OrderMgrImpl orderMgr = new OrderMgrImpl();
             try {
-                poa.activate_object_with_id(manager_type.getBytes(Charset.forName(ENCODING)),
+                poa.activate_object_with_id(managerId.getBytes(Charset.forName(ENCODING)),
                         orderMgr);
             } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-                LOGGER.error("Error activating OrderMgr", e);
+                LOGGER.error("Error activating OrderMgr: {}", e);
             }
 
-            obj = poa.create_reference_with_id(manager_type.getBytes(Charset.forName(ENCODING)),
+            obj = poa.create_reference_with_id(managerId.getBytes(Charset.forName(ENCODING)),
                     OrderMgrHelper.id());
         } else if (manager_type.equals(NsiliManagerType.PRODUCT_MGR.getSpecName())) {
             ProductMgrImpl productMgr = new ProductMgrImpl();
             try {
-                poa.activate_object_with_id(manager_type.getBytes(Charset.forName(ENCODING)),
+                poa.activate_object_with_id(managerId.getBytes(Charset.forName(ENCODING)),
                         productMgr);
             } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-                LOGGER.error("Error activating ProductMgr", e);
+                LOGGER.error("Error activating ProductMgr: {}", e);
             }
 
-            obj = poa.create_reference_with_id(manager_type.getBytes(Charset.forName(ENCODING)),
+            obj = poa.create_reference_with_id(managerId.getBytes(Charset.forName(ENCODING)),
                     ProductMgrHelper.id());
         } else if (manager_type.equals(NsiliManagerType.DATA_MODEL_MGR.getSpecName())) {
             DataModelMgrImpl dataModelMgr = new DataModelMgrImpl();
             try {
-                poa.activate_object_with_id(manager_type.getBytes(Charset.forName(ENCODING)),
+                poa.activate_object_with_id(managerId.getBytes(Charset.forName(ENCODING)),
                         dataModelMgr);
             } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-                LOGGER.error("Error activating DataModelMgr", e);
+                LOGGER.error("Error activating DataModelMgr: {}", e);
             }
 
-            obj = poa.create_reference_with_id(manager_type.getBytes(Charset.forName(ENCODING)),
+            obj = poa.create_reference_with_id(managerId.getBytes(Charset.forName(ENCODING)),
                     DataModelMgrHelper.id());
+        } else if (manager_type.equals(NsiliManagerType.CREATION_MGR.getSpecName())) {
+            CreationMgrImpl creationMgr = new CreationMgrImpl();
+            try {
+                poa.activate_object_with_id(managerId.getBytes(Charset.forName(ENCODING)),
+                        creationMgr);
+            } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
+                LOGGER.error("Error activating CreationMgr: {}", e);
+            }
+
+            obj = poa.create_reference_with_id(managerId.getBytes(Charset.forName(ENCODING)),
+                    CreationMgrHelper.id());
+        } else if (manager_type.equals(NsiliManagerType.STANDING_QUERY_MGR.getSpecName())) {
+            StandingQueryMgrImpl standingQueryMgr = new StandingQueryMgrImpl();
+            try {
+                poa.activate_object_with_id(managerId.getBytes(Charset.forName(ENCODING)),
+                        standingQueryMgr);
+            } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
+                LOGGER.error("Error activating StandingQueryMgr: {}", e);
+            }
+
+            obj = poa.create_reference_with_id(managerId.getBytes(Charset.forName(ENCODING)),
+                    StandingQueryMgrHelper.id());
         } else {
             String[] bad_params = {manager_type};
             throw new InvalidInputParameter("UnknownMangerType",

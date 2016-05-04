@@ -17,6 +17,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
 
 import com.connexta.alliance.nsili.common.GIAS.LibraryDescription;
 import com.connexta.alliance.nsili.common.UCO.ProcessingFault;
@@ -25,7 +26,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestNsiliLibraryImpl {
+import ddf.security.service.SecurityManager;
+import ddf.security.service.SecurityServiceException;
+
+public class TestNsiliLibraryImpl extends TestNsiliCommon {
 
     private static final int TEST_CORBA_PORT = 20012;
 
@@ -41,12 +45,15 @@ public class TestNsiliLibraryImpl {
 
     private NsiliEndpoint nsiliEndpoint = null;
 
+    private SecurityManager securityManager = mock(SecurityManager.class);
+
     @Before
-    public void setup() {
+    public void setUp() throws SecurityServiceException {
         System.setProperty("org.codice.ddf.system.hostname", TEST_HOSTNAME);
         System.setProperty("user.country", TEST_COUNTRY);
         System.setProperty("org.codice.ddf.system.organization", TEST_ORGANIZATION);
 
+        setupCommonMocks();
         createNsiliEndpoint();
         library = nsiliEndpoint.getLibrary();
     }
@@ -55,9 +62,8 @@ public class TestNsiliLibraryImpl {
     public void testManagerTypes() throws ProcessingFault, SystemFault {
         String[] managerTypes = library.get_manager_types();
 
-        //Right now no managers implemented, so we should have empty array
         assertThat(managerTypes, notNullValue());
-        assertThat(managerTypes.length, is(0));
+        assertThat(managerTypes.length, is(4));
     }
 
     @Test
@@ -77,6 +83,7 @@ public class TestNsiliLibraryImpl {
 
     private void createNsiliEndpoint() {
         nsiliEndpoint = new NsiliEndpoint();
+        nsiliEndpoint.setSecurityManager(securityManager);
         nsiliEndpoint.setCorbaPort(TEST_CORBA_PORT);
     }
 }

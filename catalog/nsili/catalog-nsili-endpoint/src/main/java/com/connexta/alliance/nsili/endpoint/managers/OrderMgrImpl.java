@@ -14,6 +14,7 @@
 package com.connexta.alliance.nsili.endpoint.managers;
 
 import java.nio.charset.Charset;
+import java.util.UUID;
 
 import com.connexta.alliance.nsili.common.GIAS.AvailabilityRequirement;
 import com.connexta.alliance.nsili.common.GIAS.Library;
@@ -63,20 +64,21 @@ public class OrderMgrImpl extends OrderMgrPOA {
     @Override
     public OrderRequest order(OrderContents order, NameValue[] properties)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        OrderRequestImpl orderRequest = new OrderRequestImpl();
+        OrderRequestImpl orderRequestImpl = new OrderRequestImpl();
 
+        String id = UUID.randomUUID().toString();
         try {
-            _poa().activate_object_with_id("order".getBytes(Charset.forName(ENCODING)),
-                    orderRequest);
+            _poa().activate_object_with_id(id.getBytes(Charset.forName(ENCODING)),
+                    orderRequestImpl);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-            LOGGER.warn("order : Unable to activate orderRequest object.");
+            LOGGER.error("order : Unable to activate orderRequest object. {}", e);
         }
 
-        org.omg.CORBA.Object obj = _poa().create_reference_with_id("order".getBytes(Charset.forName(
+        org.omg.CORBA.Object obj = _poa().create_reference_with_id(id.getBytes(Charset.forName(
                 ENCODING)), OrderRequestHelper.id());
-        OrderRequest queryRequest = OrderRequestHelper.narrow(obj);
+        OrderRequest orderRequest = OrderRequestHelper.narrow(obj);
 
-        return queryRequest;
+        return orderRequest;
     }
 
     // Access Mgr

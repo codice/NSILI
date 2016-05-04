@@ -801,7 +801,9 @@ public class NsiliSource extends MaskableImpl
     }
 
     public void setIorUrl(String iorUrl) {
-        this.iorUrl = iorUrl;
+        if (iorUrl != null) {
+            this.iorUrl = iorUrl.trim();
+        }
     }
 
     public void setMaxHitCount(Integer maxHitCount) {

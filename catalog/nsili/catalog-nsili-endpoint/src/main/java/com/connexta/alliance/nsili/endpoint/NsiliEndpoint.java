@@ -14,7 +14,12 @@
 package com.connexta.alliance.nsili.endpoint;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
+import org.codice.ddf.security.handler.api.AuthenticationHandler;
+import org.codice.ddf.security.handler.api.BaseAuthenticationToken;
+import org.codice.ddf.security.handler.api.GuestAuthenticationToken;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.PortableServer.POA;
@@ -27,10 +32,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ddf.catalog.CatalogFramework;
+import ddf.catalog.filter.FilterBuilder;
+import ddf.security.Subject;
+import ddf.security.service.SecurityManager;
+import ddf.security.service.SecurityServiceException;
 
 public class NsiliEndpoint {
 
     public static final int DEFAULT_CORBA_PORT = 20003;
+
+    private static final String DEFAULT_IP_ADDRESS = "127.0.0.1";
 
     private int corbaPort = DEFAULT_CORBA_PORT;
 
@@ -45,6 +56,12 @@ public class NsiliEndpoint {
     private String iorString;
 
     private Thread orbRunThread = null;
+
+    private AuthenticationHandler securityHandler;
+
+    private SecurityManager securityManager;
+
+    private FilterBuilder filterBuilder;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NsiliEndpoint.class);
 
@@ -80,6 +97,14 @@ public class NsiliEndpoint {
         init();
     }
 
+    public void setSecurityHandler(AuthenticationHandler securityHandler) {
+        this.securityHandler = securityHandler;
+    }
+
+    public void setSecurityManager(SecurityManager securityManager) {
+        this.securityManager = securityManager;
+    }
+
     public BundleContext getContext() {
         return context;
     }
@@ -96,18 +121,22 @@ public class NsiliEndpoint {
         this.framework = framework;
     }
 
+    public void setFilterBuilder(FilterBuilder filterBuilder) {
+        this.filterBuilder = filterBuilder;
+    }
+
     public void init() {
         try {
             orb = getOrbForServer(corbaPort);
             orbRunThread = new Thread(() -> orb.run());
             orbRunThread.start();
-            LOGGER.info("Started ORB on port: " + corbaPort);
+            LOGGER.info("Started ORB on port: {}", corbaPort);
         } catch (InvalidName | AdapterInactive | WrongPolicy | ServantNotActive e) {
-            LOGGER.warn("Unable to start the CORBA server.");
-            e.printStackTrace();
+            LOGGER.warn("Unable to start the CORBA server.", e);
         } catch (IOException e) {
-            LOGGER.warn("Unable to generate the IOR file.");
-            e.printStackTrace();
+            LOGGER.warn("Unable to generate the IOR file.", e);
+        } catch (SecurityServiceException e) {
+            LOGGER.error("Unable to setup guest security credentials", e);
         }
     }
 
@@ -116,10 +145,12 @@ public class NsiliEndpoint {
     }
 
     private ORB getOrbForServer(int port)
-            throws InvalidName, AdapterInactive, WrongPolicy, ServantNotActive, IOException {
+            throws InvalidName, AdapterInactive, WrongPolicy, ServantNotActive, IOException,
+            SecurityServiceException {
 
         java.util.Properties props = new java.util.Properties();
         props.put("org.omg.CORBA.ORBInitialPort", port);
+        props.put("com.sun.CORBA.POA.ORBPersistentServerPort", port);
         final ORB orb = ORB.init(new String[0], props);
 
         POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
@@ -127,8 +158,11 @@ public class NsiliEndpoint {
         rootPOA.the_POAManager()
                 .activate();
 
-
         library = new LibraryImpl(rootPOA);
+        library.setCatalogFramework(framework);
+        Subject guestSubject = getGuestSubject();
+        library.setGuestSubject(guestSubject);
+        library.setFilterBuilder(filterBuilder);
 
         org.omg.CORBA.Object objref = rootPOA.servant_to_reference(library);
 
@@ -139,5 +173,20 @@ public class NsiliEndpoint {
 
         return orb;
 
+    }
+
+    private Subject getGuestSubject() throws SecurityServiceException {
+        String ip = DEFAULT_IP_ADDRESS;
+        try {
+            ip = InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            LOGGER.warn("Could not get IP address for localhost", e);
+        }
+
+        LOGGER.debug("Guest token ip: {}", ip);
+
+        String guestTokenId = ip;
+        GuestAuthenticationToken guestToken = new GuestAuthenticationToken(BaseAuthenticationToken.ALL_REALM, guestTokenId);
+        return securityManager.getSubject(guestToken);
     }
 }

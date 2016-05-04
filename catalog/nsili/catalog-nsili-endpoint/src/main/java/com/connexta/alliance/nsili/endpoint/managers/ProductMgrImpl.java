@@ -14,6 +14,7 @@
 package com.connexta.alliance.nsili.endpoint.managers;
 
 import java.nio.charset.Charset;
+import java.util.UUID;
 
 import com.connexta.alliance.nsili.common.GIAS.AvailabilityRequirement;
 import com.connexta.alliance.nsili.common.GIAS.GetParametersRequest;
@@ -54,17 +55,20 @@ public class ProductMgrImpl extends ProductMgrPOA {
     @Override
     public GetParametersRequest get_parameters(Product prod, String[] desired_parameters,
             NameValue[] properties) throws ProcessingFault, InvalidInputParameter, SystemFault {
+
+        String id = UUID.randomUUID().toString();
+
         GetParametersRequestImpl getParametersRequest = new GetParametersRequestImpl();
 
         try {
-            _poa().activate_object_with_id("get_parameters".getBytes(Charset.forName(ENCODING)),
+            _poa().activate_object_with_id(id.getBytes(Charset.forName(ENCODING)),
                     getParametersRequest);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-            LOGGER.warn("get_parameters : Unable to activate getParametersRequest object.");
+            LOGGER.error("get_parameters : Unable to activate getParametersRequest object. {}", e);
         }
 
         org.omg.CORBA.Object obj =
-                _poa().create_reference_with_id("get_parameters".getBytes(Charset.forName(ENCODING)),
+                _poa().create_reference_with_id(id.getBytes(Charset.forName(ENCODING)),
                         GetParametersRequestHelper.id());
         GetParametersRequest queryRequest = GetParametersRequestHelper.narrow(obj);
 
@@ -81,17 +85,19 @@ public class ProductMgrImpl extends ProductMgrPOA {
     public GetRelatedFilesRequest get_related_files(Product[] products, FileLocation location,
             String type, NameValue[] properties)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
+        String id = UUID.randomUUID().toString();
+
         GetRelatedFilesRequestImpl getRelatedFilesRequest = new GetRelatedFilesRequestImpl();
 
         try {
-            _poa().activate_object_with_id("get_related_files".getBytes(Charset.forName(ENCODING)),
+            _poa().activate_object_with_id(id.getBytes(Charset.forName(ENCODING)),
                     getRelatedFilesRequest);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-            LOGGER.warn(
-                    "get_related_files : Unable to activate getRelatedFilesRequest object.");
+            LOGGER.error(
+                    "get_related_files : Unable to activate getRelatedFilesRequest object. {}", e);
         }
 
-        org.omg.CORBA.Object obj = _poa().create_reference_with_id("get_related_files".getBytes(
+        org.omg.CORBA.Object obj = _poa().create_reference_with_id(id.getBytes(
                 Charset.forName(ENCODING)), GetRelatedFilesRequestHelper.id());
         GetRelatedFilesRequest queryRequest = GetRelatedFilesRequestHelper.narrow(obj);
 
@@ -143,7 +149,6 @@ public class ProductMgrImpl extends ProductMgrPOA {
     @Override
     public void set_default_timeout(int new_default)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return;
     }
 
     @Override
@@ -155,13 +160,11 @@ public class ProductMgrImpl extends ProductMgrPOA {
     @Override
     public void set_timeout(Request aRequest, int new_lifetime)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return;
     }
 
     @Override
     public void delete_request(Request aRequest)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return;
     }
 
     // LibraryMgr

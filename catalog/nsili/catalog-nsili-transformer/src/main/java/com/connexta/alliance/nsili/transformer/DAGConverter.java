@@ -652,7 +652,7 @@ public class DAGConverter {
         }
     }
 
-    public static void addNsilStreamAttribute(MetacardImpl metacard, Node node) {
+    protected static void addNsilStreamAttribute(MetacardImpl metacard, Node node) {
 
         switch (node.attribute_name) {
         case NsiliConstants.ARCHIVED:
@@ -792,8 +792,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addMergedSecurityDescriptor(MetacardImpl metacard,
-            NsiliSecurity security) {
+    protected static void addMergedSecurityDescriptor(MetacardImpl metacard, NsiliSecurity security) {
         metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SECURITY_CLASSIFICATION,
                 security.getClassification()));
         metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SECURITY_POLICY,
@@ -806,9 +805,7 @@ public class DAGConverter {
         //If file data available use that
         Attribute fileProductURLAttr = metacard.getAttribute(NsiliMetacardType.FILE_URL);
         if (fileProductURLAttr != null) {
-            metacard.setResourceURI(convertURI(fileProductURLAttr.getValue()
-                    .toString()));
-
+            metacard.setResourceURI(convertURI(fileProductURLAttr.getValue().toString()));
             Attribute fileFormatVerAttr = metacard.getAttribute(NsiliMetacardType.FILE_FORMAT_VER);
             if (fileFormatVerAttr != null) {
                 metacard.setContentTypeVersion(fileFormatVerAttr.getValue()

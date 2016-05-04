@@ -48,6 +48,11 @@
         </dependency>
         <dependency>
             <groupId>com.connexta.alliance.nsili</groupId>
+            <artifactId>catalog-nsili-bqs</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.connexta.alliance.nsili</groupId>
             <artifactId>catalog-nsili-common</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -103,6 +108,21 @@
             <artifactId>filter-proxy</artifactId>
             <version>${ddf.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.codice.ddf</groupId>
+            <artifactId>geospatial</artifactId>
+            <version>${ddf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ddf.security.handler</groupId>
+            <artifactId>security-handler-api</artifactId>
+            <version>${ddf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.connexta.alliance.nsili</groupId>
+            <artifactId>catalog-nsili-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
     <build>
         <resources>
@@ -122,6 +142,7 @@
                         <!-- Don't Export Anything -->
                         <Export-Package/>
                         <Embed-Dependency>
+                            catalog-nsili-bqs,
                             catalog-nsili-common,
                             catalog-core-api-impl,
                             filter-proxy,
@@ -130,7 +151,8 @@
                             antlr4-runtime,
                             guava,
                             commons-lang3,
-                            geospatial
+                            geospatial,
+                            security-handler-api-impl
                         </Embed-Dependency>
                     </instructions>
                 </configuration>
@@ -158,22 +180,22 @@
                                         <limit>
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.20</minimum>
+                                            <minimum>0.45</minimum>
                                         </limit>
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.10</minimum>
+                                            <minimum>0.40</minimum>
                                         </limit>
                                         <limit>
                                             <counter>COMPLEXITY</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.10</minimum>
+                                            <minimum>0.25</minimum>
                                         </limit>
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.10</minimum>
+                                            <minimum>0.40</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

@@ -27,10 +27,16 @@ import com.connexta.alliance.nsili.common.UCO.SystemFault;
 
 public class HitCountRequestImpl extends HitCountRequestPOA {
 
+    private int numberOfHits = 0;
+
+    public HitCountRequestImpl(int numberOfHits) {
+        this.numberOfHits = numberOfHits;
+    }
+
     @Override
     public State complete(org.omg.CORBA.IntHolder number_of_hits)
             throws ProcessingFault, SystemFault {
-        number_of_hits.value = 0; //TODO TROY DAGGenerator.getResultHits();
+        number_of_hits.value = numberOfHits;
         return State.COMPLETED;
     }
 
