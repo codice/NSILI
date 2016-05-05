@@ -792,7 +792,8 @@ public class DAGConverter {
         }
     }
 
-    protected static void addMergedSecurityDescriptor(MetacardImpl metacard, NsiliSecurity security) {
+    protected static void addMergedSecurityDescriptor(MetacardImpl metacard,
+            NsiliSecurity security) {
         metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SECURITY_CLASSIFICATION,
                 security.getClassification()));
         metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SECURITY_POLICY,
@@ -805,7 +806,8 @@ public class DAGConverter {
         //If file data available use that
         Attribute fileProductURLAttr = metacard.getAttribute(NsiliMetacardType.FILE_URL);
         if (fileProductURLAttr != null) {
-            metacard.setResourceURI(convertURI(fileProductURLAttr.getValue().toString()));
+            metacard.setResourceURI(convertURI(fileProductURLAttr.getValue()
+                    .toString()));
             Attribute fileFormatVerAttr = metacard.getAttribute(NsiliMetacardType.FILE_FORMAT_VER);
             if (fileFormatVerAttr != null) {
                 metacard.setContentTypeVersion(fileFormatVerAttr.getValue()
@@ -1149,7 +1151,6 @@ public class DAGConverter {
         if (metacard instanceof MetacardImpl) {
             LOGGER.trace("{} :  Description : {}", id, ((MetacardImpl) metacard).getDescription());
         }
-
         LOGGER.trace("{} :  Content Type Name : {}", id, metacard.getContentTypeName());
         LOGGER.trace("{} :  Content Type Version : {}", id, metacard.getContentTypeVersion());
         LOGGER.trace("{} :  Created Date : {}", id, metacard.getCreatedDate());
@@ -1157,12 +1158,11 @@ public class DAGConverter {
         LOGGER.trace("{} :  Location : {}", id, metacard.getLocation());
         LOGGER.trace("{} :  SourceID : {}", id, metacard.getSourceId());
         LOGGER.trace("{} :  Modified Date : {}", id, metacard.getModifiedDate());
-        Attribute resourceDownloadUrlAttr = metacard.getAttribute(Metacard.RESOURCE_DOWNLOAD_URL);
-        if (resourceDownloadUrlAttr != null) {
-            String downloadUrl = String.valueOf(resourceDownloadUrlAttr.getValue());
-            if (downloadUrl != null) {
-                LOGGER.trace("{} :  Resource URI : {}", id, downloadUrl);
-            }
+        if (metacard.getResourceURI() != null) {
+            LOGGER.trace("{} :  Resource URI : {}",
+                    id,
+                    metacard.getResourceURI()
+                            .toString());
         }
 
         Set<AttributeDescriptor> descriptors = metacardType.getAttributeDescriptors();
@@ -1171,7 +1171,7 @@ public class DAGConverter {
             if (attribute != null) {
                 if (attribute.getValues() != null) {
                     String valueStr = getValueString(attribute.getValues());
-                    LOGGER.trace("{} :  {} : {}", id, descriptor.getName(), valueStr);
+                    LOGGER.trace("{} : {} : {}", id, descriptor.getName(), valueStr);
                 } else {
                     LOGGER.trace("{} : {} : {}", id, descriptor.getName(), attribute.getValue());
                 }

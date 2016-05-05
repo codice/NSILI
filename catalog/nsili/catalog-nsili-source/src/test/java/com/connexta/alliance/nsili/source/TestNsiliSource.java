@@ -60,6 +60,7 @@ import com.connexta.alliance.nsili.common.UCO.DAG;
 import com.connexta.alliance.nsili.common.UCO.DAGListHolder;
 import com.connexta.alliance.nsili.common.UCO.NameValue;
 import com.connexta.alliance.nsili.common.UCO.State;
+import com.connexta.alliance.nsili.common.UCO.Status;
 
 import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.impl.SortByImpl;
@@ -82,7 +83,8 @@ public class TestNsiliSource {
 
     private static final String GMTI = "GMTI";
 
-    private static final String GMTI_EQ_FILTER = "((NSIL_FILE.format = 'GMTI') or (NSIL_STREAM.standard = 'GMTI'))";
+    private static final String GMTI_EQ_FILTER =
+            "((NSIL_FILE.format = 'GMTI') or (NSIL_STREAM.standard = 'GMTI'))";
 
     private static final String GMTI_LIKE_FILTER = "(GMTI like '%')";
 
@@ -138,8 +140,8 @@ public class TestNsiliSource {
                 argumentCaptor.capture(),
                 any(NameValue[].class));
 
-        assertThat(argumentCaptor.getValue()[0].attribute_name,
-                is(NsiliConstants.DATE_TIME_MODIFIED));
+        String sortAttr = NsiliConstants.NSIL_CARD + "." + NsiliConstants.DATE_TIME_MODIFIED;
+        assertThat(argumentCaptor.getValue()[0].attribute_name, is(sortAttr));
         assertThat(argumentCaptor.getValue()[0].sort_polarity, is(Polarity.ASCENDING));
     }
 
@@ -161,8 +163,8 @@ public class TestNsiliSource {
                 argumentCaptor.capture(),
                 any(NameValue[].class));
 
-        assertThat(argumentCaptor.getValue()[0].attribute_name,
-                is(NsiliConstants.DATE_TIME_MODIFIED));
+        String sortAttr = NsiliConstants.NSIL_CARD + "." + NsiliConstants.DATE_TIME_MODIFIED;
+        assertThat(argumentCaptor.getValue()[0].attribute_name, is(sortAttr));
         assertThat(argumentCaptor.getValue()[0].sort_polarity, is(Polarity.DESCENDING));
     }
 
@@ -252,8 +254,10 @@ public class TestNsiliSource {
                 .text(GMTI));
         SourceResponse sourceResponse = source.query(new QueryRequestImpl(propertyIsLikeQuery));
         ArgumentCaptor<Query> argumentCaptor = ArgumentCaptor.forClass(Query.class);
-        verify(catalogMgr).submit_query(argumentCaptor.capture(), any(String[].class), any(
-                SortAttribute[].class), any(NameValue[].class));
+        verify(catalogMgr).submit_query(argumentCaptor.capture(),
+                any(String[].class),
+                any(SortAttribute[].class),
+                any(NameValue[].class));
         assertThat(sourceResponse.getHits(), is(LONG));
         assertThat(argumentCaptor.getValue().bqs_query, is(GMTI_EQ_FILTER));
     }
@@ -266,8 +270,10 @@ public class TestNsiliSource {
                 .text("*"));
         SourceResponse sourceResponse = source.query(new QueryRequestImpl(propertyIsLikeQuery));
         ArgumentCaptor<Query> argumentCaptor = ArgumentCaptor.forClass(Query.class);
-        verify(catalogMgr).submit_query(argumentCaptor.capture(), any(String[].class), any(
-                SortAttribute[].class), any(NameValue[].class));
+        verify(catalogMgr).submit_query(argumentCaptor.capture(),
+                any(String[].class),
+                any(SortAttribute[].class),
+                any(NameValue[].class));
         assertThat(sourceResponse.getHits(), is(LONG));
         assertThat(argumentCaptor.getValue().bqs_query, is(GMTI_LIKE_FILTER));
     }
@@ -280,8 +286,10 @@ public class TestNsiliSource {
                 .text("%"));
         SourceResponse sourceResponse = source.query(new QueryRequestImpl(propertyIsLikeQuery));
         ArgumentCaptor<Query> argumentCaptor = ArgumentCaptor.forClass(Query.class);
-        verify(catalogMgr).submit_query(argumentCaptor.capture(), any(String[].class), any(
-                SortAttribute[].class), any(NameValue[].class));
+        verify(catalogMgr).submit_query(argumentCaptor.capture(),
+                any(String[].class),
+                any(SortAttribute[].class),
+                any(NameValue[].class));
         assertThat(sourceResponse.getHits(), is(LONG));
         assertThat(argumentCaptor.getValue().bqs_query, is(GMTI_LIKE_FILTER));
     }
@@ -345,8 +353,7 @@ public class TestNsiliSource {
         source = Mockito.spy(new NsiliSource(factory,
                 resultAttributes,
                 sortableAttributes,
-                new NsiliFilterDelegate(attributeInformationMap,
-                        NsiliConstants.NSIL_ALL_VIEW)));
+                new NsiliFilterDelegate(attributeInformationMap, NsiliConstants.NSIL_ALL_VIEW)));
         source.setIorUrl(IOR_URL);
         source.setCxfUsername(NsiliSource.CXF_USERNAME);
         source.setCxfPassword(NsiliSource.CXF_PASSWORD);
@@ -379,6 +386,11 @@ public class TestNsiliSource {
 
         doReturn(State.COMPLETED).when(hitCountRequest)
                 .complete(any(IntHolder.class));
+
+        Status status = new Status();
+        status.completion_state = State.COMPLETED;
+        doReturn(status).when(hitCountRequest)
+                .get_status();
 
         when(hitCountRequest.complete(any(IntHolder.class))).thenAnswer((InvocationOnMock invocationOnMock) -> {
             IntHolder intHolder = (IntHolder) invocationOnMock.getArguments()[0];
@@ -440,9 +452,12 @@ public class TestNsiliSource {
 
     private HashMap<String, List<String>> generateMockSortableAttributes() {
         HashMap<String, List<String>> sortableAttributes = new HashMap<>();
+        String declaredSortAttr =
+                NsiliConstants.NSIL_FILE + "." + NsiliConstants.DATE_TIME_DECLARED;
+        String modifiedSortAttr =
+                NsiliConstants.NSIL_CARD + "." + NsiliConstants.DATE_TIME_MODIFIED;
         sortableAttributes.put(NsiliConstants.NSIL_ALL_VIEW,
-                Arrays.asList(NsiliConstants.DATE_TIME_DECLARED,
-                        NsiliConstants.DATE_TIME_MODIFIED));
+                Arrays.asList(declaredSortAttr, modifiedSortAttr));
         return sortableAttributes;
     }
 

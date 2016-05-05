@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import com.connexta.alliance.nsili.common.GIAS.AttributeInformation;
 import com.connexta.alliance.nsili.common.GIAS.AttributeType;
+import com.connexta.alliance.nsili.common.GIAS.DomainType;
 import com.connexta.alliance.nsili.common.NsiliAttributeMap;
 import com.connexta.alliance.nsili.common.NsiliConstants;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -118,7 +119,14 @@ public class NsiliFilterFactory {
 
         for (AttributeInformation attributeInformation : attributeInformationList) {
             if (isTextAttributeType(attributeInformation)) {
-                String filterString = LP + attributeInformation.attribute_name + LIKE + NsiliFilterDelegate.SQ;
+                String filterString =
+                        LP + attributeInformation.attribute_name + LIKE + NsiliFilterDelegate.SQ;
+
+                if (isAttributeListDomain(attributeInformation)) {
+                    filterString =
+                            LP + attributeInformation.attribute_name + EQ + NsiliFilterDelegate.SQ;
+                }
+
                 if (addPrefixWildcard) {
                     filterString = filterString + NsiliFilterDelegate.WILDCARD;
                 }
@@ -139,6 +147,11 @@ public class NsiliFilterFactory {
     public boolean isTextAttributeType(AttributeInformation attributeInformation) {
         return attributeInformation.attribute_type.equals(AttributeType.TEXT)
                 && !attributeInformation.attribute_name.equals(TYPE);
+    }
+
+    public boolean isAttributeListDomain(AttributeInformation attributeInformation) {
+        return attributeInformation.attribute_domain.discriminator() == DomainType.LIST
+                || attributeInformation.attribute_domain.discriminator() == DomainType.ORDERED_LIST;
     }
 
     public String buildPropertyIsEqualTo(String property, String value) {

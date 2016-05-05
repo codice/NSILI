@@ -32,6 +32,7 @@ import org.junit.Test;
 
 import com.connexta.alliance.nsili.common.GIAS.AttributeInformation;
 import com.connexta.alliance.nsili.common.GIAS.AttributeType;
+import com.connexta.alliance.nsili.common.GIAS.DateRange;
 import com.connexta.alliance.nsili.common.GIAS.Domain;
 import com.connexta.alliance.nsili.common.GIAS.IntegerRange;
 import com.connexta.alliance.nsili.common.GIAS.RequirementMode;
@@ -758,7 +759,8 @@ public class TestNsiliFilterDelegate {
                 true));
 
         domain = new Domain();
-        domain.l(NsiliConstants.CONTENT_STRINGS.toArray(new String[NsiliConstants.CONTENT_STRINGS.size()]));
+        DateRange dateRange = new DateRange();
+        domain.d(dateRange);
         attributeInformationList.add(createAttributeInformation(NsiliConstants.DATE_TIME_MODIFIED,
                 AttributeType.TEXT,
                 domain,

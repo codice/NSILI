@@ -63,6 +63,7 @@ import com.connexta.alliance.nsili.common.GIAS.ProductMgrHelper;
 import com.connexta.alliance.nsili.common.GIAS.SortAttribute;
 import com.connexta.alliance.nsili.common.GIAS.SubmitQueryRequest;
 import com.connexta.alliance.nsili.common.GIAS.View;
+import com.connexta.alliance.nsili.common.NsilCorbaExceptionUtil;
 import com.connexta.alliance.nsili.common.Nsili;
 import com.connexta.alliance.nsili.common.NsiliConstants;
 import com.connexta.alliance.nsili.common.UCO.DAG;
@@ -348,7 +349,7 @@ public class NsiliSource extends MaskableImpl
             LOGGER.debug("{} : Unable to process IOR String.", id, e);
         } catch (Exception e) {
             LOGGER.warn("{} : Error retrieving IOR file for {}. {}", id, iorUrl, e.getMessage());
-            LOGGER.debug("{} : Error retrieving IOR file for {}. {}", id, iorUrl, e);
+            LOGGER.debug("{} : Error retrieving IOR file for {}.", id, iorUrl, e);
         }
 
         if (StringUtils.isNotBlank(iorString)) {
@@ -643,7 +644,10 @@ public class NsiliSource extends MaskableImpl
             HitCountRequest hitCountRequest = catalogMgr.hit_count(query, properties);
             hitCountRequest.complete(intHolder);
         } catch (ProcessingFault | SystemFault | InvalidInputParameter e) {
-            LOGGER.error("{} : Unable to get hit count for query.", getId(), e);
+            LOGGER.error("{} : Unable to get hit count for query. : {}",
+                    getId(),
+                    NsilCorbaExceptionUtil.getExceptionDetails(e));
+            LOGGER.debug("{} : HitCount Query error", getId(), e);
         }
 
         LOGGER.debug("{} :  Received {} hit(s) from query.", getId(), intHolder.value);
@@ -666,11 +670,12 @@ public class NsiliSource extends MaskableImpl
         DAGListHolder dagListHolder = new DAGListHolder();
 
         try {
-            LOGGER.debug("{} : Submit query: " + query, id);
-            LOGGER.debug("{} : Requesting result attributes: " + Arrays.toString(resultAttributes),
-                    id);
-            LOGGER.debug("{} : Sort Attributes: " + Arrays.toString(sortAttributes), id);
-            LOGGER.debug("{} : Properties: " + Arrays.toString(properties), id);
+            LOGGER.debug("{} : Submit query: {}", id, query);
+            LOGGER.debug("{} : Requesting result attributes: {}",
+                    id,
+                    Arrays.toString(resultAttributes));
+            LOGGER.debug("{} : Sort Attributes: {}", id, Arrays.toString(sortAttributes));
+            LOGGER.debug("{} : Properties: {}", id, Arrays.toString(properties));
             SubmitQueryRequest submitQueryRequest = catalogMgr.submit_query(query,
                     resultAttributes,
                     sortAttributes,
@@ -679,7 +684,10 @@ public class NsiliSource extends MaskableImpl
             submitQueryRequest.set_number_of_hits(maxHitCount);
             submitQueryRequest.complete_DAG_results(dagListHolder);
         } catch (ProcessingFault | SystemFault | InvalidInputParameter e) {
-            LOGGER.error("{} : Unable to query source.", getId(), e);
+            LOGGER.error("{} : Unable to query source. {}",
+                    id,
+                    NsilCorbaExceptionUtil.getExceptionDetails(e));
+            LOGGER.debug("{} : Query error", id, e);
         }
 
         List<Result> results = new ArrayList<>();
@@ -956,15 +964,23 @@ public class NsiliSource extends MaskableImpl
             sortPolarity = Polarity.DESCENDING;
         }
 
-        if (sortAttribute.equals(Metacard.MODIFIED)
-                && isAttributeSupported(NsiliConstants.DATE_TIME_MODIFIED)) {
-            SortAttribute[] sortAttributeArray =
-                    {new SortAttribute(NsiliConstants.DATE_TIME_MODIFIED, sortPolarity)};
+        String cardDateTimeModifiedAttribute =
+                NsiliConstants.NSIL_CARD + "." + NsiliConstants.DATE_TIME_MODIFIED;
+        String cardSourceDateTimeModified =
+                NsiliConstants.NSIL_CARD + "." + NsiliConstants.SOURCE_DATE_TIME_MODIFIED;
+        String dateTimeDeclaredAttribute =
+                NsiliConstants.NSIL_FILE + "." + NsiliConstants.DATE_TIME_DECLARED;
+
+        if (sortAttribute.equals(Metacard.MODIFIED) && (isAttributeSupported(
+                cardDateTimeModifiedAttribute)
+                || isAttributeSupported(cardSourceDateTimeModified))) {
+            SortAttribute[] sortAttributeArray = {new SortAttribute(cardDateTimeModifiedAttribute,
+                    sortPolarity), new SortAttribute(cardSourceDateTimeModified, sortPolarity)};
             return sortAttributeArray;
-        } else if (sortAttribute.equals(Metacard.CREATED)
-                && isAttributeSupported(NsiliConstants.DATE_TIME_DECLARED)) {
-            SortAttribute[] sortAttributeArray =
-                    {new SortAttribute(NsiliConstants.DATE_TIME_DECLARED, sortPolarity)};
+        } else if (sortAttribute.equals(Metacard.CREATED) && isAttributeSupported(
+                dateTimeDeclaredAttribute)) {
+            SortAttribute[] sortAttributeArray = {new SortAttribute(dateTimeDeclaredAttribute,
+                    sortPolarity)};
             return sortAttributeArray;
         } else {
             return new SortAttribute[0];
@@ -977,6 +993,7 @@ public class NsiliSource extends MaskableImpl
     private boolean isAttributeSupported(String attribute) {
         List<String> attributeInformationList =
                 sortableAttributes.get(NsiliConstants.NSIL_ALL_VIEW);
+
         for (String sortableAttribute : attributeInformationList) {
             if (attribute.equals(sortableAttribute)) {
                 return true;
