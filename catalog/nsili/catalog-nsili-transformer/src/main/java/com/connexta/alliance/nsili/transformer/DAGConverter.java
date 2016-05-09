@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.StringUtils;
 import org.jgrapht.alg.DijkstraShortestPath;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.traverse.DepthFirstIterator;
@@ -303,7 +304,10 @@ public class DAGConverter {
     protected static void addNsilCardAttribute(MetacardImpl metacard, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.IDENTIFIER:
-            metacard.setId(getString(node.value));
+            if (StringUtils.isBlank(metacard.getId())) {
+                //Only use this ID if nothing is set, otherwise we can ignore it
+                metacard.setId(getString(node.value));
+            }
             break;
         case NsiliConstants.SOURCE_DATE_TIME_MODIFIED:
             Date cardDate = convertDate(node.value);

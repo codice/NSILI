@@ -111,6 +111,12 @@ public class NsiliSource extends MaskableImpl
 
     public static final String MAX_HIT_COUNT = "maxHitCount";
 
+    public static final String ACCESS_USERID = "accessUserId";
+
+    public static final String ACCESS_PASSWORD = "accessPassword";
+
+    public static final String ACCESS_LICENSE_KEY = "accessLicenseKey";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(NsiliSource.class);
 
     private static final String DESCRIBABLE_PROPERTIES_FILE = "/describable.properties";
@@ -181,9 +187,7 @@ public class NsiliSource extends MaskableImpl
 
     private org.omg.CORBA.ORB orb;
 
-    private AccessCriteria accessCriteria = new AccessCriteria(NsiliFilterDelegate.EMPTY_STRING,
-            NsiliFilterDelegate.EMPTY_STRING,
-            NsiliFilterDelegate.EMPTY_STRING);
+    private AccessCriteria accessCriteria;
 
     private Set<SourceMonitor> sourceMonitors = new HashSet<>();
 
@@ -214,6 +218,14 @@ public class NsiliSource extends MaskableImpl
     private String ddfOrgName = DEFAULT_USER_INFO;
 
     private ResourceReader resourceReader;
+
+    private String accessUserId = "";
+
+    private String accessPassword = "";
+
+    private String accessLicenseKey = "";
+
+    private Boolean excludeSortOrder = false;
 
     static {
         try (InputStream properties = NsiliSource.class.getResourceAsStream(
@@ -396,6 +408,8 @@ public class NsiliSource extends MaskableImpl
      */
     private void initMandatoryManagers() {
         try {
+            accessCriteria = new AccessCriteria(accessUserId, accessPassword, accessLicenseKey);
+
             LibraryManager libraryManager = library.get_manager(CATALOG_MGR, accessCriteria);
             setCatalogMgr(CatalogMgrHelper.narrow(libraryManager));
 
@@ -582,6 +596,18 @@ public class NsiliSource extends MaskableImpl
         if (maxHitCount != null && !maxHitCount.equals(this.maxHitCount)) {
             setMaxHitCount(maxHitCount);
         }
+        String accessUserId = (String) configuration.get(ACCESS_USERID);
+        if (StringUtils.isNotBlank(accessUserId)) {
+            setAccessUserId(accessUserId);
+        }
+        String accessPassword = (String) configuration.get(ACCESS_PASSWORD);
+        if (StringUtils.isNotBlank(accessPassword)) {
+            setAccessPassword(accessPassword);
+        }
+        String accessLicenseKey = (String) configuration.get(ACCESS_LICENSE_KEY);
+        if (StringUtils.isNotBlank(accessLicenseKey)) {
+            setAccessLicenseKey(accessLicenseKey);
+        }
         init();
     }
 
@@ -670,16 +696,27 @@ public class NsiliSource extends MaskableImpl
         DAGListHolder dagListHolder = new DAGListHolder();
 
         try {
-            LOGGER.debug("{} : Submit query: {}", id, query);
+            LOGGER.debug("{} : Submit query: {}", id, query.bqs_query);
             LOGGER.debug("{} : Requesting result attributes: {}",
                     id,
                     Arrays.toString(resultAttributes));
             LOGGER.debug("{} : Sort Attributes: {}", id, Arrays.toString(sortAttributes));
             LOGGER.debug("{} : Properties: {}", id, Arrays.toString(properties));
-            SubmitQueryRequest submitQueryRequest = catalogMgr.submit_query(query,
-                    resultAttributes,
-                    sortAttributes,
-                    properties);
+            HitCountRequest hitCountRequest = catalogMgr.hit_count(query, properties);
+            IntHolder hitHolder = new IntHolder();
+            hitCountRequest.complete(hitHolder);
+            SubmitQueryRequest submitQueryRequest;
+            if (hitHolder.value > 1) {
+                submitQueryRequest = catalogMgr.submit_query(query,
+                        resultAttributes,
+                        sortAttributes,
+                        properties);
+            } else {
+                submitQueryRequest = catalogMgr.submit_query(query,
+                        resultAttributes,
+                        new SortAttribute[0],
+                        new NameValue[0]);
+            }
             submitQueryRequest.set_user_info(ddfOrgName);
             submitQueryRequest.set_number_of_hits(maxHitCount);
             submitQueryRequest.complete_DAG_results(dagListHolder);
@@ -838,6 +875,40 @@ public class NsiliSource extends MaskableImpl
         return pollInterval;
     }
 
+    public Boolean getExcludeSortOrder() {
+        return excludeSortOrder;
+    }
+
+    public void setExcludeSortOrder(Boolean excludeSortOrder) {
+        if (excludeSortOrder != null) {
+            this.excludeSortOrder = excludeSortOrder;
+        }
+    }
+
+    public String getAccessUserId() {
+        return accessUserId;
+    }
+
+    public void setAccessUserId(String accessUserId) {
+        this.accessUserId = accessUserId;
+    }
+
+    public String getAccessPassword() {
+        return accessPassword;
+    }
+
+    public void setAccessPassword(String accessPassword) {
+        this.accessPassword = accessPassword;
+    }
+
+    public String getAccessLicenseKey() {
+        return accessLicenseKey;
+    }
+
+    public void setAccessLicenseKey(String accessLicenseKey) {
+        this.accessLicenseKey = accessLicenseKey;
+    }
+
     public void setResourceReader(ResourceReader resourceReader) {
         this.resourceReader = resourceReader;
     }
@@ -945,6 +1016,10 @@ public class NsiliSource extends MaskableImpl
      * @return - an array of SortAttributes sent in the query to the source.
      */
     private SortAttribute[] getSortAttributes(SortBy sortBy) {
+        if (excludeSortOrder) {
+            return new SortAttribute[0];
+        }
+
         if (sortBy == null || sortableAttributes == null) {
             //Default to sorting by Date/Time modified if no sorting provided
             return new SortAttribute[] {new SortAttribute(
@@ -971,12 +1046,16 @@ public class NsiliSource extends MaskableImpl
         String dateTimeDeclaredAttribute =
                 NsiliConstants.NSIL_FILE + "." + NsiliConstants.DATE_TIME_DECLARED;
 
-        if (sortAttribute.equals(Metacard.MODIFIED) && (isAttributeSupported(
-                cardDateTimeModifiedAttribute)
-                || isAttributeSupported(cardSourceDateTimeModified))) {
-            SortAttribute[] sortAttributeArray = {new SortAttribute(cardDateTimeModifiedAttribute,
-                    sortPolarity), new SortAttribute(cardSourceDateTimeModified, sortPolarity)};
-            return sortAttributeArray;
+        if (sortAttribute.equals(Metacard.MODIFIED)) {
+            List<SortAttribute> modifiedAttrs = new ArrayList<>();
+            if (isAttributeSupported(cardDateTimeModifiedAttribute)) {
+                modifiedAttrs.add(new SortAttribute(cardDateTimeModifiedAttribute, sortPolarity));
+            }
+            if (isAttributeSupported(cardSourceDateTimeModified)) {
+                modifiedAttrs.add(new SortAttribute(cardSourceDateTimeModified, sortPolarity));
+            }
+
+            return modifiedAttrs.toArray(new SortAttribute[0]);
         } else if (sortAttribute.equals(Metacard.CREATED) && isAttributeSupported(
                 dateTimeDeclaredAttribute)) {
             SortAttribute[] sortAttributeArray = {new SortAttribute(dateTimeDeclaredAttribute,

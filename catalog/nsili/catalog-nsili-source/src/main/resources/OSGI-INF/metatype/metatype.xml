@@ -20,7 +20,7 @@
         <AD description="The ID of the NSILI Source" name="NSILI Source ID" id="id"
             required="true" type="String" default="NSILI Federated Source"/>
 
-        <AD description="The URL of the IOR File to use for the NSILI CORBA Server.  For local files, use 'file://'"
+        <AD description="The URL of the IOR File to use for the NSILI CORBA Service.  For local files, use 'file://'"
             name="Ior File URL" id="iorUrl" required="true" type="String"/>
 
         <AD description="The Username to be used for authentication with HTTP server."
@@ -36,6 +36,18 @@
         <AD description="Poll Interval to Check if the Source is available (in minutes - minimum 1)."
             name="Poll Interval" id="pollInterval"
             required="true" type="Integer" default="5"/>
+
+        <AD description="Whether or not to exclude sort order in query."
+            name="Exclude Sort Order" id="excludeSortOrder" required="false" type="Boolean" default="false"/>
+
+        <AD description="User ID for NSILI Access Criteria"
+            name="NSILI Access Criteria User" id="accessUserId" required="false" type="String" default=""/>
+
+        <AD description="Password for NSILI Access Criteria"
+            name="NSILI Access Criteria Password" id="accessPassword" required="false" type="String" default=""/>
+
+        <AD description="License Key for NSILI Access Criteria"
+            name="NSILI Access Criteria License Key" id="accessLicenseKey" required="false" type="String" default=""/>
     </OCD>
 
     <OCD name="NSILI Connected Source" id="NSILI_Connected_Source"
@@ -44,7 +56,7 @@
         <AD description="The ID of the NSILI Source" name="NSILI Source ID" id="id"
             required="true" type="String" default="NSILI Connected Source"/>
 
-        <AD description="The URL of the IOR File to use for the NSILI CORBA Server.  For local files, use 'file://'"
+        <AD description="The URL of the IOR File to use for the NSILI CORBA Service.  For local files, use 'file://'"
             name="Ior File URL" id="iorUrl" required="true" type="String"/>
 
         <AD description="The Username to be used for authentication with HTTP server."
@@ -60,6 +72,18 @@
         <AD description="Poll Interval to Check if the Source is available (in minutes - minimum 1)."
             name="Poll Interval" id="pollInterval"
             required="true" type="Integer" default="5"/>
+
+        <AD description="Whether or not to exclude sort order in query."
+            name="Exclude Sort Order" id="excludeSortOrder" required="false" type="Boolean" default="false"/>
+
+        <AD description="User ID for NSILI Access Criteria"
+            name="NSILI Access Criteria User" id="accessUserId" required="false" type="String" default=""/>
+
+        <AD description="Password for NSILI Access Criteria"
+            name="NSILI Access Criteria Password" id="accessPassword" required="false" type="String" default=""/>
+
+        <AD description="License Key for NSILI Access Criteria"
+            name="NSILI Access Criteria License Key" id="accessLicenseKey" required="false" type="String" default=""/>
     </OCD>
 
     <Designate pid="NSILI_Federated_Source" factoryPid="NSILI_Federated_Source">

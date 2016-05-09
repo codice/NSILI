@@ -345,7 +345,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
+        assertThat(COM_ID_UUID, is(metacard.getId()));
         assertThat(NsiliProductType.IMAGERY.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -657,7 +657,7 @@ public class TestDAGConverter {
                 is(metacard.getMetacardType()
                         .getClass()
                         .getCanonicalName()));
-        assertThat(CARD_ID, is(metacard.getId()));
+        assertThat(COM_ID_UUID, is(metacard.getId()));
         assertThat(NsiliProductType.GMTI.toString(), is(metacard.getContentTypeName()));
         assertThat(STREAM_STANDARD_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -755,7 +755,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(MESSAGE_SUBJECT, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
+        assertThat(COM_ID_UUID, is(metacard.getId()));
         assertThat(NsiliProductType.MESSAGE.toString(), is(metacard.getContentTypeName()));
         assertThat(metacard.getContentTypeVersion(), nullValue());
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -855,7 +855,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
+        assertThat(COM_ID_UUID, is(metacard.getId()));
         assertThat(NsiliProductType.VIDEO.toString(), is(metacard.getContentTypeName()));
         assertThat(metacard.getContentTypeVersion(), nullValue());
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -1146,7 +1146,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
+        assertThat(COM_ID_UUID, is(metacard.getId()));
         assertThat(NsiliProductType.REPORT.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -1253,7 +1253,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
+        assertThat(COM_ID_UUID, is(metacard.getId()));
         assertThat(NsiliProductType.COLLECTION_EXPLOITATION_PLAN.toString(),
                 is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
@@ -1348,7 +1348,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
+        assertThat(COM_ID_UUID, is(metacard.getId()));
         assertThat(NsiliProductType.DOCUMENT.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -1438,7 +1438,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
+        assertThat(COM_ID_UUID, is(metacard.getId()));
         assertThat(NsiliProductType.RFI.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -1556,7 +1556,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
+        assertThat(COM_ID_UUID, is(metacard.getId()));
         assertThat(NsiliProductType.TASK.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -1657,7 +1657,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
+        assertThat(COM_ID_UUID, is(metacard.getId()));
         assertThat(NsiliProductType.TDL_DATA.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -1899,8 +1899,7 @@ public class TestDAGConverter {
             ResultDAGConverter.addStringAttribute(graph,
                     cardNode,
                     NsiliConstants.IDENTIFIER,
-                    UUID.randomUUID()
-                            .toString(),
+                    CARD_ID,
                     orb);
             addTestDateAttribute(graph, cardNode, NsiliConstants.SOURCE_DATE_TIME_MODIFIED, orb);
             addTestDateAttribute(graph, cardNode, NsiliConstants.DATE_TIME_MODIFIED, orb);
