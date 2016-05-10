@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang.StringUtils;
 import org.jgrapht.alg.DijkstraShortestPath;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.traverse.DepthFirstIterator;
@@ -97,7 +96,7 @@ public class DAGConverter {
 
     private static String sourceId;
 
-    public static MetacardImpl convertDAG(DAG dag, String logSourceId) {
+    public static MetacardImpl convertDAG(DAG dag, boolean swapCoordinates, String logSourceId) {
         MetacardImpl metacard = null;
         sourceId = logSourceId;
 
@@ -119,7 +118,7 @@ public class DAGConverter {
                 }
             }
 
-            metacard = parseGraph(graph);
+            metacard = parseGraph(graph, swapCoordinates);
             metacard.setSourceId(sourceId);
         }
 
@@ -135,7 +134,8 @@ public class DAGConverter {
         return nodeMap;
     }
 
-    private static MetacardImpl parseGraph(DirectedAcyclicGraph<Node, Edge> graph) {
+    private static MetacardImpl parseGraph(DirectedAcyclicGraph<Node, Edge> graph,
+            boolean swapCoordinates) {
         MetacardImpl metacard = new MetacardImpl();
 
         NsiliSecurity security = new NsiliSecurity();
@@ -192,7 +192,7 @@ public class DAGConverter {
                     addNsilCommonAttribute(metacard, node);
                     break;
                 case NsiliConstants.NSIL_COVERAGE:
-                    addNsilCoverageAttribute(metacard, node);
+                    addNsilCoverageAttribute(metacard, node, swapCoordinates);
                     break;
                 case NsiliConstants.NSIL_CXP:
                     addNsilCxpAttribute(metacard, node);
@@ -304,10 +304,7 @@ public class DAGConverter {
     protected static void addNsilCardAttribute(MetacardImpl metacard, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.IDENTIFIER:
-            if (StringUtils.isBlank(metacard.getId())) {
-                //Only use this ID if nothing is set, otherwise we can ignore it
-                metacard.setId(getString(node.value));
-            }
+            metacard.setId(getString(node.value));
             break;
         case NsiliConstants.SOURCE_DATE_TIME_MODIFIED:
             Date cardDate = convertDate(node.value);
@@ -370,14 +367,15 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilCoverageAttribute(MetacardImpl metacard, Node node) {
+    protected static void addNsilCoverageAttribute(MetacardImpl metacard, Node node,
+            boolean swapCoordinates) {
         switch (node.attribute_name) {
         case NsiliConstants.SPATIAL_COUNTRY_CODE:
             metacard.setAttribute(new AttributeImpl(NsiliMetacardType.COUNTRY_CODE,
                     getString(node.value)));
             break;
         case NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX:
-            metacard.setLocation(convertShape(node.value));
+            metacard.setLocation(convertShape(node.value, swapCoordinates));
             break;
         case NsiliConstants.TEMPORAL_START:
             metacard.setAttribute(new AttributeImpl(NsiliMetacardType.START_DATETIME,
@@ -892,7 +890,7 @@ public class DAGConverter {
         return NsiliProductType.fromSpecName(productTypeStr);
     }
 
-    protected static String convertShape(Any any) {
+    protected static String convertShape(Any any, boolean swapCoordinates) {
         com.connexta.alliance.nsili.common.UCO.Rectangle rectangle = RectangleHelper.extract(any);
         com.connexta.alliance.nsili.common.UCO.Coordinate2d upperLeft = rectangle.upper_left;
         com.connexta.alliance.nsili.common.UCO.Coordinate2d lowerRight = rectangle.lower_right;
@@ -902,19 +900,31 @@ public class DAGConverter {
 
         if (upperLeft.x == lowerRight.x && upperLeft.y == lowerRight.y) {
             //Build a Point vs Polygon
-            Coordinate pointCoord = new Coordinate(upperLeft.x, upperLeft.y);
+            Coordinate pointCoord;
+            if (swapCoordinates) {
+                pointCoord = new Coordinate(upperLeft.y, upperLeft.x);
+            } else {
+                pointCoord = new Coordinate(upperLeft.x, upperLeft.y);
+            }
             geom = geometryFactory.createPoint(pointCoord);
         } else {
-
-            //UCO Specifies Coordinate2d.x = lat, Coordinate2d.y = lon
-            //WKT Uses Coordinate.x = lon, Coordinate.y = lat
-            //Need to swap x & y
             Coordinate[] coordinates = new Coordinate[5];
+            Coordinate lowerLeftCoord;
+            Coordinate upperLeftCoord;
+            Coordinate upperRightCoord;
+            Coordinate lowerRightCoord;
 
-            Coordinate lowerLeftCoord = new Coordinate(upperLeft.x, lowerRight.y);
-            Coordinate upperLeftCoord = new Coordinate(upperLeft.x, upperLeft.y);
-            Coordinate upperRightCoord = new Coordinate(lowerRight.x, upperLeft.y);
-            Coordinate lowerRightCoord = new Coordinate(lowerRight.x, lowerRight.y);
+            if (swapCoordinates) {
+                lowerLeftCoord = new Coordinate(upperLeft.y, lowerRight.x);
+                upperLeftCoord = new Coordinate(upperLeft.y, upperLeft.x);
+                upperRightCoord = new Coordinate(lowerRight.y, upperLeft.x);
+                lowerRightCoord = new Coordinate(lowerRight.y, lowerRight.x);
+            } else {
+                lowerLeftCoord = new Coordinate(upperLeft.x, lowerRight.y);
+                upperLeftCoord = new Coordinate(upperLeft.x, upperLeft.y);
+                upperRightCoord = new Coordinate(lowerRight.x, upperLeft.y);
+                lowerRightCoord = new Coordinate(lowerRight.x, lowerRight.y);
+            }
 
             coordinates[0] = lowerLeftCoord;
             coordinates[1] = upperLeftCoord;

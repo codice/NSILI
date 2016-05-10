@@ -225,7 +225,9 @@ public class NsiliSource extends MaskableImpl
 
     private String accessLicenseKey = "";
 
-    private Boolean excludeSortOrder = false;
+    private boolean excludeSortOrder = false;
+
+    private boolean swapCoordinates = false;
 
     static {
         try (InputStream properties = NsiliSource.class.getResourceAsStream(
@@ -730,7 +732,7 @@ public class NsiliSource extends MaskableImpl
         List<Result> results = new ArrayList<>();
         if (dagListHolder.value != null) {
             for (DAG dag : dagListHolder.value) {
-                Metacard card = DAGConverter.convertDAG(dag, getId());
+                Metacard card = DAGConverter.convertDAG(dag, swapCoordinates, getId());
                 if (card != null) {
                     DAGConverter.logMetacard(card, getId());
                     results.add(new ResultImpl(card));
@@ -875,14 +877,20 @@ public class NsiliSource extends MaskableImpl
         return pollInterval;
     }
 
-    public Boolean getExcludeSortOrder() {
+    public boolean getExcludeSortOrder() {
         return excludeSortOrder;
     }
 
-    public void setExcludeSortOrder(Boolean excludeSortOrder) {
-        if (excludeSortOrder != null) {
-            this.excludeSortOrder = excludeSortOrder;
-        }
+    public void setExcludeSortOrder(boolean excludeSortOrder) {
+        this.excludeSortOrder = excludeSortOrder;
+    }
+
+    public boolean getSwapCoordinates() {
+        return swapCoordinates;
+    }
+
+    public void setSwapCoordinates(boolean swapCoordinates) {
+        this.swapCoordinates = swapCoordinates;
     }
 
     public String getAccessUserId() {

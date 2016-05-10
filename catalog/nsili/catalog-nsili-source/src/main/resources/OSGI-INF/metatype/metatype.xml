@@ -28,7 +28,7 @@
             required="false" type="String"/>
 
         <AD description="The Password to be used for authentication with HTTP server."
-            name="HTTP/S Password" id="cxfPassword" required="false" type="String"/>
+            name="HTTP/S Password" id="cxfPassword" required="false" type="Password" default=""/>
 
         <AD description="The Maximum Hit Count for Queries to the Source" name="Max Hit Count"
             id="maxHitCount" required="true" type="Integer" default="250"/>
@@ -40,11 +40,14 @@
         <AD description="Whether or not to exclude sort order in query."
             name="Exclude Sort Order" id="excludeSortOrder" required="false" type="Boolean" default="false"/>
 
+        <AD description="Swap coordinates for systems that send latitude in the X field of the coordinate."
+            name="Swap X/Y Coordinates" id="swapCoordinates" required="false" type="Boolean" default="false"/>
+
         <AD description="User ID for NSILI Access Criteria"
             name="NSILI Access Criteria User" id="accessUserId" required="false" type="String" default=""/>
 
         <AD description="Password for NSILI Access Criteria"
-            name="NSILI Access Criteria Password" id="accessPassword" required="false" type="String" default=""/>
+            name="NSILI Access Criteria Password" id="accessPassword" required="false" type="Password" default=""/>
 
         <AD description="License Key for NSILI Access Criteria"
             name="NSILI Access Criteria License Key" id="accessLicenseKey" required="false" type="String" default=""/>
@@ -64,7 +67,7 @@
             required="false" type="String"/>
 
         <AD description="The Password to be used for authentication with HTTP server."
-            name="HTTP/S Password" id="cxfPassword" required="false" type="String"/>
+            name="HTTP/S Password" id="cxfPassword" required="false" type="Password" default=""/>
 
         <AD description="The Maximum Hit Count for Queries to the Source" name="Max Hit Count"
             id="maxHitCount" required="true" type="Integer" default="250"/>
@@ -76,11 +79,14 @@
         <AD description="Whether or not to exclude sort order in query."
             name="Exclude Sort Order" id="excludeSortOrder" required="false" type="Boolean" default="false"/>
 
+        <AD description="Swap coordinates for systems that send latitude in the X field of the coordinate."
+            name="Swap X/Y Coordinates" id="swapCoordinates" required="false" type="Boolean" default="false"/>
+
         <AD description="User ID for NSILI Access Criteria"
             name="NSILI Access Criteria User" id="accessUserId" required="false" type="String" default=""/>
 
         <AD description="Password for NSILI Access Criteria"
-            name="NSILI Access Criteria Password" id="accessPassword" required="false" type="String" default=""/>
+            name="NSILI Access Criteria Password" id="accessPassword" required="false" type="Password" default=""/>
 
         <AD description="License Key for NSILI Access Criteria"
             name="NSILI Access Criteria License Key" id="accessLicenseKey" required="false" type="String" default=""/>

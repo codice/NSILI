@@ -324,7 +324,7 @@ public class TestDAGConverter {
         imageryDAG.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         imageryDAG.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(imageryDAG, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(imageryDAG, false, SOURCE_ID);
 
         if (SHOULD_PRINT_CARD) {
             File file = new File("/tmp/output-imagery.txt");
@@ -345,7 +345,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(COM_ID_UUID, is(metacard.getId()));
+        assertThat(CARD_ID, is(metacard.getId()));
         assertThat(NsiliProductType.IMAGERY.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -368,6 +368,52 @@ public class TestDAGConverter {
         checkSdsAttribute(metacard);
 
         DAGConverter.logMetacard(metacard, "123");
+    }
+
+    @Test
+    public void testSwapCoordinates() {
+        String swapWktLocation = "POLYGON ((1 1, 1 5, 5 5, 5 1, 1 1))";
+
+        DAG imageryDAG = new DAG();
+        DirectedAcyclicGraph<Node, Edge> graph = new DirectedAcyclicGraph<>(Edge.class);
+
+        Node productNode = createRootNode();
+        graph.addVertex(productNode);
+
+        addCardNode(graph, productNode);
+        addFileNode(graph, productNode);
+        addMetadataSecurity(graph, productNode);
+        addSecurityNode(graph, productNode);
+        addImageryPart(graph, productNode);
+
+        graph.addVertex(productNode);
+
+        NsiliCommonUtils.setUCOEdgeIds(graph);
+        NsiliCommonUtils.setUCOEdges(productNode, graph);
+        imageryDAG.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
+        imageryDAG.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
+
+        MetacardImpl metacard = DAGConverter.convertDAG(imageryDAG, true, SOURCE_ID);
+
+        if (SHOULD_PRINT_CARD) {
+            File file = new File("/tmp/output-imagery.txt");
+            if (file.exists()) {
+                file.delete();
+            }
+
+            try (PrintStream outStream = new PrintStream(file)) {
+                printMetacard(metacard, outStream);
+            } catch (IOException ioe) {
+                //Ignore the error
+            }
+        }
+
+        //Check top-level meta-card attributes
+        assertThat(NsiliImageryMetacardType.class.getCanonicalName(),
+                is(metacard.getMetacardType()
+                        .getClass()
+                        .getCanonicalName()));
+        assertThat(metacard.getLocation(), is(swapWktLocation));
     }
 
     private void checkExploitationInfoAttributes(MetacardImpl metacard) {
@@ -637,7 +683,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
 
         if (SHOULD_PRINT_CARD) {
             File file = new File("/tmp/output-gmti.txt");
@@ -657,7 +703,7 @@ public class TestDAGConverter {
                 is(metacard.getMetacardType()
                         .getClass()
                         .getCanonicalName()));
-        assertThat(COM_ID_UUID, is(metacard.getId()));
+        assertThat(CARD_ID, is(metacard.getId()));
         assertThat(NsiliProductType.GMTI.toString(), is(metacard.getContentTypeName()));
         assertThat(STREAM_STANDARD_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -734,7 +780,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
 
         if (SHOULD_PRINT_CARD) {
             File file = new File("/tmp/output-message.txt");
@@ -755,7 +801,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(MESSAGE_SUBJECT, is(metacard.getTitle()));
-        assertThat(COM_ID_UUID, is(metacard.getId()));
+        assertThat(CARD_ID, is(metacard.getId()));
         assertThat(NsiliProductType.MESSAGE.toString(), is(metacard.getContentTypeName()));
         assertThat(metacard.getContentTypeVersion(), nullValue());
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -834,7 +880,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
 
         if (SHOULD_PRINT_CARD) {
             File file = new File("/tmp/output-video.txt");
@@ -855,7 +901,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(COM_ID_UUID, is(metacard.getId()));
+        assertThat(CARD_ID, is(metacard.getId()));
         assertThat(NsiliProductType.VIDEO.toString(), is(metacard.getContentTypeName()));
         assertThat(metacard.getContentTypeVersion(), nullValue());
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -890,7 +936,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
         assertThat(metacard.getTitle(), nullValue());
     }
 
@@ -915,7 +961,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
         assertThat(metacard.getTitle(), nullValue());
     }
 
@@ -944,7 +990,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
         assertThat(metacard.getTitle(), nullValue());
     }
 
@@ -969,14 +1015,14 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
         assertThat(metacard.getTitle(), nullValue());
     }
 
     @Test
     public void testEmptyDAG() {
         DAG dag = new DAG();
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
         assertThat(metacard, nullValue());
     }
 
@@ -991,7 +1037,7 @@ public class TestDAGConverter {
 
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
         assertThat(metacard, nullValue());
     }
 
@@ -1010,7 +1056,7 @@ public class TestDAGConverter {
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
         dag.edges = edges;
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
         assertThat(metacard.getTitle(), nullValue());
     }
 
@@ -1029,7 +1075,7 @@ public class TestDAGConverter {
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
         dag.edges = edges;
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
         assertThat(metacard.getTitle(), nullValue());
     }
 
@@ -1125,7 +1171,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
 
         if (SHOULD_PRINT_CARD) {
             File file = new File("/tmp/output-report.txt");
@@ -1146,7 +1192,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(COM_ID_UUID, is(metacard.getId()));
+        assertThat(CARD_ID, is(metacard.getId()));
         assertThat(NsiliProductType.REPORT.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -1232,7 +1278,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
 
         if (SHOULD_PRINT_CARD) {
             File file = new File("/tmp/output-ccirm-cxp.txt");
@@ -1253,7 +1299,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(COM_ID_UUID, is(metacard.getId()));
+        assertThat(CARD_ID, is(metacard.getId()));
         assertThat(NsiliProductType.COLLECTION_EXPLOITATION_PLAN.toString(),
                 is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
@@ -1327,7 +1373,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
 
         if (SHOULD_PRINT_CARD) {
             File file = new File("/tmp/output-ccirm-ir.txt");
@@ -1348,7 +1394,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(COM_ID_UUID, is(metacard.getId()));
+        assertThat(CARD_ID, is(metacard.getId()));
         assertThat(NsiliProductType.DOCUMENT.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -1417,7 +1463,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
 
         if (SHOULD_PRINT_CARD) {
             File file = new File("/tmp/output-ccirm-rfi.txt");
@@ -1438,7 +1484,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(COM_ID_UUID, is(metacard.getId()));
+        assertThat(CARD_ID, is(metacard.getId()));
         assertThat(NsiliProductType.RFI.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -1535,7 +1581,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
 
         if (SHOULD_PRINT_CARD) {
             File file = new File("/tmp/output-ccirm-task.txt");
@@ -1556,7 +1602,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(COM_ID_UUID, is(metacard.getId()));
+        assertThat(CARD_ID, is(metacard.getId()));
         assertThat(NsiliProductType.TASK.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -1636,7 +1682,7 @@ public class TestDAGConverter {
         dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
         dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
 
-        MetacardImpl metacard = DAGConverter.convertDAG(dag, SOURCE_ID);
+        MetacardImpl metacard = DAGConverter.convertDAG(dag, false, SOURCE_ID);
 
         if (SHOULD_PRINT_CARD) {
             File file = new File("/tmp/output-tdl.txt");
@@ -1657,7 +1703,7 @@ public class TestDAGConverter {
                         .getClass()
                         .getCanonicalName()));
         assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(COM_ID_UUID, is(metacard.getId()));
+        assertThat(CARD_ID, is(metacard.getId()));
         assertThat(NsiliProductType.TDL_DATA.toString(), is(metacard.getContentTypeName()));
         assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
         assertThat(metacard.getCreatedDate(), notNullValue());
@@ -1899,7 +1945,8 @@ public class TestDAGConverter {
             ResultDAGConverter.addStringAttribute(graph,
                     cardNode,
                     NsiliConstants.IDENTIFIER,
-                    CARD_ID,
+                    UUID.randomUUID()
+                            .toString(),
                     orb);
             addTestDateAttribute(graph, cardNode, NsiliConstants.SOURCE_DATE_TIME_MODIFIED, orb);
             addTestDateAttribute(graph, cardNode, NsiliConstants.DATE_TIME_MODIFIED, orb);
