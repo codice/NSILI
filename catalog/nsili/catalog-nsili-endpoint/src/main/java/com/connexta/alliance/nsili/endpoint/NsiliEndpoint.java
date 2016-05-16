@@ -16,6 +16,7 @@ package com.connexta.alliance.nsili.endpoint;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 
 import org.codice.ddf.security.handler.api.AuthenticationHandler;
 import org.codice.ddf.security.handler.api.BaseAuthenticationToken;
@@ -31,6 +32,8 @@ import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.connexta.alliance.nsili.common.NsilCorbaExceptionUtil;
+
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.filter.FilterBuilder;
 import ddf.security.Subject;
@@ -39,11 +42,17 @@ import ddf.security.service.SecurityServiceException;
 
 public class NsiliEndpoint {
 
+    public static final String ENCODING = StandardCharsets.ISO_8859_1.name();
+
+     public static final int DEFAULT_MAX_NUM_RESULTS = 500;
+
     public static final int DEFAULT_CORBA_PORT = 20003;
 
     private static final String DEFAULT_IP_ADDRESS = "127.0.0.1";
 
     private int corbaPort = DEFAULT_CORBA_PORT;
+
+    private int maxNumResults = DEFAULT_MAX_NUM_RESULTS;
 
     private ORB orb = null;
 
@@ -70,14 +79,14 @@ public class NsiliEndpoint {
     }
 
     public void shutdown() {
-        if (orb != null) {
-            LOGGER.debug("Attempting to stop ORB on port: " + corbaPort);
-            orb.destroy();
-        }
-
         if (orbRunThread != null) {
             orbRunThread.interrupt();
             orbRunThread = null;
+        }
+
+        if (orb != null) {
+            LOGGER.debug("Attempting to stop ORB on port: {}", corbaPort);
+            orb.destroy();
         }
 
         library = null;
@@ -95,6 +104,17 @@ public class NsiliEndpoint {
         shutdown();
         this.corbaPort = corbaPort;
         init();
+    }
+
+    public int getMaxNumResults() {
+        return maxNumResults;
+    }
+
+    public void setMaxNumResults(int maxNumResults) {
+        this.maxNumResults = maxNumResults;
+        if (library != null) {
+            library.setMaxNumResults(maxNumResults);
+        }
     }
 
     public void setSecurityHandler(AuthenticationHandler securityHandler) {
@@ -132,7 +152,8 @@ public class NsiliEndpoint {
             orbRunThread.start();
             LOGGER.info("Started ORB on port: {}", corbaPort);
         } catch (InvalidName | AdapterInactive | WrongPolicy | ServantNotActive e) {
-            LOGGER.warn("Unable to start the CORBA server.", e);
+            LOGGER.warn("Unable to start the CORBA server. {}", NsilCorbaExceptionUtil.getExceptionDetails(e));
+            LOGGER.debug("CORBA server startup exception details", e);
         } catch (IOException e) {
             LOGGER.warn("Unable to generate the IOR file.", e);
         } catch (SecurityServiceException e) {
@@ -167,9 +188,6 @@ public class NsiliEndpoint {
         org.omg.CORBA.Object objref = rootPOA.servant_to_reference(library);
 
         iorString = orb.object_to_string(objref);
-
-        rootPOA.the_POAManager()
-                .activate();
 
         return orb;
 

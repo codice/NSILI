@@ -14,7 +14,6 @@
 package com.connexta.alliance.nsili.endpoint;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.mockito.Matchers.any;
@@ -22,6 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -29,33 +29,33 @@ import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.omg.CORBA.IntHolder;
-import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
+import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
 import org.omg.PortableServer.POAPackage.ServantNotActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.connexta.alliance.nsili.common.GIAS.HitCountRequest;
+import com.connexta.alliance.nsili.common.CorbaUtils;
+import com.connexta.alliance.nsili.common.GIAS.ProductMgrHelper;
 import com.connexta.alliance.nsili.common.GIAS.Query;
 import com.connexta.alliance.nsili.common.GIAS.Request;
-import com.connexta.alliance.nsili.common.GIAS.SortAttribute;
-import com.connexta.alliance.nsili.common.GIAS.SubmitQueryRequest;
 import com.connexta.alliance.nsili.common.NsiliConstants;
-import com.connexta.alliance.nsili.common.UCO.DAGListHolder;
-import com.connexta.alliance.nsili.common.UCO.InvalidInputParameter;
-import com.connexta.alliance.nsili.common.UCO.ProcessingFault;
-import com.connexta.alliance.nsili.common.UCO.SystemFault;
+import com.connexta.alliance.nsili.common.ResultDAGConverter;
+import com.connexta.alliance.nsili.common.UCO.DAG;
+import com.connexta.alliance.nsili.common.UID.Product;
+import com.connexta.alliance.nsili.common.UID.ProductHelper;
 import com.connexta.alliance.nsili.endpoint.managers.AccessManagerImpl;
-import com.connexta.alliance.nsili.endpoint.managers.CatalogMgrImpl;
 
 import ddf.catalog.CatalogFramework;
+import ddf.catalog.data.Metacard;
 import ddf.catalog.data.Result;
+import ddf.catalog.data.impl.AttributeImpl;
 import ddf.catalog.data.impl.MetacardImpl;
 import ddf.catalog.data.impl.ResultImpl;
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
@@ -65,8 +65,7 @@ import ddf.catalog.operation.impl.QueryResponseImpl;
 import ddf.security.Subject;
 import ddf.security.service.SecurityServiceException;
 
-public class TestCatalogMgrImpl extends TestNsiliCommon {
-
+public class TestAccessManagerImpl extends TestNsiliCommon {
     private ORB orb = null;
 
     private LibraryImpl library;
@@ -77,18 +76,22 @@ public class TestCatalogMgrImpl extends TestNsiliCommon {
 
     private CatalogFramework mockCatalogFramework = mock(CatalogFramework.class);
 
-    private CatalogMgrImpl catalogMgr;
+    private AccessManagerImpl accessManager;
 
     private Query testQuery;
 
     private String bqsQuery = "NSIL_CARD.identifier like '%'";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TestCatalogMgrImpl.class);
+    private Product testProduct = null;
+
+    private String testMetacardId = UUID.randomUUID().toString();
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TestAccessManagerImpl.class);
 
     @Before
     public void setUp() throws Exception {
         setupCommonMocks();
-        setupCatalogMgrMocks();
+        setupAccessMgrMocks();
         try {
             setupOrb();
             orbRunThread = new Thread(() -> orb.run());
@@ -103,105 +106,113 @@ public class TestCatalogMgrImpl extends TestNsiliCommon {
 
         testQuery = new Query(NsiliConstants.NSIL_ALL_VIEW, bqsQuery);
 
-        catalogMgr = new CatalogMgrImpl(rootPOA, new GeotoolsFilterBuilder());
-        catalogMgr.setGuestSubject(mockSubject);
-        catalogMgr.setCatalogFramework(mockCatalogFramework);
+        String managerId = UUID.randomUUID().toString();
+        accessManager = new AccessManagerImpl();
+        accessManager.setFilterBuilder(new GeotoolsFilterBuilder());
+        accessManager.setSubject(mockSubject);
+        accessManager.setCatalogFramework(mockCatalogFramework);
+
+        if (!CorbaUtils.isIdActive(rootPOA,
+                managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
+            try {
+                rootPOA.activate_object_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
+                        accessManager);
+            } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
+                LOGGER.error("Error activating ProductMgr: {}", e);
+            }
+        }
+
+        rootPOA.create_reference_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
+                ProductMgrHelper.id());
     }
 
     @Test
-    public void testTimeoutSettings() throws InvalidInputParameter, SystemFault, ProcessingFault {
-        int timeoutSec = 500;
-        catalogMgr.set_default_timeout(timeoutSec);
-        int timeout = catalogMgr.get_default_timeout();
-        assertThat(timeoutSec, is(timeout));
+    public void testIsAvailableNoURL() throws Exception {
+        MetacardImpl testMetacard = new MetacardImpl();
+        testMetacard.setId(testMetacardId);
+        testMetacard.setTitle("JUnit Test Card");
+        Result testResult = new ResultImpl(testMetacard);
+
+        DAG dag = ResultDAGConverter.convertResult(testResult, orb, rootPOA);
+        Product product = ProductHelper.extract(dag.nodes[0].value);
+        boolean avail = accessManager.is_available(product, null);
+        assertThat(avail, is(false));
+
+        avail = accessManager.is_available(null, null);
+        assertThat(avail, is(false));
     }
 
     @Test
-    public void testRequests() throws SystemFault, ProcessingFault, InvalidInputParameter {
-        Request[] activeReqs = catalogMgr.get_active_requests();
-        assertThat(activeReqs.length, is(0));
+    public void testIsAvailableWithBadURL() throws Exception {
+        MetacardImpl testMetacard = new MetacardImpl();
+        testMetacard.setId(testMetacardId);
+        testMetacard.setTitle("JUnit Test Card");
+        testMetacard.setAttribute(new AttributeImpl(Metacard.RESOURCE_DOWNLOAD_URL, "http://localhost:20000/not/present"));
+        Result testResult = new ResultImpl(testMetacard);
 
-        catalogMgr.delete_request(null);
+        List<Result> results = new ArrayList<>();
+        results.add(testResult);
+        QueryResponse testResponse = new QueryResponseImpl(null, results, results.size());
+        when(mockCatalogFramework.query(any(QueryRequest.class))).thenReturn(testResponse);
+
+        DAG dag = ResultDAGConverter.convertResult(testResult, orb, rootPOA);
+        Product product = ProductHelper.extract(dag.nodes[0].value);
+        boolean avail = accessManager.is_available(product, null);
+        assertThat(avail, is(false));
+
+        avail = accessManager.is_available(null, null);
+        assertThat(avail, is(false));
     }
 
     @Test
-    public void testHitCount() throws InvalidInputParameter, SystemFault, ProcessingFault {
-        catalogMgr.set_default_timeout(AccessManagerImpl.DEFAULT_TIMEOUT);
-        HitCountRequest hitCountRequest = catalogMgr.hit_count(testQuery, null);
-        IntHolder hitHolder = new IntHolder();
-        assertThat(hitCountRequest, notNullValue());
+    public void testIsUrlValidBadUrls() throws IOException {
+        boolean valid = accessManager.isUrlValid(null);
+        assertThat(valid, is(false));
 
-        hitCountRequest.complete(hitHolder);
-        assertThat(hitHolder.value, greaterThan(0));
+        valid = accessManager.isUrlValid("http://localhost:2000/not/present");
+        assertThat(valid, is(false));
+
     }
 
     @Test
-    public void testHitCountWithTimeoutSet() throws InvalidInputParameter, SystemFault, ProcessingFault {
-        catalogMgr.set_default_timeout(30);
-        HitCountRequest hitCountRequest = catalogMgr.hit_count(testQuery, null);
-        IntHolder hitHolder = new IntHolder();
-        assertThat(hitCountRequest, notNullValue());
-
-        hitCountRequest.complete(hitHolder);
-        assertThat(hitHolder.value, greaterThan(0));
+    public void testQueryAvailDelay() throws Exception {
+        int delay = accessManager.query_availability_delay(null, null, null);
+        assertThat(delay, greaterThan(-1));
     }
 
     @Test
-    public void testQuery() throws InvalidInputParameter, SystemFault, ProcessingFault {
-        String[] resultAttributes = null;
-        SortAttribute[] sortAttributes = null;
-        catalogMgr.setMaxNumResults(999);
-        catalogMgr.set_default_timeout(AccessManagerImpl.DEFAULT_TIMEOUT);
-        SubmitQueryRequest submitQueryRequest = catalogMgr.submit_query(testQuery,
-                resultAttributes,
-                sortAttributes,
-                null);
-        assertThat(submitQueryRequest, notNullValue());
+    public void testGetNumberOfPriorities() throws Exception {
+        int numPriorities = accessManager.get_number_of_priorities();
+        assertThat(numPriorities, is(1));
+    }
 
-        DAGListHolder dagListHolder = new DAGListHolder();
-        submitQueryRequest.complete_DAG_results(dagListHolder);
-        assertThat(dagListHolder.value, notNullValue());
-        assertThat(dagListHolder.value.length, greaterThan(0));
+    @Test
+    public void testGetActiveRequests() throws Exception {
+        Request[] requests = accessManager.get_active_requests();
+        assertThat(requests.length, is(0));
     }
 
     @Test
     public void testGetDefaultTimeout() throws Exception {
-        int defaultTimeout = catalogMgr.get_default_timeout();
+        int defaultTimeout = accessManager.get_default_timeout();
         assertThat(defaultTimeout, is(-1));
     }
 
     @Test
     public void testGetTimeout() throws Exception {
-        int timeout = catalogMgr.get_timeout(null);
+        int timeout = accessManager.get_timeout(null);
         assertThat(timeout, is(-1));
     }
 
-    @Test (expected = NO_IMPLEMENT.class)
-    public void testGetPropertyNames() throws Exception {
-        catalogMgr.get_property_names();
-    }
-
-    @Test (expected = NO_IMPLEMENT.class)
-    public void testGetPropertyValues() throws Exception {
-        catalogMgr.get_property_values(null);
-    }
-
-    @Test (expected = NO_IMPLEMENT.class)
-    public void testGetLibraries() throws Exception {
-        catalogMgr.get_libraries();
-    }
-
-    private void setupCatalogMgrMocks() throws Exception {
+    private void setupAccessMgrMocks() throws Exception {
         int testTotalHits = 5;
         List<Result> results = new ArrayList<>(testTotalHits);
         MetacardImpl testMetacard = new MetacardImpl();
-        testMetacard.setId(UUID.randomUUID()
-                .toString());
+        testMetacard.setId(testMetacardId);
         Result testResult = new ResultImpl(testMetacard);
         results.add(testResult);
         QueryResponse testResponse = new QueryResponseImpl(null, results, testTotalHits);
         when(mockCatalogFramework.query(any(QueryRequest.class))).thenReturn(testResponse);
-
     }
 
     private void setupOrb()
@@ -242,7 +253,6 @@ public class TestCatalogMgrImpl extends TestNsiliCommon {
             orb.destroy();
         }
 
-        orb = null;
         library = null;
     }
 }

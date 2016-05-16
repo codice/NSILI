@@ -14,8 +14,6 @@
 package com.connexta.alliance.nsili.endpoint.managers;
 
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
@@ -42,12 +40,11 @@ import com.connexta.alliance.nsili.common.UCO.InvalidInputParameter;
 import com.connexta.alliance.nsili.common.UCO.NameValue;
 import com.connexta.alliance.nsili.common.UCO.ProcessingFault;
 import com.connexta.alliance.nsili.common.UCO.SystemFault;
+import com.connexta.alliance.nsili.endpoint.NsiliEndpoint;
 import com.connexta.alliance.nsili.endpoint.requests.HitCountRequestImpl;
 import com.connexta.alliance.nsili.endpoint.requests.SubmitQueryRequestImpl;
 
 import ddf.catalog.CatalogFramework;
-import ddf.catalog.data.Metacard;
-import ddf.catalog.data.Result;
 import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
@@ -56,17 +53,15 @@ import ddf.security.Subject;
 
 public class CatalogMgrImpl extends CatalogMgrPOA {
 
-    private static final String ENCODING = "UTF-8";
-
-    private static final int DEFAULT_TIMEOUT = -1;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(CatalogMgrImpl.class);
 
     private POA poa_;
 
     private CatalogFramework catalogFramework;
 
-    private long defaultTimeout = DEFAULT_TIMEOUT;
+    private int maxNumResults = NsiliEndpoint.DEFAULT_MAX_NUM_RESULTS;
+
+    private long defaultTimeout = AccessManagerImpl.DEFAULT_TIMEOUT;
 
     private BqsConverter bqsConverter;
 
@@ -82,6 +77,10 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
 
     public void setCatalogFramework(CatalogFramework catalogFramework) {
         this.catalogFramework = catalogFramework;
+    }
+
+    public void setMaxNumResults(int maxNumResults) {
+        this.maxNumResults = maxNumResults;
     }
 
     public void setGuestSubject(Subject guestSubject) {
@@ -126,21 +125,22 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
     public SubmitQueryRequest submit_query(Query aQuery, String[] result_attributes,
             SortAttribute[] sort_attributes, NameValue[] properties)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        SubmitQueryRequestImpl submitQueryRequest = new SubmitQueryRequestImpl();
+        SubmitQueryRequestImpl submitQueryRequest = new SubmitQueryRequestImpl(aQuery, bqsConverter, catalogFramework, guestSubject);
+        submitQueryRequest.set_number_of_hits(maxNumResults);
+        submitQueryRequest.setTimeout(defaultTimeout);
 
         String queryId = UUID.randomUUID()
                 .toString();
         try {
-            poa_.activate_object_with_id(queryId.getBytes(Charset.forName(ENCODING)),
+            poa_.activate_object_with_id(queryId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                     submitQueryRequest);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
             LOGGER.error("submit_query : Unable to activate submitQueryRequest object.", e);
         }
 
         org.omg.CORBA.Object obj = poa_.create_reference_with_id(queryId.getBytes(Charset.forName(
-                ENCODING)), SubmitQueryRequestHelper.id());
+                NsiliEndpoint.ENCODING)), SubmitQueryRequestHelper.id());
         SubmitQueryRequest queryRequest = SubmitQueryRequestHelper.narrow(obj);
-        submitQueryRequest.setQueryResults(getResults(aQuery));
         return queryRequest;
     }
 
@@ -155,14 +155,14 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
         String id = UUID.randomUUID().toString();
 
         try {
-            poa_.activate_object_with_id(id.getBytes(Charset.forName(ENCODING)),
+            poa_.activate_object_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                     hitCountRequest);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
             LOGGER.error("hit_count : Unable to activate hitCountRequest object: {}", id, e);
         }
 
         org.omg.CORBA.Object obj =
-                poa_.create_reference_with_id(id.getBytes(Charset.forName(ENCODING)),
+                poa_.create_reference_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                         HitCountRequestHelper.id());
         HitCountRequest queryRequest = HitCountRequestHelper.narrow(obj);
 
@@ -212,50 +212,6 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
         }
 
         return resultCount;
-    }
-
-    protected List<Result> getResults(Query aQuery) {
-        List<Result> results = new ArrayList<>();
-
-        Filter parsedFilter = bqsConverter.convertBQSToDDF(aQuery);
-
-        QueryImpl catalogQuery = new QueryImpl(parsedFilter);
-
-        if (defaultTimeout > 0) {
-            catalogQuery.setTimeoutMillis(defaultTimeout*1000);
-        }
-
-        QueryRequestImpl catalogQueryRequest = new QueryRequestImpl(catalogQuery);
-
-        try {
-            QueryResultsCallable queryCallable = new QueryResultsCallable(catalogQueryRequest);
-            results.addAll(guestSubject.execute(queryCallable));
-
-        } catch (Exception e) {
-            LOGGER.warn("Unable to query catalog", e);
-        }
-
-        return results;
-    }
-
-    class QueryResultsCallable implements Callable<List<Result>> {
-        QueryRequestImpl catalogQueryRequest;
-
-        public QueryResultsCallable(QueryRequestImpl catalogQueryRequest) {
-            this.catalogQueryRequest = catalogQueryRequest;
-        }
-
-        @Override
-        public List<Result> call() throws Exception {
-            List<Result> results = new ArrayList<>();
-
-            QueryResponse queryResponse = catalogFramework.query(catalogQueryRequest);
-            queryResponse.getHits();
-            if (queryResponse.getResults() != null) {
-                results.addAll(queryResponse.getResults());
-            }
-            return results;
-        }
     }
 
     class QueryCountCallable implements Callable<Long> {

@@ -16,6 +16,7 @@ package com.connexta.alliance.nsili.endpoint.requests;
 import com.connexta.alliance.nsili.common.CB.Callback;
 import com.connexta.alliance.nsili.common.GIAS.DelayEstimate;
 import com.connexta.alliance.nsili.common.GIAS.DeliveryManifestHolder;
+import com.connexta.alliance.nsili.common.GIAS.OrderContents;
 import com.connexta.alliance.nsili.common.GIAS.OrderRequestPOA;
 import com.connexta.alliance.nsili.common.GIAS.RequestManager;
 import com.connexta.alliance.nsili.common.GIAS._RequestManagerStub;
@@ -28,9 +29,16 @@ import com.connexta.alliance.nsili.common.UCO.SystemFault;
 
 public class OrderRequestImpl extends OrderRequestPOA {
 
+    private OrderContents order;
+
+    public OrderRequestImpl(OrderContents order) {
+        this.order = order;
+    }
+
     @Override
     public State complete(DeliveryManifestHolder prods) throws ProcessingFault, SystemFault {
         prods.value = null; //TODO DeliveryManifestGenerator.getManifest();
+
         return State.COMPLETED;
     }
 

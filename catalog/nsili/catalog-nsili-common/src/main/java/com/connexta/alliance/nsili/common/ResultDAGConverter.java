@@ -13,11 +13,25 @@
  */
 package com.connexta.alliance.nsili.common;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.UUID;
+
+import org.codice.ddf.configuration.SystemBaseUrl;
+import org.codice.ddf.configuration.SystemInfo;
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.ORB;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
+import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.connexta.alliance.nsili.common.UCO.AbsTime;
 import com.connexta.alliance.nsili.common.UCO.AbsTimeHelper;
@@ -30,17 +44,6 @@ import com.connexta.alliance.nsili.common.UCO.RectangleHelper;
 import com.connexta.alliance.nsili.common.UCO.Time;
 import com.connexta.alliance.nsili.common.UID.Product;
 import com.connexta.alliance.nsili.common.UID.ProductHelper;
-import org.codice.ddf.configuration.SystemInfo;
-import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
-import org.omg.CORBA.Any;
-import org.omg.CORBA.ORB;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
-import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
-import org.omg.PortableServer.POAPackage.WrongPolicy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 
@@ -51,7 +54,11 @@ import ddf.catalog.data.Result;
 public class ResultDAGConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ResultDAGConverter.class);
 
-    private static final String ENCODING = "UTF-8";
+    private static final String CATALOG_SOURCE_PATH = "/catalog/sources";
+
+    private static final String THUMBNAIL_TRANSFORMER = "thumbnail";
+
+    private static final String ENCODING = StandardCharsets.UTF_8.name();
 
     public static DAG convertResult(Result result, ORB orb, POA poa) {
         Double distanceInMeters = result.getDistanceInMeters();
@@ -63,14 +70,17 @@ public class ResultDAGConverter {
 
         ProductImpl productImpl = new ProductImpl();
 
-        String id = result.getMetacard().getId() + UUID.randomUUID().toString();
+        String id = result.getMetacard().getId();
 
-        try {
-            poa.activate_object_with_id(id.getBytes(Charset.forName(ENCODING)), productImpl);
-        } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-
-            LOGGER.info("Convert DAG : Unable to activate product impl object ({}): {}", result.getMetacard().getId(),
-                    e.getLocalizedMessage());
+        if (!CorbaUtils.isIdActive(poa, id.getBytes(Charset.forName(ENCODING)))) {
+            try {
+                poa.activate_object_with_id(id.getBytes(Charset.forName(ENCODING)), productImpl);
+            } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
+                LOGGER.info("Convert DAG : Unable to activate product impl object ({}): {}",
+                        result.getMetacard()
+                                .getId(),
+                        e.getLocalizedMessage());
+            }
         }
 
         org.omg.CORBA.Object obj = poa.create_reference_with_id(result.getMetacard()
@@ -89,6 +99,10 @@ public class ResultDAGConverter {
         addCardNodeWithAttributes(graph, productNode, metacard, orb);
         addFileNodeWithAttributes(graph, productNode, metacard, orb);
         addParts(graph, productNode, metacard, orb);
+
+        if (metacard.getThumbnail() != null && metacard.getThumbnail().length > 0) {
+            addThumbnailRelatedFile(graph, productNode, metacard, orb);
+        }
 
         graph.addVertex(productNode);
 
@@ -319,6 +333,58 @@ public class ResultDAGConverter {
         }
     }
 
+    public static void addThumbnailRelatedFile(DirectedAcyclicGraph<Node, Edge> graph,
+            Node productNode, Metacard metacard, ORB orb) {
+        Any any = orb.create_any();
+        Node relatedFileNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_RELATED_FILE, any);
+        graph.addVertex(relatedFileNode);
+        graph.addEdge(productNode, relatedFileNode);
+
+        Attribute pocAttr = metacard.getAttribute(Metacard.POINT_OF_CONTACT);
+        if (pocAttr != null) {
+            String pocString = String.valueOf(pocAttr.getValue());
+            if (pocString != null) {
+                addStringAttribute(graph, relatedFileNode, NsiliConstants.CREATOR, pocString, orb);
+            }
+        }
+
+        addDateAttribute(graph,
+                relatedFileNode,
+                NsiliConstants.DATE_TIME_DECLARED,
+                metacard.getCreatedDate(),
+                orb);
+
+        if (metacard.getResourceSize() != null) {
+            try {
+                Double resSize = (double)metacard.getThumbnail().length;
+                Double resSizeMB = convertToMegabytes(resSize);
+                addDoubleAttribute(graph, relatedFileNode, NsiliConstants.EXTENT, resSizeMB, orb);
+            } catch (NumberFormatException nfe) {
+                LOGGER.warn("Couldn't convert the thumbnail size to double: {}",
+                        metacard.getResourceSize());
+            }
+        }
+
+        try {
+            String thumbnailURL = new URI(SystemBaseUrl.constructUrl(
+                    CATALOG_SOURCE_PATH + "/" + metacard.getSourceId() + "/" + metacard.getId() + "?transform="
+                            + THUMBNAIL_TRANSFORMER, true)).toASCIIString();
+            addStringAttribute(graph, relatedFileNode, NsiliConstants.URL, thumbnailURL, orb);
+        } catch (URISyntaxException e) {
+            LOGGER.warn("Unable to construct URI: {}", e);
+            LOGGER.debug("", e);
+        }
+
+        String siteName = SystemInfo.getSiteName();
+
+        boolean fileLocal = true;
+        if (siteName != null && metacard.getSourceId() != null
+                && !siteName.equals(metacard.getSourceId())) {
+            fileLocal = false;
+        }
+        addBooleanAttribute(graph, relatedFileNode, NsiliConstants.IS_FILE_LOCAL, fileLocal, orb);
+    }
+
     public static Node createRootNode(ORB orb) {
         return new Node(0, NodeType.ROOT_NODE, NsiliConstants.NSIL_PRODUCT, orb.create_any());
     }
@@ -377,18 +443,8 @@ public class ResultDAGConverter {
 
     public static void addDateAttribute(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode,
             String key, Date date, ORB orb) {
-        Calendar cal = new GregorianCalendar();
-        cal.setTime(date);
         Any any = orb.create_any();
-
-        AbsTime absTime = new AbsTime(new com.connexta.alliance.nsili.common.UCO.Date((short) cal.get(
-                Calendar.YEAR),
-                (short) (cal.get(Calendar.MONTH) + 1),
-                (short) cal.get(Calendar.DAY_OF_MONTH)),
-                new Time((short) cal.get(Calendar.HOUR_OF_DAY),
-                        (short) cal.get(Calendar.MINUTE),
-                        (short) cal.get(Calendar.SECOND)));
-        AbsTimeHelper.insert(any, absTime);
+        AbsTimeHelper.insert(any, getAbsTime(date));
         Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
         graph.addVertex(node);
         graph.addEdge(parentNode, node);
@@ -409,6 +465,19 @@ public class ResultDAGConverter {
         } else {
             return null;
         }
+    }
+
+    public static AbsTime getAbsTime(Date date) {
+        Calendar cal = new GregorianCalendar();
+        cal.setTime(date);
+
+        return new AbsTime(new com.connexta.alliance.nsili.common.UCO.Date((short) cal.get(
+                Calendar.YEAR),
+                (short) (cal.get(Calendar.MONTH) + 1),
+                (short) cal.get(Calendar.DAY_OF_MONTH)),
+                new Time((short) cal.get(Calendar.HOUR_OF_DAY),
+                        (short) cal.get(Calendar.MINUTE),
+                        (short) cal.get(Calendar.SECOND)));
     }
 
     private static boolean metacardContainsImageryData(Metacard metacard) {

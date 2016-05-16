@@ -16,6 +16,8 @@ package com.connexta.alliance.nsili.endpoint.managers;
 import java.nio.charset.Charset;
 import java.util.UUID;
 
+import com.connexta.alliance.nsili.common.CorbaUtils;
+import com.connexta.alliance.nsili.common.GIAS.AccessManagerHelper;
 import com.connexta.alliance.nsili.common.GIAS.AvailabilityRequirement;
 import com.connexta.alliance.nsili.common.GIAS.Library;
 import com.connexta.alliance.nsili.common.GIAS.OrderContents;
@@ -31,6 +33,7 @@ import com.connexta.alliance.nsili.common.UCO.NameValue;
 import com.connexta.alliance.nsili.common.UCO.ProcessingFault;
 import com.connexta.alliance.nsili.common.UCO.SystemFault;
 import com.connexta.alliance.nsili.common.UID.Product;
+import com.connexta.alliance.nsili.endpoint.NsiliEndpoint;
 import com.connexta.alliance.nsili.endpoint.requests.OrderRequestImpl;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
@@ -38,17 +41,34 @@ import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
 import org.slf4j.LoggerFactory;
 
+import ddf.catalog.CatalogFramework;
+import ddf.catalog.filter.FilterBuilder;
+import ddf.security.Subject;
+
 public class OrderMgrImpl extends OrderMgrPOA {
 
-    private static final int QUERY_AVAILABILITY_DELAY = 10;
-
-    private static final int NUM_PRIORITIES = 10;
-
-    private static final int TIMEOUT = 1;
-
-    private static final String ENCODING = "UTF-8";
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(OrderMgrImpl.class);
+
+    private AccessManagerImpl accessManager = null;
+
+    private CatalogFramework catalogFramework;
+
+    private FilterBuilder filterBuilder;
+
+    private Subject subject;
+
+    public void setCatalogFramework(CatalogFramework catalogFramework) {
+        this.catalogFramework = catalogFramework;
+    }
+
+    public void setFilterBuilder(FilterBuilder filterBuilder) {
+        this.filterBuilder = filterBuilder;
+    }
+
+    public void setSubject(Subject subject) {
+        this.subject = subject;
+    }
 
     @Override
     public String[] get_package_specifications() throws ProcessingFault, SystemFault {
@@ -64,18 +84,19 @@ public class OrderMgrImpl extends OrderMgrPOA {
     @Override
     public OrderRequest order(OrderContents order, NameValue[] properties)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        OrderRequestImpl orderRequestImpl = new OrderRequestImpl();
+        OrderRequestImpl orderRequestImpl = new OrderRequestImpl(order);
 
         String id = UUID.randomUUID().toString();
         try {
-            _poa().activate_object_with_id(id.getBytes(Charset.forName(ENCODING)),
+            _poa().activate_object_with_id("order".getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                     orderRequestImpl);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
             LOGGER.error("order : Unable to activate orderRequest object. {}", e);
         }
 
         org.omg.CORBA.Object obj = _poa().create_reference_with_id(id.getBytes(Charset.forName(
-                ENCODING)), OrderRequestHelper.id());
+                NsiliEndpoint.ENCODING)), OrderRequestHelper.id());
+
         OrderRequest orderRequest = OrderRequestHelper.narrow(obj);
 
         return orderRequest;
@@ -84,25 +105,25 @@ public class OrderMgrImpl extends OrderMgrPOA {
     // Access Mgr
     @Override
     public String[] get_use_modes() throws ProcessingFault, SystemFault {
-        return new String[0];
+        return getAccessManager().get_use_modes();
     }
 
     @Override
     public boolean is_available(Product prod, String use_mode)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return true;
+        return getAccessManager().is_available(prod, use_mode);
     }
 
     @Override
     public int query_availability_delay(Product prod,
             AvailabilityRequirement availability_requirement, String use_mode)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return QUERY_AVAILABILITY_DELAY;
+        return getAccessManager().query_availability_delay(prod, availability_requirement, use_mode);
     }
 
     @Override
     public short get_number_of_priorities() throws ProcessingFault, SystemFault {
-        return NUM_PRIORITIES;
+        return getAccessManager().get_number_of_priorities();
     }
 
     @Override
@@ -120,31 +141,28 @@ public class OrderMgrImpl extends OrderMgrPOA {
 
     @Override
     public int get_default_timeout() throws ProcessingFault, SystemFault {
-        return TIMEOUT;
+        return getAccessManager().get_default_timeout();
     }
 
     @Override
     public void set_default_timeout(int new_default)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return;
     }
 
     @Override
     public int get_timeout(Request aRequest)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return TIMEOUT;
+        return getAccessManager().get_timeout(aRequest);
     }
 
     @Override
     public void set_timeout(Request aRequest, int new_lifetime)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return;
     }
 
     @Override
     public void delete_request(Request aRequest)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return;
     }
 
     // LibraryMgr
@@ -164,4 +182,28 @@ public class OrderMgrImpl extends OrderMgrPOA {
         throw new NO_IMPLEMENT();
     }
 
+    private AccessManagerImpl getAccessManager() {
+        if (accessManager == null) {
+            accessManager = new AccessManagerImpl();
+            accessManager.setCatalogFramework(catalogFramework);
+            accessManager.setFilterBuilder(filterBuilder);
+            accessManager.setSubject(subject);
+
+            String managerId = UUID.randomUUID()
+                    .toString();
+            if (!CorbaUtils.isIdActive(_poa(), managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
+                try {
+                    _poa().activate_object_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
+                            accessManager);
+                } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
+                    LOGGER.error("Error activating AcccessMgr: {}", e);
+                }
+            }
+
+            _poa().create_reference_with_id(managerId.getBytes(
+                    Charset.forName(NsiliEndpoint.ENCODING)), AccessManagerHelper.id());
+        }
+
+        return accessManager;
+    }
 }

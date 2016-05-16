@@ -15,21 +15,27 @@ package com.connexta.alliance.nsili.endpoint;
 
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.mock;
-
-import ddf.security.service.SecurityServiceException;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.connexta.alliance.nsili.common.GIAS.AccessCriteria;
+import com.connexta.alliance.nsili.common.GIAS.LibraryManager;
+import com.connexta.alliance.nsili.common.NsiliManagerType;
+
+import ddf.security.service.SecurityServiceException;
 
 public class TestNsiliEndpoint extends TestNsiliCommon {
     public static final int TEST_CORBA_PORT = 20010;
 
     private NsiliEndpoint nsiliEndpoint;
 
+    private AccessCriteria testAccessCriteria;
+
     @Before
     public void setUp() throws SecurityServiceException {
+        testAccessCriteria = new AccessCriteria("", "", "");
         createEndpoint();
         setupCommonMocks();
     }
@@ -41,9 +47,45 @@ public class TestNsiliEndpoint extends TestNsiliCommon {
     }
 
     @Test
-    public void testEndpointManagers() {
-        //This should be empty until managers are implements and added to the endpoint
+    public void testEndpointManagers() throws Exception {
+        String[] supportedManagerTypes = nsiliEndpoint.getLibrary().get_manager_types();
+        assertThat(supportedManagerTypes.length, notNullValue());
+    }
 
+    @Test
+    public void testGetCatalogMgr() throws Exception {
+        LibraryManager catalogMgr = nsiliEndpoint.getLibrary().get_manager(NsiliManagerType.CATALOG_MGR.getSpecName(), testAccessCriteria);
+        assertThat(catalogMgr, notNullValue());
+    }
+
+    @Test
+    public void testGetOrderMgr() throws Exception {
+        LibraryManager orderMgr = nsiliEndpoint.getLibrary().get_manager(NsiliManagerType.ORDER_MGR.getSpecName(), testAccessCriteria);
+        assertThat(orderMgr, notNullValue());
+    }
+
+    @Test
+    public void testGetProductMgr() throws Exception {
+        LibraryManager productMgr = nsiliEndpoint.getLibrary().get_manager(NsiliManagerType.PRODUCT_MGR.getSpecName(), testAccessCriteria);
+        assertThat(productMgr, notNullValue());
+    }
+
+    @Test
+    public void testGetDataModelMgr() throws Exception {
+        LibraryManager dataModelMgr = nsiliEndpoint.getLibrary().get_manager(NsiliManagerType.DATA_MODEL_MGR.getSpecName(), testAccessCriteria);
+        assertThat(dataModelMgr, notNullValue());
+    }
+
+    @Test
+    public void testCreationMgr() throws Exception {
+        LibraryManager creationMgr = nsiliEndpoint.getLibrary().get_manager(NsiliManagerType.CREATION_MGR.getSpecName(), testAccessCriteria);
+        assertThat(creationMgr, notNullValue());
+    }
+
+    @Test
+    public void testStandingQueryMgr() throws Exception {
+        LibraryManager standingQueryMgr = nsiliEndpoint.getLibrary().get_manager(NsiliManagerType.STANDING_QUERY_MGR.getSpecName(), testAccessCriteria);
+        assertThat(standingQueryMgr, notNullValue());
     }
 
     @After

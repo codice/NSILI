@@ -13,11 +13,22 @@
  */
 package com.connexta.alliance.nsili.endpoint.requests;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+
+import org.apache.shiro.subject.ExecutionException;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.opengis.filter.Filter;
+import org.slf4j.LoggerFactory;
+
 import com.connexta.alliance.nsili.common.CB.Callback;
 import com.connexta.alliance.nsili.common.GIAS.DelayEstimate;
 import com.connexta.alliance.nsili.common.GIAS.GetParametersRequestPOA;
 import com.connexta.alliance.nsili.common.GIAS.RequestManager;
 import com.connexta.alliance.nsili.common.GIAS._RequestManagerStub;
+import com.connexta.alliance.nsili.common.NsilCorbaExceptionUtil;
+import com.connexta.alliance.nsili.common.ResultDAGConverter;
 import com.connexta.alliance.nsili.common.UCO.DAGHolder;
 import com.connexta.alliance.nsili.common.UCO.InvalidInputParameter;
 import com.connexta.alliance.nsili.common.UCO.ProcessingFault;
@@ -27,18 +38,72 @@ import com.connexta.alliance.nsili.common.UCO.Status;
 import com.connexta.alliance.nsili.common.UCO.StringDAGHolder;
 import com.connexta.alliance.nsili.common.UCO.SystemFault;
 
+import ddf.catalog.CatalogFramework;
+import ddf.catalog.data.Metacard;
+import ddf.catalog.data.Result;
+import ddf.catalog.filter.FilterBuilder;
+import ddf.catalog.operation.Query;
+import ddf.catalog.operation.QueryResponse;
+import ddf.catalog.operation.impl.QueryImpl;
+import ddf.catalog.operation.impl.QueryRequestImpl;
+import ddf.security.Subject;
+
 public class GetParametersRequestImpl extends GetParametersRequestPOA {
+
+    private static final org.slf4j.Logger LOGGER =
+            LoggerFactory.getLogger(GetParametersRequestImpl.class);
+
+    private String productIdStr;
+
+    private String[] desiredParameters;
+
+    private CatalogFramework catalogFramework;
+
+    private FilterBuilder filterBuilder;
+
+    private Subject guestSubject;
+
+    public GetParametersRequestImpl(String productIdStr, String[] desiredParameters,
+            CatalogFramework catalogFramework, FilterBuilder filterBuilder, Subject guestSubject) {
+        this.productIdStr = productIdStr;
+        this.desiredParameters = desiredParameters;
+        this.catalogFramework = catalogFramework;
+        this.filterBuilder = filterBuilder;
+        this.guestSubject = guestSubject;
+    }
 
     @Override
     public State complete(DAGHolder parameters) throws ProcessingFault, SystemFault {
-        parameters.value = null; //TODO DAGGenerator.generateDAGResultNSILAllView(_orb())[0];
+        Filter filter = filterBuilder.attribute(Metacard.ID)
+                .is()
+                .equalTo()
+                .text(productIdStr);
+        Query query = new QueryImpl(filter);
+        Result result = getResult(query);
+
+        if (result != null) {
+            if (desiredParameters != null) {
+                if (isParamContained(desiredParameters, "ALL")) {
+                    parameters.value = ResultDAGConverter.convertResult(result, _orb(), _poa());
+                } else if (isParamContained(desiredParameters, "CORE")) {
+                    throw new NO_IMPLEMENT("CORE desired_parameter not supported");
+                } else if (isParamContained(desiredParameters, "ORDER")) {
+                    throw new NO_IMPLEMENT("ORDER desired_parameter not supported");
+                }
+            } else {
+                if (result != null) {
+                    parameters.value = ResultDAGConverter.convertResult(result, _orb(), _poa());
+                }
+            }
+        }
+
         return State.COMPLETED;
     }
 
     @Override
     public State complete_StringDAG(StringDAGHolder parameters)
             throws ProcessingFault, SystemFault {
-        return State.COMPLETED;
+        throw new NO_IMPLEMENT("complete_StringDAG not implemented");
     }
 
     @Override
@@ -68,7 +133,7 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
     @Override
     public String register_callback(Callback acallback)
             throws InvalidInputParameter, ProcessingFault, SystemFault {
-        return "";
+        throw new NO_IMPLEMENT("Callbacks are not supported");
     }
 
     @Override
@@ -81,4 +146,50 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
         return new _RequestManagerStub();
     }
 
+    private Result getResult(Query query) {
+        QueryRequestImpl queryRequest = new QueryRequestImpl(query);
+        Result result = null;
+        try {
+            QueryResultsCallable queryCallable = new QueryResultsCallable(queryRequest);
+            List<Result> results = guestSubject.execute(queryCallable);
+            if (results != null && !results.isEmpty()) {
+                result = results.iterator()
+                        .next();
+            }
+
+        } catch (ExecutionException e) {
+            LOGGER.warn("Unable to query catalog {}", NsilCorbaExceptionUtil.getExceptionDetails(e));
+            LOGGER.debug("Catalog Query details", e);
+        }
+
+        return result;
+    }
+
+    private boolean isParamContained(String[] params, String param) {
+        for (String paramValue : params) {
+            if (paramValue.equals(param)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    class QueryResultsCallable implements Callable<List<Result>> {
+        QueryRequestImpl catalogQueryRequest;
+
+        public QueryResultsCallable(QueryRequestImpl catalogQueryRequest) {
+            this.catalogQueryRequest = catalogQueryRequest;
+        }
+
+        @Override
+        public List<Result> call() throws Exception {
+            List<Result> results = new ArrayList<>();
+
+            QueryResponse queryResponse = catalogFramework.query(catalogQueryRequest);
+            if (queryResponse.getResults() != null) {
+                results.addAll(queryResponse.getResults());
+            }
+            return results;
+        }
+    }
 }

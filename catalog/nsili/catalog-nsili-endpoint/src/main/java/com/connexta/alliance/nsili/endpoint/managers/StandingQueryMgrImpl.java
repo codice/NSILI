@@ -34,6 +34,7 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
 
     @Override
     public Event[] get_event_descriptions() throws ProcessingFault, SystemFault {
+        LOGGER.debug("StandingQueryMgr.get_event_descriptions");
         return new Event[0];
     }
 

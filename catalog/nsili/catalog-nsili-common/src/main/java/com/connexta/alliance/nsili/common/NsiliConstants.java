@@ -275,13 +275,13 @@ public class NsiliConstants {
 
     public static final String PRIORITY = "priority";
 
-    public static final String FILE_TYPE = "fileType";
-
-    public static final String URL = "URL";
-
     public static final String IS_FILE_LOCAL = "isFileLocal";
 
     public static final String AMPLIFICATION = "amplification";
+
+    public static final String FILE_TYPE = "fileType";
+
+    public static final String URL = "url";
 
     public static final String CONTRIBUTOR = "contributor";
 

@@ -14,13 +14,26 @@
 package com.connexta.alliance.nsili.endpoint.requests;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.Callable;
 
+import org.apache.shiro.subject.ExecutionException;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.opengis.filter.Filter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.connexta.alliance.nsili.common.BqsConverter;
 import com.connexta.alliance.nsili.common.CB.Callback;
 import com.connexta.alliance.nsili.common.GIAS.DelayEstimate;
+import com.connexta.alliance.nsili.common.GIAS.Query;
 import com.connexta.alliance.nsili.common.GIAS.RequestManager;
 import com.connexta.alliance.nsili.common.GIAS.SubmitQueryRequestPOA;
 import com.connexta.alliance.nsili.common.GIAS._RequestManagerStub;
+import com.connexta.alliance.nsili.common.NsilCorbaExceptionUtil;
 import com.connexta.alliance.nsili.common.ResultDAGConverter;
 import com.connexta.alliance.nsili.common.UCO.DAG;
 import com.connexta.alliance.nsili.common.UCO.DAGListHolder;
@@ -31,24 +44,47 @@ import com.connexta.alliance.nsili.common.UCO.State;
 import com.connexta.alliance.nsili.common.UCO.Status;
 import com.connexta.alliance.nsili.common.UCO.StringDAGListHolder;
 import com.connexta.alliance.nsili.common.UCO.SystemFault;
-import org.omg.CORBA.NO_IMPLEMENT;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.connexta.alliance.nsili.endpoint.NsiliEndpoint;
 
+import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Result;
+import ddf.catalog.operation.QueryResponse;
+import ddf.catalog.operation.impl.QueryImpl;
+import ddf.catalog.operation.impl.QueryRequestImpl;
+import ddf.security.Subject;
 
 public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SubmitQueryRequestImpl.class);
 
-    private long NO_LIMIT_MAX_HITS = -1;
+    private int maxNumReturnedHits = NsiliEndpoint.DEFAULT_MAX_NUM_RESULTS;
 
-    private long maxNumReturnedHits = NO_LIMIT_MAX_HITS;
+    private Query query;
 
-    private List<Result> queryResults;
+    private BqsConverter bqsConverter;
 
-    public void setQueryResults(List<Result> queryResults) {
-        this.queryResults = queryResults;
+    private long timeout = -1;
+
+    private CatalogFramework catalogFramework;
+
+    private Subject guestSubject;
+
+    private int totalHitsReturned = 0;
+
+    private Map<String, Callback> callbacks = new HashMap<>();
+
+    public SubmitQueryRequestImpl(Query query, BqsConverter bqsConverter,
+            CatalogFramework catalogFramework, Subject guestSubject) {
+        this.query = query;
+        this.bqsConverter = bqsConverter;
+        this.catalogFramework = catalogFramework;
+        this.guestSubject = guestSubject;
+
+        notifyCallbacks();
+    }
+
+    public void setTimeout(long timeout) {
+        this.timeout = timeout;
     }
 
     @Override
@@ -60,33 +96,33 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
     @Override
     public State complete_DAG_results(DAGListHolder results) throws ProcessingFault, SystemFault {
         DAG[] noResults = new DAG[0];
-        if (queryResults == null) {
-            results.value = noResults;
-        } else {
-            List<DAG> dags = new ArrayList<>();
-            int totalHits = 0;
-            for (Result result : queryResults) {
-                DAG dag = ResultDAGConverter.convertResult(result, _orb(), _poa());
-                if (dag != null) {
-                    dags.add(dag);
-                    totalHits++;
-                }
+        results.value = noResults;
 
-                if (maxNumReturnedHits != NO_LIMIT_MAX_HITS) {
-                    if (totalHits >= maxNumReturnedHits) {
-                        break;
-                    }
-                }
-            }
-            if (!dags.isEmpty()) {
-                results.value = dags.toArray(new DAG[0]);
-                LOGGER.debug("Number of results being returned: {}, requested: {}", results.value.length, maxNumReturnedHits);
-            } else {
-                LOGGER.debug("No results will be returned");
-                results.value = noResults;
+        List<DAG> dags = new ArrayList<>();
+        int totalHits = 0;
+        List<Result> queryResults = getResults(query, totalHitsReturned);
+        for (Result result : queryResults) {
+            DAG dag = ResultDAGConverter.convertResult(result, _orb(), _poa());
+            if (dag != null) {
+                dags.add(dag);
+                totalHits++;
+                totalHitsReturned++;
             }
 
+            if (totalHits >= maxNumReturnedHits) {
+                break;
+            }
         }
+        if (!dags.isEmpty()) {
+            results.value = dags.toArray(new DAG[0]);
+            LOGGER.debug("Number of results being returned: {}, requested: {}",
+                    results.value.length,
+                    maxNumReturnedHits);
+        } else {
+            LOGGER.debug("No results will be returned");
+            results.value = noResults;
+        }
+
         return State.COMPLETED;
     }
 
@@ -103,8 +139,7 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
     }
 
     @Override
-    public RequestDescription get_request_description()
-            throws ProcessingFault, SystemFault {
+    public RequestDescription get_request_description() throws ProcessingFault, SystemFault {
         return new RequestDescription();
     }
 
@@ -132,18 +167,86 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
     @Override
     public String register_callback(Callback acallback)
             throws InvalidInputParameter, ProcessingFault, SystemFault {
-        return "";
+        String id = UUID.randomUUID()
+                .toString();
+        callbacks.put(id, acallback);
+
+        return id;
     }
 
     @Override
     public void free_callback(String id)
             throws InvalidInputParameter, ProcessingFault, SystemFault {
-
+        callbacks.remove(id);
     }
 
     @Override
     public RequestManager get_request_manager() throws ProcessingFault, SystemFault {
         return new _RequestManagerStub();
+    }
+
+    private void notifyCallbacks() {
+        if (!callbacks.isEmpty()) {
+            for (Callback callback : callbacks.values()) {
+                RequestDescription requestDescription = new RequestDescription();
+                try {
+                    callback._notify(State.COMPLETED, requestDescription);
+                } catch (InvalidInputParameter | SystemFault | ProcessingFault e) {
+                    LOGGER.error("Unable to notify callback {}", NsilCorbaExceptionUtil.getExceptionDetails(e));
+                    LOGGER.debug("Callback notification exception details", e);
+                }
+            }
+        }
+    }
+
+    protected List<Result> getResults(Query aQuery, int offset) {
+        List<Result> results = new ArrayList<>();
+
+        Filter parsedFilter = bqsConverter.convertBQSToDDF(aQuery);
+
+        QueryImpl catalogQuery = new QueryImpl(parsedFilter);
+        catalogQuery.setRequestsTotalResultsCount(false);
+        catalogQuery.setPageSize(maxNumReturnedHits);
+
+        if (offset > 0) {
+            catalogQuery.setStartIndex(offset);
+        }
+
+        if (timeout > 0) {
+            catalogQuery.setTimeoutMillis(timeout * 1000);
+        }
+
+        QueryRequestImpl catalogQueryRequest = new QueryRequestImpl(catalogQuery);
+
+        try {
+            QueryResultsCallable queryCallable = new QueryResultsCallable(catalogQueryRequest);
+            results.addAll(guestSubject.execute(queryCallable));
+
+        } catch (ExecutionException e) {
+            LOGGER.warn("Unable to query catalog {}", e);
+            LOGGER.debug("Catalog query exception details", e);
+        }
+
+        return results;
+    }
+
+    class QueryResultsCallable implements Callable<List<Result>> {
+        QueryRequestImpl catalogQueryRequest;
+
+        public QueryResultsCallable(QueryRequestImpl catalogQueryRequest) {
+            this.catalogQueryRequest = catalogQueryRequest;
+        }
+
+        @Override
+        public List<Result> call() throws Exception {
+            List<Result> results = new ArrayList<>();
+
+            QueryResponse queryResponse = catalogFramework.query(catalogQueryRequest);
+            if (queryResponse.getResults() != null) {
+                results.addAll(queryResponse.getResults());
+            }
+            return results;
+        }
     }
 
 }

@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -134,8 +135,6 @@ public class NsiliSource extends MaskableImpl
     private static final String GEOGRAPHIC_DATUM = "GeographicDatum";
 
     private static final String ASC = "ASC";
-
-    private static final String UTF8 = "UTF-8";
 
     private static final String CATALOG_MGR = "CatalogMgr";
 
@@ -335,7 +334,7 @@ public class NsiliSource extends MaskableImpl
      */
     private void getIorStringFromLocalDisk() {
         try (InputStream inputStream = new FileInputStream(iorUrl.substring(7))) {
-            iorString = IOUtils.toString(inputStream);
+            iorString = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
         } catch (IOException e) {
             LOGGER.error("{} : Unable to process IOR String.", id, e);
         }
@@ -355,7 +354,7 @@ public class NsiliSource extends MaskableImpl
         Nsili nsili = factory.getClient();
 
         try (InputStream inputStream = nsili.getIorFile()) {
-            iorString = IOUtils.toString(inputStream, UTF8);
+            iorString = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
             //Remove leading/trailing whitespace as the CORBA init can't handle that.
             iorString = iorString.trim();
         } catch (IOException e) {

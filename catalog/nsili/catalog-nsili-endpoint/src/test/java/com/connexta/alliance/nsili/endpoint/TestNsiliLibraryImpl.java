@@ -20,11 +20,13 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 
 import com.connexta.alliance.nsili.common.GIAS.LibraryDescription;
+import com.connexta.alliance.nsili.common.UCO.InvalidInputParameter;
 import com.connexta.alliance.nsili.common.UCO.ProcessingFault;
 import com.connexta.alliance.nsili.common.UCO.SystemFault;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.omg.CORBA.NO_IMPLEMENT;
 
 import ddf.security.service.SecurityManager;
 import ddf.security.service.SecurityServiceException;
@@ -72,6 +74,16 @@ public class TestNsiliLibraryImpl extends TestNsiliCommon {
         assertThat(libraryDescription.library_name, is(TEST_HOSTNAME));
         assertThat(libraryDescription.library_description, containsString(TEST_ORGANIZATION));
         assertThat(libraryDescription.library_version_number, containsString(TEST_VERSION));
+    }
+
+    @Test (expected = NO_IMPLEMENT.class)
+    public void testGetOtherLibraries() throws ProcessingFault, SystemFault, InvalidInputParameter {
+        library.get_other_libraries(null);
+    }
+
+    @Test
+    public void testSetMaxResults() {
+        library.setMaxNumResults(999);
     }
 
     @After

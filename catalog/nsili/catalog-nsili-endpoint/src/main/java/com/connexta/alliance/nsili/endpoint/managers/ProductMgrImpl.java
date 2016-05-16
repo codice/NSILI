@@ -13,9 +13,21 @@
  */
 package com.connexta.alliance.nsili.endpoint.managers;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
+import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
+import org.omg.PortableServer.POAPackage.WrongAdapter;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.slf4j.LoggerFactory;
+
+import com.connexta.alliance.nsili.common.CorbaUtils;
+import com.connexta.alliance.nsili.common.GIAS.AccessManagerHelper;
 import com.connexta.alliance.nsili.common.GIAS.AvailabilityRequirement;
 import com.connexta.alliance.nsili.common.GIAS.GetParametersRequest;
 import com.connexta.alliance.nsili.common.GIAS.GetParametersRequestHelper;
@@ -26,79 +38,131 @@ import com.connexta.alliance.nsili.common.GIAS.ProductMgrPOA;
 import com.connexta.alliance.nsili.common.GIAS.Request;
 import com.connexta.alliance.nsili.common.GIAS.SetAvailabilityRequest;
 import com.connexta.alliance.nsili.common.GIAS._SetAvailabilityRequestStub;
+import com.connexta.alliance.nsili.common.NsilCorbaExceptionUtil;
 import com.connexta.alliance.nsili.common.UCO.FileLocation;
 import com.connexta.alliance.nsili.common.UCO.InvalidInputParameter;
 import com.connexta.alliance.nsili.common.UCO.NameValue;
 import com.connexta.alliance.nsili.common.UCO.ProcessingFault;
 import com.connexta.alliance.nsili.common.UCO.SystemFault;
 import com.connexta.alliance.nsili.common.UID.Product;
+import com.connexta.alliance.nsili.endpoint.NsiliEndpoint;
 import com.connexta.alliance.nsili.endpoint.requests.GetParametersRequestImpl;
 import com.connexta.alliance.nsili.endpoint.requests.GetRelatedFilesRequestImpl;
-import org.omg.CORBA.NO_IMPLEMENT;
-import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
-import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
-import org.omg.PortableServer.POAPackage.WrongPolicy;
-import org.slf4j.LoggerFactory;
+
+import ddf.catalog.CatalogFramework;
+import ddf.catalog.data.Metacard;
+import ddf.catalog.filter.FilterBuilder;
+import ddf.security.Subject;
 
 public class ProductMgrImpl extends ProductMgrPOA {
 
-    private static final int QUERY_AVAILABILITY_DELAY = 10;
+    public static final String THUMBNAIL_RELATED_FILE = "THUMBNAIL";
 
-    private static final int NUM_PRIORITIES = 10;
+    private static final String PORT_PROP = "PORT";
+
+    private static final int QUERY_AVAILABILITY_DELAY = 10;
 
     private static final int TIMEOUT = 1;
 
-    private static final String ENCODING = "UTF-8";
-
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ProductMgrImpl.class);
+
+    private CatalogFramework catalogFramework;
+
+    private FilterBuilder filterBuilder;
+
+    private Subject subject;
+
+    private AccessManagerImpl accessManager;
+
+    public ProductMgrImpl() {
+
+    }
+
+    public void setCatalogFramework(CatalogFramework catalogFramework) {
+        this.catalogFramework = catalogFramework;
+    }
+
+    public void setFilterBuilder(FilterBuilder filterBuilder) {
+        this.filterBuilder = filterBuilder;
+    }
+
+    public void setSubject(Subject subject) {
+        this.subject = subject;
+    }
 
     @Override
     public GetParametersRequest get_parameters(Product prod, String[] desired_parameters,
             NameValue[] properties) throws ProcessingFault, InvalidInputParameter, SystemFault {
 
-        String id = UUID.randomUUID().toString();
+        GetParametersRequest getParamRequest = null;
 
-        GetParametersRequestImpl getParametersRequest = new GetParametersRequestImpl();
+        String id = UUID.randomUUID()
+                .toString();
 
         try {
-            _poa().activate_object_with_id(id.getBytes(Charset.forName(ENCODING)),
+            String productIdStr = getAccessManager().getProductId(prod);
+
+            GetParametersRequestImpl getParametersRequest = new GetParametersRequestImpl(
+                    productIdStr,
+                    desired_parameters,
+                    catalogFramework,
+                    filterBuilder,
+                    subject);
+            _poa().activate_object_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                     getParametersRequest);
-        } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-            LOGGER.error("get_parameters : Unable to activate getParametersRequest object. {}", e);
+
+            org.omg.CORBA.Object obj = _poa().create_reference_with_id(id.getBytes(Charset.forName(
+                    NsiliEndpoint.ENCODING)), GetParametersRequestHelper.id());
+            getParamRequest = GetParametersRequestHelper.narrow(obj);
+
+        } catch (WrongAdapter | WrongPolicy | UnsupportedEncodingException e) {
+            LOGGER.error("Unable to get ID from product reference: {}", NsilCorbaExceptionUtil.getExceptionDetails(e));
+            LOGGER.debug("Product reference exception details", e);
+        } catch (ServantAlreadyActive | ObjectAlreadyActive e) {
+            LOGGER.error("get_parameters : Unable to activate getParametersRequest object. {}", NsilCorbaExceptionUtil.getExceptionDetails(e));
         }
 
-        org.omg.CORBA.Object obj =
-                _poa().create_reference_with_id(id.getBytes(Charset.forName(ENCODING)),
-                        GetParametersRequestHelper.id());
-        GetParametersRequest queryRequest = GetParametersRequestHelper.narrow(obj);
-
-        return queryRequest;
+        return getParamRequest;
     }
 
     @Override
     public String[] get_related_file_types(Product prod)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return new String[0];
+        return new String[] {THUMBNAIL_RELATED_FILE};
     }
 
     @Override
     public GetRelatedFilesRequest get_related_files(Product[] products, FileLocation location,
             String type, NameValue[] properties)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        String id = UUID.randomUUID().toString();
-
-        GetRelatedFilesRequestImpl getRelatedFilesRequest = new GetRelatedFilesRequestImpl();
+        String id = UUID.randomUUID()
+                .toString();
 
         try {
-            _poa().activate_object_with_id(id.getBytes(Charset.forName(ENCODING)),
+            List<Metacard> metacards = new ArrayList<>();
+            AccessManagerImpl accessMgr = getAccessManager();
+            for (Product product : products) {
+                Metacard metacard = accessMgr.getMetacard(accessMgr.getProductId(product));
+                if (metacard != null) {
+                    metacards.add(metacard);
+                }
+            }
+
+            Integer port = getPort(properties);
+            GetRelatedFilesRequestImpl getRelatedFilesRequest = new GetRelatedFilesRequestImpl(
+                    metacards,
+                    location,
+                    type,
+                    port);
+            _poa().activate_object_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                     getRelatedFilesRequest);
-        } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
-            LOGGER.error(
-                    "get_related_files : Unable to activate getRelatedFilesRequest object. {}", e);
+        } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy | WrongAdapter | UnsupportedEncodingException e) {
+            LOGGER.error("get_related_files : Unable to activate getRelatedFilesRequest object. {}",
+                    e);
         }
 
-        org.omg.CORBA.Object obj = _poa().create_reference_with_id(id.getBytes(
-                Charset.forName(ENCODING)), GetRelatedFilesRequestHelper.id());
+        org.omg.CORBA.Object obj = _poa().create_reference_with_id(id.getBytes(Charset.forName(
+                NsiliEndpoint.ENCODING)), GetRelatedFilesRequestHelper.id());
         GetRelatedFilesRequest queryRequest = GetRelatedFilesRequestHelper.narrow(obj);
 
         return queryRequest;
@@ -107,13 +171,13 @@ public class ProductMgrImpl extends ProductMgrPOA {
     // Access Mgr
     @Override
     public String[] get_use_modes() throws ProcessingFault, SystemFault {
-        return new String[0];
+        return getAccessManager().get_use_modes();
     }
 
     @Override
     public boolean is_available(Product prod, String use_mode)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return true;
+        return getAccessManager().is_available(prod, use_mode);
     }
 
     @Override
@@ -125,7 +189,7 @@ public class ProductMgrImpl extends ProductMgrPOA {
 
     @Override
     public short get_number_of_priorities() throws ProcessingFault, SystemFault {
-        return NUM_PRIORITIES;
+        return getAccessManager().get_number_of_priorities();
     }
 
     @Override
@@ -184,4 +248,44 @@ public class ProductMgrImpl extends ProductMgrPOA {
         throw new NO_IMPLEMENT();
     }
 
+    private Integer getPort(NameValue[] props) {
+        Integer port = null;
+        for (NameValue prop : props) {
+            if (prop.aname.equals(PORT_PROP)) {
+                String propValueStr = prop.value.extract_string();
+                try {
+                    port = Integer.parseInt(propValueStr);
+                } catch (NumberFormatException nfe) {
+                    LOGGER.error("Unable to parse port from string: {}", propValueStr);
+                }
+                break;
+            }
+        }
+        return port;
+    }
+
+    private AccessManagerImpl getAccessManager() {
+        if (accessManager == null) {
+            accessManager = new AccessManagerImpl();
+            accessManager.setCatalogFramework(catalogFramework);
+            accessManager.setFilterBuilder(filterBuilder);
+            accessManager.setSubject(subject);
+
+            String managerId = UUID.randomUUID()
+                    .toString();
+            if (!CorbaUtils.isIdActive(_poa(), managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
+                try {
+                    _poa().activate_object_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
+                            accessManager);
+                } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
+                    LOGGER.error("Error activating AcccessMgr: {}", e);
+                }
+            }
+
+            _poa().create_reference_with_id(managerId.getBytes(
+                    Charset.forName(NsiliEndpoint.ENCODING)), AccessManagerHelper.id());
+        }
+
+        return accessManager;
+    }
 }

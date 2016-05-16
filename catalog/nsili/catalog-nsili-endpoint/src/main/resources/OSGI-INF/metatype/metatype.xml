@@ -21,6 +21,11 @@
                 name="Corba Listen Port" id="corbaPort" required="true" type="Integer"
                 default="20002"
         />
+        <AD
+                description="Maximum number of results that will be returned"
+                name="Max Number Returned Results" id="maxNumResults" required="true" type="Integer"
+                default="500"
+        />
     </OCD>
 
     <Designate pid="com.connexta.alliance.nsili.endpoint">

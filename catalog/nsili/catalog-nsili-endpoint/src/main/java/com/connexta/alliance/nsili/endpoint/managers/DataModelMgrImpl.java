@@ -48,9 +48,9 @@ public class DataModelMgrImpl extends DataModelMgrPOA {
 
     private static View[] VIEWS;
 
-    private static final AbsTime LAST_UPDATED = new AbsTime(new Date((short) 2,
-            (short) 9,
-            (short) 16), new Time((short) 2, (short) 0, (short) 0));
+    private static final AbsTime LAST_UPDATED = new AbsTime(new Date((short) 2016,
+            (short) 2,
+            (short) 9), new Time((short) 2, (short) 0, (short) 0));
 
     private static final short MAX_VERTICES = 10;
 
@@ -73,7 +73,8 @@ public class DataModelMgrImpl extends DataModelMgrPOA {
     public String[] get_alias_categories(NameValue[] properties)
             throws InvalidInputParameter, ProcessingFault, SystemFault {
 
-        return nsiliDataModel.getAliasCategories().toArray(new String[0]);
+        return nsiliDataModel.getAliasCategories()
+                .toArray(new String[0]);
     }
 
     @Override
@@ -96,7 +97,8 @@ public class DataModelMgrImpl extends DataModelMgrPOA {
             throws InvalidInputParameter, ProcessingFault, SystemFault {
         String logicalAttrName = "";
 
-        List<Pair<ConceptualAttributeType, String>> pairs = nsiliDataModel.getConceptualAttrsForView(view_name);
+        List<Pair<ConceptualAttributeType, String>> pairs =
+                nsiliDataModel.getConceptualAttrsForView(view_name);
         for (Pair<ConceptualAttributeType, String> pair : pairs) {
             if (pair.getLeft() == attribute_type) {
                 logicalAttrName = pair.getRight();
@@ -144,7 +146,8 @@ public class DataModelMgrImpl extends DataModelMgrPOA {
     @Override
     public Association[] get_associations(NameValue[] properties)
             throws InvalidInputParameter, ProcessingFault, SystemFault {
-        return nsiliDataModel.getAssociations().toArray(new Association[0]);
+        return nsiliDataModel.getAssociations()
+                .toArray(new Association[0]);
     }
 
     @Override

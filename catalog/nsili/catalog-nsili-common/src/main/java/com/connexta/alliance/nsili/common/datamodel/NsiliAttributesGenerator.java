@@ -53,11 +53,11 @@ import com.connexta.alliance.nsili.common.UCO.Rectangle;
 import com.connexta.alliance.nsili.common.UCO.Time;
 
 public class NsiliAttributesGenerator {
-    private static final AbsTime EARLIEST = new AbsTime(new Date((short) 1,
+    private static final AbsTime EARLIEST = new AbsTime(new Date((short) 1970,
             (short) 1,
-            (short) 1970), new Time((short) 18, (short) 0, (short) 0));
+            (short) 1), new Time((short) 18, (short) 0, (short) 0));
 
-    private static final AbsTime LATEST = new AbsTime(new Date((short) 1, (short) 1, (short) 2020),
+    private static final AbsTime LATEST = new AbsTime(new Date((short) 2020, (short) 1, (short) 1),
             new Time((short) 18, (short) 0, (short) 0));
 
     private static final DateRange DATE_RANGE = new DateRange(EARLIEST, LATEST);
@@ -814,7 +814,7 @@ public class NsiliAttributesGenerator {
                 false));
 
         domain = new Domain();
-        domain.t(30);
+        domain.t(0);
         attributes.add(new AttributeInformation(prefix + NsiliConstants.URL,
                 AttributeType.TEXT,
                 domain,
@@ -1222,8 +1222,7 @@ public class NsiliAttributesGenerator {
     }
 
     public static List<AttributeInformation> getNsilExploitationInfoAttributes() {
-        String prefix =
-                NsiliConstants.NSIL_EXPLOITATION_INFO + ".";
+        String prefix = NsiliConstants.NSIL_EXPLOITATION_INFO + ".";
         Domain domain;
 
         List<AttributeInformation> attributes = new ArrayList<>();

@@ -864,7 +864,7 @@ public class DAGConverter {
             }
         }
 
-        /// Content Type Name Fall Back
+        // Content Type Name Fall Back
         if (metacard.getContentTypeName() == null) {
             metacard.setContentTypeName(NsiliProductType.DOCUMENT.toString());
         }
@@ -1031,7 +1031,7 @@ public class DAGConverter {
         return NsiliReportType.valueOf(reportTypeStr);
     }
 
-    protected static String getString(Any any) {
+    public static String getString(Any any) {
         if (any.type()
                 .kind() == TCKind.tk_wstring) {
             return any.extract_wstring();
@@ -1042,7 +1042,7 @@ public class DAGConverter {
         return null;
     }
 
-    protected static Integer getLong(Any any) {
+    public static Integer getLong(Any any) {
         if (any.type()
                 .kind() == TCKind.tk_long) {
             return any.extract_long();
@@ -1053,7 +1053,7 @@ public class DAGConverter {
         return null;
     }
 
-    protected static Short getShort(Any any) {
+    public static Short getShort(Any any) {
         if (any.type()
                 .kind() == TCKind.tk_short) {
             return any.extract_short();
@@ -1193,7 +1193,7 @@ public class DAGConverter {
         }
     }
 
-    private static String getValueString(Collection<Serializable> collection) {
+    public static String getValueString(Collection<Serializable> collection) {
         return collection.stream()
                 .map(Object::toString)
                 .sorted()
@@ -1233,7 +1233,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void printNode(Node node, int offset) {
+    public static void printNode(Node node, int offset) {
         String attrName = node.attribute_name;
         String value = "NOT PARSED";
 
@@ -1244,25 +1244,7 @@ public class DAGConverter {
 
         if (node.node_type == NodeType.ATTRIBUTE_NODE) {
             if (node.value != null && node.value.type() != null) {
-                if (node.value.type()
-                        .kind() == TCKind.tk_wstring) {
-                    value = node.value.extract_wstring();
-                } else if (node.value.type()
-                        .kind() == TCKind.tk_string) {
-                    value = node.value.extract_string();
-                } else if (node.value.type()
-                        .kind() == TCKind.tk_long) {
-                    value = String.valueOf(node.value.extract_long());
-                } else if (node.value.type()
-                        .kind() == TCKind.tk_ulong) {
-                    value = String.valueOf(node.value.extract_ulong());
-                } else if (node.value.type()
-                        .kind() == TCKind.tk_short) {
-                    value = String.valueOf(node.value.extract_short());
-                } else if (node.value.type()
-                        .kind() == TCKind.tk_ushort) {
-                    value = String.valueOf(node.value.extract_ushort());
-                }
+                value = getNodeValue(node.value);
                 sb.append(attrName);
                 sb.append("=");
                 sb.append(value);
@@ -1273,4 +1255,28 @@ public class DAGConverter {
         LOGGER.trace(sb.toString());
     }
 
+    public static String getNodeValue(Any any) {
+        String value = null;
+        if (any.type()
+                .kind() == TCKind.tk_wstring) {
+            value = any.extract_wstring();
+        } else if (any.type()
+                .kind() == TCKind.tk_string) {
+            value = any.extract_string();
+        } else if (any.type()
+                .kind() == TCKind.tk_long) {
+            value = String.valueOf(any.extract_long());
+        } else if (any.type()
+                .kind() == TCKind.tk_ulong) {
+            value = String.valueOf(any.extract_ulong());
+        } else if (any.type()
+                .kind() == TCKind.tk_short) {
+            value = String.valueOf(any.extract_short());
+        } else if (any.type()
+                .kind() == TCKind.tk_ushort) {
+            value = String.valueOf(any.extract_ushort());
+        }
+
+        return value;
+    }
 }
