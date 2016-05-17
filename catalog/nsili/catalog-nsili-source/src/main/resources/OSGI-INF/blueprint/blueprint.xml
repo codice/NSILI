@@ -62,6 +62,7 @@
             <property name="cxfPassword" value=""/>
             <property name="pollInterval" value="5"/>
             <property name="maxHitCount" value="250"/>
+            <property name="numberWorkerThreads" value="4" />
             <property name="accessUserId" value="" />
             <property name="accessPassword" value="" />
             <property name="accessLicenseKey" value="" />
@@ -86,6 +87,7 @@
             <property name="cxfPassword" value=""/>
             <property name="pollInterval" value="5"/>
             <property name="maxHitCount" value="250"/>
+            <property name="numberWorkerThreads" value="4" />
             <property name="accessUserId" value="" />
             <property name="accessPassword" value="" />
             <property name="accessLicenseKey" value="" />

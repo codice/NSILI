@@ -13,6 +13,7 @@
  */
 package com.connexta.alliance.nsili.transformer;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -26,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.StringUtils;
 import org.jgrapht.alg.DijkstraShortestPath;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.traverse.DepthFirstIterator;
@@ -85,6 +87,10 @@ import ddf.catalog.data.Metacard;
 import ddf.catalog.data.MetacardType;
 import ddf.catalog.data.impl.AttributeImpl;
 import ddf.catalog.data.impl.MetacardImpl;
+import ddf.catalog.operation.ResourceResponse;
+import ddf.catalog.resource.ResourceNotFoundException;
+import ddf.catalog.resource.ResourceNotSupportedException;
+import ddf.catalog.resource.ResourceReader;
 
 public class DAGConverter {
 
@@ -96,7 +102,17 @@ public class DAGConverter {
 
     private static String sourceId;
 
-    public static MetacardImpl convertDAG(DAG dag, boolean swapCoordinates, String logSourceId) {
+    private ResourceReader resourceReader;
+
+    private String relatedFileType;
+
+    private String relatedFileUrl;
+
+    public DAGConverter(ResourceReader resourceReader) {
+        this.resourceReader = resourceReader;
+    }
+
+    public MetacardImpl convertDAG(DAG dag, boolean swapCoordinates, String logSourceId) {
         MetacardImpl metacard = null;
         sourceId = logSourceId;
 
@@ -134,7 +150,7 @@ public class DAGConverter {
         return nodeMap;
     }
 
-    private static MetacardImpl parseGraph(DirectedAcyclicGraph<Node, Edge> graph,
+    private MetacardImpl parseGraph(DirectedAcyclicGraph<Node, Edge> graph,
             boolean swapCoordinates) {
         MetacardImpl metacard = new MetacardImpl();
 
@@ -156,15 +172,18 @@ public class DAGConverter {
                 parentEntity = node;
                 if (node.attribute_name.equals(NsiliConstants.NSIL_ASSOCIATION)) {
                     assocNode = node;
+                } else if (node.attribute_name.equals(NsiliConstants.NSIL_RELATED_FILE)) {
+                    relatedFileType = "";
+                    relatedFileUrl = "";
                 } else {
                     if (assocNode != null && !isNodeChildOfStart(graph, assocNode, node)) {
                         assocNode = null;
                     }
-                }
 
-                //Handle Marker nodes
-                if (node.attribute_name.equals(NsiliConstants.NSIL_IR)) {
-                    addNsilIRAttribute(metacard);
+                    //Handle Marker nodes
+                    if (node.attribute_name.equals(NsiliConstants.NSIL_IR)) {
+                        addNsilIRAttribute(metacard);
+                    }
                 }
             } else if (node.node_type == NodeType.RECORD_NODE) {
                 //Nothing to process from record node
@@ -233,6 +252,8 @@ public class DAGConverter {
                 case NsiliConstants.NSIL_VIDEO:
                     addNsilVideoAttribute(metacard, node);
                     break;
+                case NsiliConstants.NSIL_RELATED_FILE:
+                    addNsilRelatedFile(metacard, node);
                 default:
                     break;
                 }
@@ -269,7 +290,7 @@ public class DAGConverter {
      * @param end   - Child node to check
      * @return true if the end node is a child of the start node in the provided graph.
      */
-    protected static boolean isNodeChildOfStart(DirectedAcyclicGraph<Node, Edge> graph, Node start,
+    private static boolean isNodeChildOfStart(DirectedAcyclicGraph<Node, Edge> graph, Node start,
             Node end) {
         boolean endNodeInTree = false;
         DepthFirstIterator<Node, Edge> depthFirstIterator = new DepthFirstIterator<>(graph, start);
@@ -282,7 +303,7 @@ public class DAGConverter {
         return endNodeInTree;
     }
 
-    protected static void addNsilApprovalAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilApprovalAttribute(MetacardImpl metacard, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.APPROVED_BY:
             metacard.setAttribute(new AttributeImpl(NsiliMetacardType.APPROVAL_BY,
@@ -301,7 +322,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilCardAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilCardAttribute(MetacardImpl metacard, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.IDENTIFIER:
             metacard.setId(getString(node.value));
@@ -326,7 +347,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilCommonAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilCommonAttribute(MetacardImpl metacard, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.DESCRIPTION_ABSTRACT:
             metacard.setDescription(getString(node.value));
@@ -367,7 +388,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilCoverageAttribute(MetacardImpl metacard, Node node,
+    private void addNsilCoverageAttribute(MetacardImpl metacard, Node node,
             boolean swapCoordinates) {
         switch (node.attribute_name) {
         case NsiliConstants.SPATIAL_COUNTRY_CODE:
@@ -391,7 +412,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilCxpAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilCxpAttribute(MetacardImpl metacard, Node node) {
         metacard.setType(new NsiliCxpMetacardType());
         metacard.setContentTypeName(NsiliProductType.COLLECTION_EXPLOITATION_PLAN.toString());
 
@@ -405,11 +426,11 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilIRAttribute(MetacardImpl metacard) {
+    private void addNsilIRAttribute(MetacardImpl metacard) {
         metacard.setType(new NsiliIRMetacardType());
     }
 
-    protected static void addNsilExploitationInfoAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilExploitationInfoAttribute(MetacardImpl metacard, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.DESCRIPTION:
             metacard.setAttribute(new AttributeImpl(NsiliMetacardType.EXPLOITATION_DESCRIPTION,
@@ -432,7 +453,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilFileAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilFileAttribute(MetacardImpl metacard, Node node) {
 
         switch (node.attribute_name) {
         case NsiliConstants.ARCHIVED:
@@ -473,7 +494,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilGmtiAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilGmtiAttribute(MetacardImpl metacard, Node node) {
         //If any GMTI node is added, then we will set the MetacardType
         metacard.setType(new NsiliGmtiMetacardType());
         metacard.setContentTypeName(NsiliProductType.GMTI.toString());
@@ -492,7 +513,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilImageryAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilImageryAttribute(MetacardImpl metacard, Node node) {
         //If any Imagery attribute is added, set the card type
         metacard.setType(new NsiliImageryMetacardType());
         metacard.setContentTypeName(NsiliProductType.IMAGERY.toString());
@@ -542,7 +563,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilMessageAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilMessageAttribute(MetacardImpl metacard, Node node) {
         metacard.setType(new NsiliMessageMetacardType());
         metacard.setContentTypeName(NsiliProductType.MESSAGE.toString());
 
@@ -568,7 +589,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilReportAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilReportAttribute(MetacardImpl metacard, Node node) {
         metacard.setType(new NsiliReportMetacardType());
         metacard.setContentTypeName(NsiliProductType.REPORT.toString());
         switch (node.attribute_name) {
@@ -589,7 +610,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilRfiAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilRfiAttribute(MetacardImpl metacard, Node node) {
         metacard.setType(new NsiliRfiMetacardType());
         metacard.setContentTypeName(NsiliProductType.RFI.toString());
 
@@ -619,7 +640,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilSdsAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilSdsAttribute(MetacardImpl metacard, Node node) {
         metacard.setContentTypeName(NsiliProductType.SYSTEM_DEPLOYMENT_STATUS.toString());
 
         switch (node.attribute_name) {
@@ -632,7 +653,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilSecurityAttribute(NsiliSecurity security, Node node) {
+    private void addNsilSecurityAttribute(NsiliSecurity security, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.POLICY:
             String mergedPolicy = mergeSecurityPolicyString(security.getPolicy(),
@@ -654,7 +675,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilStreamAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilStreamAttribute(MetacardImpl metacard, Node node) {
 
         switch (node.attribute_name) {
         case NsiliConstants.ARCHIVED:
@@ -694,7 +715,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilTaskAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilTaskAttribute(MetacardImpl metacard, Node node) {
         metacard.setType(new NsiliTaskMetacardType());
         metacard.setContentTypeName(NsiliProductType.TASK.toString());
         switch (node.attribute_name) {
@@ -711,7 +732,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilTdlAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilTdlAttribute(MetacardImpl metacard, Node node) {
         metacard.setType(new NsiliTdlMetacardType());
         metacard.setContentTypeName(NsiliProductType.TDL_DATA.toString());
 
@@ -738,7 +759,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilVideoAttribute(MetacardImpl metacard, Node node) {
+    private void addNsilVideoAttribute(MetacardImpl metacard, Node node) {
         metacard.setType(new NsiliVideoMetacardType());
         metacard.setContentTypeName(NsiliProductType.VIDEO.toString());
 
@@ -784,7 +805,7 @@ public class DAGConverter {
         }
     }
 
-    protected static void addNsilAssociation(List<Serializable> associations, Node node) {
+    private void addNsilAssociation(List<Serializable> associations, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.IDENTIFIER:
             associations.add(getString(node.value));
@@ -794,8 +815,32 @@ public class DAGConverter {
         }
     }
 
-    protected static void addMergedSecurityDescriptor(MetacardImpl metacard,
-            NsiliSecurity security) {
+    private String addNsilRelatedFile(MetacardImpl metacard, Node node) {
+        switch (node.attribute_name) {
+        case NsiliConstants.FILE_TYPE:
+            relatedFileType = getString(node.value);
+            if (StringUtils.isNotBlank(relatedFileUrl)) {
+                if (relatedFileType.equalsIgnoreCase(NsiliConstants.THUMBNAIL_TYPE)) {
+                    metacard.setThumbnail(getThumbnail(relatedFileUrl));
+                }
+            }
+            break;
+        case NsiliConstants.URL:
+            relatedFileUrl = getString(node.value);
+            if (relatedFileType.equalsIgnoreCase(NsiliConstants.THUMBNAIL_TYPE)) {
+                if (StringUtils.isNotBlank(relatedFileUrl)) {
+                    metacard.setThumbnail(getThumbnail(relatedFileUrl));
+                }
+            }
+            break;
+        default:
+            break;
+        }
+
+        return relatedFileType;
+    }
+
+    private void addMergedSecurityDescriptor(MetacardImpl metacard, NsiliSecurity security) {
         metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SECURITY_CLASSIFICATION,
                 security.getClassification()));
         metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SECURITY_POLICY,
@@ -804,7 +849,7 @@ public class DAGConverter {
                 security.getReleasability()));
     }
 
-    protected static void setTopLevelMetacardAttributes(MetacardImpl metacard) {
+    private void setTopLevelMetacardAttributes(MetacardImpl metacard) {
         //If file data available use that
         Attribute fileProductURLAttr = metacard.getAttribute(NsiliMetacardType.FILE_URL);
         if (fileProductURLAttr != null) {
@@ -870,7 +915,7 @@ public class DAGConverter {
         }
     }
 
-    protected static Date convertDate(Any any) {
+    private Date convertDate(Any any) {
         AbsTime absTime = AbsTimeHelper.extract(any);
         com.connexta.alliance.nsili.common.UCO.Date ucoDate = absTime.aDate;
         com.connexta.alliance.nsili.common.UCO.Time ucoTime = absTime.aTime;
@@ -885,12 +930,12 @@ public class DAGConverter {
         return dateTime.toDate();
     }
 
-    protected static NsiliProductType convertProductType(Any any) {
+    private NsiliProductType convertProductType(Any any) {
         String productTypeStr = getString(any);
         return NsiliProductType.fromSpecName(productTypeStr);
     }
 
-    protected static String convertShape(Any any, boolean swapCoordinates) {
+    private String convertShape(Any any, boolean swapCoordinates) {
         com.connexta.alliance.nsili.common.UCO.Rectangle rectangle = RectangleHelper.extract(any);
         com.connexta.alliance.nsili.common.UCO.Coordinate2d upperLeft = rectangle.upper_left;
         com.connexta.alliance.nsili.common.UCO.Coordinate2d lowerRight = rectangle.lower_right;
@@ -939,7 +984,7 @@ public class DAGConverter {
         return WKT_WRITER.write(geom);
     }
 
-    protected static int convertMegabytesToBytes(Double megabytes) {
+    public static int convertMegabytesToBytes(Double megabytes) {
         int bytes = 0;
 
         if (megabytes != null) {
@@ -949,7 +994,7 @@ public class DAGConverter {
         return bytes;
     }
 
-    protected static final URI convertURI(String uriStr) {
+    private static URI convertURI(String uriStr) {
         URI uri = null;
 
         try {
@@ -961,72 +1006,72 @@ public class DAGConverter {
         return uri;
     }
 
-    protected static NsiliImageryType convertImageCategory(Any any) {
+    private NsiliImageryType convertImageCategory(Any any) {
         String imageryTypeStr = getString(any);
         return NsiliImageryType.valueOf(imageryTypeStr);
     }
 
-    protected static NsiliImageryDecompressionTech convertDecompressionTechnique(Any any) {
+    private NsiliImageryDecompressionTech convertDecompressionTechnique(Any any) {
         String decompressionTechStr = getString(any);
         return NsiliImageryDecompressionTech.valueOf(decompressionTechStr);
     }
 
-    protected static NsiliVideoCategoryType convertVideoCategory(Any any) {
+    private NsiliVideoCategoryType convertVideoCategory(Any any) {
         String videoCategoryType = getString(any);
         return NsiliVideoCategoryType.valueOf(videoCategoryType);
     }
 
-    protected static NsiliVideoEncodingScheme convertVideoEncodingScheme(Any any) {
+    private NsiliVideoEncodingScheme convertVideoEncodingScheme(Any any) {
         String videoEncSchemeStr = getString(any);
         return NsiliVideoEncodingScheme.fromSpecName(videoEncSchemeStr);
     }
 
-    protected static NsiliMetadataEncodingScheme convertMetadataEncScheme(Any any) {
+    private NsiliMetadataEncodingScheme convertMetadataEncScheme(Any any) {
         String metadataEncSchemeStr = getString(any);
         return NsiliMetadataEncodingScheme.valueOf(metadataEncSchemeStr);
     }
 
-    protected static NsiliCxpStatusType convertCxpStatus(Any any) {
+    private NsiliCxpStatusType convertCxpStatus(Any any) {
         String cxpStatusStr = getString(any);
         return NsiliCxpStatusType.valueOf(cxpStatusStr);
     }
 
-    protected static NsiliRfiStatus convertRfiStatus(Any any) {
+    private NsiliRfiStatus convertRfiStatus(Any any) {
         String rfiStatusStr = getString(any);
         return NsiliRfiStatus.valueOf(rfiStatusStr);
     }
 
-    protected static NsiliRfiWorkflowStatus convertRfiWorkflowStatus(Any any) {
+    private NsiliRfiWorkflowStatus convertRfiWorkflowStatus(Any any) {
         String rfiWorkflowStatusStr = getString(any);
         return NsiliRfiWorkflowStatus.valueOf(rfiWorkflowStatusStr);
     }
 
-    protected static NsiliTaskStatus convertTaskStatus(Any any) {
+    private NsiliTaskStatus convertTaskStatus(Any any) {
         String taskStatusStr = getString(any);
         return NsiliTaskStatus.valueOf(taskStatusStr);
     }
 
-    protected static NsiliExploitationSubQualCode convertExplSubQualCd(Any any) {
+    private NsiliExploitationSubQualCode convertExplSubQualCd(Any any) {
         String explSubQualCodeStr = getString(any);
         return NsiliExploitationSubQualCode.valueOf(explSubQualCodeStr);
     }
 
-    protected static NsiliSdsOpStatus convertSdsOpStatus(Any any) {
+    private NsiliSdsOpStatus convertSdsOpStatus(Any any) {
         String sdsOpStatusStr = getString(any);
         return NsiliSdsOpStatus.fromSpecName(sdsOpStatusStr);
     }
 
-    protected static NsiliApprovalStatus convertApprovalStatus(Any any) {
+    private NsiliApprovalStatus convertApprovalStatus(Any any) {
         String approvalStr = getString(any);
         return NsiliApprovalStatus.fromSpecName(approvalStr);
     }
 
-    protected static NsiliReportPriority convertReportPriority(Any any) {
+    private NsiliReportPriority convertReportPriority(Any any) {
         String reportPriorityStr = getString(any);
         return NsiliReportPriority.valueOf(reportPriorityStr);
     }
 
-    protected static NsiliReportType convertReportType(Any any) {
+    private NsiliReportType convertReportType(Any any) {
         String reportTypeStr = getString(any);
         return NsiliReportType.valueOf(reportTypeStr);
     }
@@ -1071,7 +1116,7 @@ public class DAGConverter {
      * @param policy2 - Additional policies to add.
      * @return Non-duplicated policies space separated.
      */
-    protected static String mergeSecurityPolicyString(String policy1, String policy2) {
+    private String mergeSecurityPolicyString(String policy1, String policy2) {
         if (policy1 == null && policy2 == null) {
             return null;
         } else if (policy1 != null && policy2 == null) {
@@ -1102,7 +1147,7 @@ public class DAGConverter {
      * @param releasability2 - Releasabilities to merge.
      * @return - Non-duplicated releasabilities space separated.
      */
-    protected static String mergeReleasabilityString(String releasability1, String releasability2) {
+    private String mergeReleasabilityString(String releasability1, String releasability2) {
         if (releasability1 == null) {
             return releasability2;
         } else if (releasability2 == null) {
@@ -1135,8 +1180,7 @@ public class DAGConverter {
      * @param classification2 - Classification to check
      * @return Most restrictive classification
      */
-    protected static String mergeClassificationString(String classification1,
-            String classification2) {
+    private String mergeClassificationString(String classification1, String classification2) {
         NsiliClassification class1 = NsiliClassification.fromSpecName(classification1);
         NsiliClassification class2 = NsiliClassification.fromSpecName(classification2);
         NsiliClassificationComparator classificationComparator =
@@ -1198,6 +1242,27 @@ public class DAGConverter {
                 .map(Object::toString)
                 .sorted()
                 .collect(Collectors.joining(", "));
+    }
+
+    private byte[] getThumbnail(String thumbnailUrlStr) {
+        byte[] thumbnail = null;
+
+        try {
+            URI thumbnailURI = new URI(thumbnailUrlStr);
+            ResourceResponse resourceResponse = null;
+            try {
+                resourceResponse = resourceReader.retrieveResource(thumbnailURI, new HashMap<>());
+                thumbnail = resourceResponse.getResource()
+                        .getByteArray();
+            } catch (ResourceNotSupportedException e) {
+                LOGGER.warn("Resource is not supported: {} ", thumbnailURI, e);
+            }
+        } catch (IOException | ResourceNotFoundException | URISyntaxException e) {
+            LOGGER.warn("Unable to get thumbnail from URL {} : {}", thumbnailUrlStr, e);
+            LOGGER.debug("Thumbnail retrieval error details", e);
+        }
+
+        return thumbnail;
     }
 
     public static void printDAG(DAG dag) {

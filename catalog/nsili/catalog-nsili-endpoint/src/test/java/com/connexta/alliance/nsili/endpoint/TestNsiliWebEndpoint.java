@@ -13,7 +13,7 @@
  */
 package com.connexta.alliance.nsili.endpoint;
 
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
 
@@ -46,7 +46,7 @@ public class TestNsiliWebEndpoint extends TestNsiliCommon {
         assertThat(response.getEntity(), notNullValue());
 
         String responseStr = response.getEntity().toString();
-        assertThat(responseStr, is(nsiliEndpoint.getIorString()));
+        assertThat(responseStr, containsString(nsiliEndpoint.getIorString()));
     }
 
     @After

@@ -281,7 +281,7 @@ public class NsiliConstants {
 
     public static final String FILE_TYPE = "fileType";
 
-    public static final String URL = "url";
+    public static final String URL = "URL";
 
     public static final String CONTRIBUTOR = "contributor";
 
@@ -299,5 +299,8 @@ public class NsiliConstants {
     public static final String ORIGINATING_FROM = "ORIGINATING FROM";
 
     public static final String FOLLOWS = "FOLLOWS";
+
+    //Related File
+    public static final String THUMBNAIL_TYPE = "THUMBNAIL";
 
 }

@@ -363,6 +363,7 @@ public class TestNsiliSource {
         source.setDataModelMgr(getMockDataModelMgr());
         source.setCatalogMgr(getMockCatalogMgr());
         source.setFilterAdapter(new GeotoolsFilterAdapterImpl());
+        source.setNumberWorkerThreads(6);
 
         // Suppress CORBA communications to test refresh
         doNothing().when(source)

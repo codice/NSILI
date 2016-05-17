@@ -43,9 +43,10 @@ public class NsiliWebEndpoint implements NsiliWeb {
     @Override
     @GET
     @Path("ior.txt")
-    @Produces(MediaType.TEXT_PLAIN)
+    @Produces("text/plain; charset=ISO-8859-1")
     public Response getIorFile() {
-        Response.ResponseBuilder response = Response.ok(nsiliEndpoint.getIorString());
+        String responseStr = nsiliEndpoint.getIorString() + "\n";
+        Response.ResponseBuilder response = Response.ok(responseStr);
         return response.build();
     }
 }

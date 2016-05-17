@@ -52,6 +52,11 @@
             <artifactId>jts</artifactId>
             <version>1.12</version>
         </dependency>
+        <dependency>
+            <groupId>ddf.catalog.core</groupId>
+            <artifactId>catalog-core-urlresourcereader</artifactId>
+            <version>${ddf.version}</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -37,6 +37,9 @@
             name="Poll Interval" id="pollInterval"
             required="true" type="Integer" default="5"/>
 
+        <AD description="Maximum parallel threads for converting results and retrieving thumbnails" name="Num Worker Threads"
+            id="numberWorkerThreads" required="true" type="Integer" default="4"/>
+
         <AD description="Whether or not to exclude sort order in query."
             name="Exclude Sort Order" id="excludeSortOrder" required="false" type="Boolean" default="false"/>
 
@@ -75,6 +78,9 @@
         <AD description="Poll Interval to Check if the Source is available (in minutes - minimum 1)."
             name="Poll Interval" id="pollInterval"
             required="true" type="Integer" default="5"/>
+
+        <AD description="Maximum parallel threads for converting results and retrieving thumbnails" name="Num Worker Threads"
+            id="numberWorkerThreads" required="true" type="Integer" default="4"/>
 
         <AD description="Whether or not to exclude sort order in query."
             name="Exclude Sort Order" id="excludeSortOrder" required="false" type="Boolean" default="false"/>

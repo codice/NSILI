@@ -22,13 +22,20 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -228,6 +235,10 @@ public class NsiliSource extends MaskableImpl
 
     private boolean swapCoordinates = false;
 
+    private ExecutorService executorService;
+
+    private CompletionService<Result> completionService;
+
     static {
         try (InputStream properties = NsiliSource.class.getResourceAsStream(
                 DESCRIBABLE_PROPERTIES_FILE)) {
@@ -334,7 +345,7 @@ public class NsiliSource extends MaskableImpl
      */
     private void getIorStringFromLocalDisk() {
         try (InputStream inputStream = new FileInputStream(iorUrl.substring(7))) {
-            iorString = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+            iorString = IOUtils.toString(inputStream, StandardCharsets.ISO_8859_1.name());
         } catch (IOException e) {
             LOGGER.error("{} : Unable to process IOR String.", id, e);
         }
@@ -354,7 +365,7 @@ public class NsiliSource extends MaskableImpl
         Nsili nsili = factory.getClient();
 
         try (InputStream inputStream = nsili.getIorFile()) {
-            iorString = IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
+            iorString = IOUtils.toString(inputStream, StandardCharsets.ISO_8859_1.name());
             //Remove leading/trailing whitespace as the CORBA init can't handle that.
             iorString = iorString.trim();
         } catch (IOException e) {
@@ -696,6 +707,8 @@ public class NsiliSource extends MaskableImpl
             SortAttribute[] sortAttributes, NameValue[] properties) {
         DAGListHolder dagListHolder = new DAGListHolder();
 
+        SourceResponseImpl sourceResponse = null;
+
         try {
             LOGGER.debug("{} : Submit query: {}", id, query.bqs_query);
             LOGGER.debug("{} : Requesting result attributes: {}",
@@ -728,25 +741,48 @@ public class NsiliSource extends MaskableImpl
             LOGGER.debug("{} : Query error", id, e);
         }
 
-        List<Result> results = new ArrayList<>();
         if (dagListHolder.value != null) {
+            List<Result> results =
+                    Collections.synchronizedList(new ArrayList<>(dagListHolder.value.length));
+            String id = getId();
+            List<Future> futures = new ArrayList<>(dagListHolder.value.length);
+
             for (DAG dag : dagListHolder.value) {
-                Metacard card = DAGConverter.convertDAG(dag, swapCoordinates, getId());
-                if (card != null) {
-                    DAGConverter.logMetacard(card, getId());
-                    results.add(new ResultImpl(card));
-                } else {
-                    LOGGER.warn("{} : Unable to convert DAG to metacard, returned card is null",
-                            getId());
+                Callable<Result> convertRunner = () -> {
+                    DAGConverter dagConverter = new DAGConverter(resourceReader);
+                    Metacard card = dagConverter.convertDAG(dag, swapCoordinates, id);
+                    if (card != null) {
+                        DAGConverter.logMetacard(card, getId());
+                        return new ResultImpl(card);
+                    } else {
+                        LOGGER.warn("{} : Unable to convert DAG to metacard, returned card is null",
+                                getId());
+                    }
+                    return null;
+                };
+                futures.add(completionService.submit(convertRunner));
+            }
+
+            Future<Result> completedFuture;
+            while (!futures.isEmpty()) {
+                try {
+                    completedFuture = completionService.take();
+                    futures.remove(completedFuture);
+                    results.add(completedFuture.get());
+                } catch (ExecutionException e) {
+                    LOGGER.warn("Unable to create result.", e);
+                } catch (InterruptedException ignore) {
+                    //ignore
                 }
             }
+
+            sourceResponse = new SourceResponseImpl(queryRequest,
+                    results,
+                    (long) getHitCount(query, properties));
+
         } else {
             LOGGER.warn("{} : Source returned empty DAG list", getId());
         }
-
-        SourceResponseImpl sourceResponse = new SourceResponseImpl(queryRequest,
-                results,
-                (long) getHitCount(query, properties));
 
         return sourceResponse;
     }
@@ -914,6 +950,21 @@ public class NsiliSource extends MaskableImpl
 
     public void setAccessLicenseKey(String accessLicenseKey) {
         this.accessLicenseKey = accessLicenseKey;
+    }
+
+    public void setNumberWorkerThreads(int numberWorkerThreads) {
+        List<Runnable> waitingTasks = null;
+        if (executorService != null) {
+            waitingTasks = executorService.shutdownNow();
+        }
+
+        executorService = Executors.newFixedThreadPool(numberWorkerThreads);
+        completionService = new ExecutorCompletionService(executorService);
+        if (waitingTasks != null) {
+            for (Runnable task : waitingTasks) {
+                executorService.submit(task);
+            }
+        }
     }
 
     public void setResourceReader(ResourceReader resourceReader) {
