@@ -18,10 +18,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.apache.shiro.subject.ExecutionException;
-import org.omg.CORBA.NO_IMPLEMENT;
-import org.opengis.filter.Filter;
-import org.slf4j.LoggerFactory;
-
 import org.codice.alliance.nsili.common.CB.Callback;
 import org.codice.alliance.nsili.common.GIAS.DelayEstimate;
 import org.codice.alliance.nsili.common.GIAS.GetParametersRequestPOA;
@@ -37,6 +33,9 @@ import org.codice.alliance.nsili.common.UCO.State;
 import org.codice.alliance.nsili.common.UCO.Status;
 import org.codice.alliance.nsili.common.UCO.StringDAGHolder;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.opengis.filter.Filter;
+import org.slf4j.LoggerFactory;
 
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Metacard;
@@ -63,13 +62,17 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
 
     private Subject guestSubject;
 
+    private boolean enterpriseSearch = false;
+
     public GetParametersRequestImpl(String productIdStr, String[] desiredParameters,
-            CatalogFramework catalogFramework, FilterBuilder filterBuilder, Subject guestSubject) {
+            CatalogFramework catalogFramework, FilterBuilder filterBuilder, Subject guestSubject,
+            boolean enterpriseSearch) {
         this.productIdStr = productIdStr;
         this.desiredParameters = desiredParameters;
         this.catalogFramework = catalogFramework;
         this.filterBuilder = filterBuilder;
         this.guestSubject = guestSubject;
+        this.enterpriseSearch = enterpriseSearch;
     }
 
     @Override
@@ -147,7 +150,7 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
     }
 
     private Result getResult(Query query) {
-        QueryRequestImpl queryRequest = new QueryRequestImpl(query);
+        QueryRequestImpl queryRequest = new QueryRequestImpl(query, enterpriseSearch);
         Result result = null;
         try {
             QueryResultsCallable queryCallable = new QueryResultsCallable(queryRequest);
@@ -158,7 +161,8 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
             }
 
         } catch (ExecutionException e) {
-            LOGGER.warn("Unable to query catalog {}", NsilCorbaExceptionUtil.getExceptionDetails(e));
+            LOGGER.warn("Unable to query catalog {}",
+                    NsilCorbaExceptionUtil.getExceptionDetails(e));
             LOGGER.debug("Catalog Query details", e);
         }
 

@@ -59,7 +59,7 @@ public class LibraryImpl extends LibraryPOA {
     private static final String LIBRARY_VERSION = "NSILI|1.0";
 
     private List<String> managers = Arrays.asList(
-            //                NsiliManagerType.ORDER_MGR.getSpecName(),
+            NsiliManagerType.ORDER_MGR.getSpecName(),
             NsiliManagerType.CATALOG_MGR.getSpecName(),
             NsiliManagerType.CREATION_MGR.getSpecName(),
             NsiliManagerType.PRODUCT_MGR.getSpecName(),
@@ -79,6 +79,8 @@ public class LibraryImpl extends LibraryPOA {
     private FilterBuilder filterBuilder;
 
     private int maxNumResults = NsiliEndpoint.DEFAULT_MAX_NUM_RESULTS;
+
+    private boolean enterpriseSearch = false;
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(LibraryImpl.class);
 
@@ -102,6 +104,10 @@ public class LibraryImpl extends LibraryPOA {
         this.filterBuilder = filterBuilder;
     }
 
+    public void setEnterpriseSearch(boolean enterpriseSearch) {
+        this.enterpriseSearch = enterpriseSearch;
+    }
+
     @Override
     public String[] get_manager_types() throws ProcessingFault, SystemFault {
         String[] managerArr = new String[managers.size()];
@@ -117,7 +123,7 @@ public class LibraryImpl extends LibraryPOA {
                 .toString();
 
         if (manager_type.equals(NsiliManagerType.CATALOG_MGR.getSpecName())) {
-            CatalogMgrImpl catalogMgr = new CatalogMgrImpl(poa, filterBuilder);
+            CatalogMgrImpl catalogMgr = new CatalogMgrImpl(poa, filterBuilder, enterpriseSearch);
             catalogMgr.setCatalogFramework(catalogFramework);
             catalogMgr.setGuestSubject(guestSubject);
             if (!CorbaUtils.isIdActive(poa,
@@ -152,7 +158,7 @@ public class LibraryImpl extends LibraryPOA {
                     poa.create_reference_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                             OrderMgrHelper.id());
         } else if (manager_type.equals(NsiliManagerType.PRODUCT_MGR.getSpecName())) {
-            ProductMgrImpl productMgr = new ProductMgrImpl();
+            ProductMgrImpl productMgr = new ProductMgrImpl(enterpriseSearch);
             productMgr.setCatalogFramework(catalogFramework);
             productMgr.setFilterBuilder(filterBuilder);
             productMgr.setSubject(guestSubject);
@@ -232,7 +238,6 @@ public class LibraryImpl extends LibraryPOA {
         String country = System.getProperty("user.country");
         String organization = System.getProperty("org.codice.ddf.system.organization");
         String libraryDescr = country + "|" + organization;
-
         return new LibraryDescription(host, libraryDescr, LIBRARY_VERSION);
     }
 

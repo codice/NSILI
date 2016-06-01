@@ -74,8 +74,10 @@ public class ProductMgrImpl extends ProductMgrPOA {
 
     private AccessManagerImpl accessManager;
 
-    public ProductMgrImpl() {
+    private boolean enterpriseSearch = false;
 
+    public ProductMgrImpl(boolean enterpriseSearch) {
+        this.enterpriseSearch = enterpriseSearch;
     }
 
     public void setCatalogFramework(CatalogFramework catalogFramework) {
@@ -107,7 +109,8 @@ public class ProductMgrImpl extends ProductMgrPOA {
                     desired_parameters,
                     catalogFramework,
                     filterBuilder,
-                    subject);
+                    subject,
+                    enterpriseSearch);
             _poa().activate_object_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                     getParametersRequest);
 

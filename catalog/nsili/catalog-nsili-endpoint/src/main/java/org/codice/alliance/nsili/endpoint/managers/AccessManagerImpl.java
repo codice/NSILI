@@ -95,7 +95,7 @@ public class AccessManagerImpl extends AccessManagerPOA {
         if (product != null) {
             Metacard metacard;
             try {
-                metacard = getMetacard(getProductId(product));
+                metacard = getMetacard(product);
                 if (metacard != null) {
                     Attribute downloadUrlAttr = metacard.getAttribute(Metacard.RESOURCE_DOWNLOAD_URL);
                     if (downloadUrlAttr != null) {
@@ -170,6 +170,14 @@ public class AccessManagerImpl extends AccessManagerPOA {
             throws UnsupportedEncodingException, WrongPolicy, WrongAdapter {
         byte[] productOidBytes = _poa().reference_to_id(product);
         return new String(productOidBytes, NsiliEndpoint.ENCODING);
+    }
+
+    public Metacard getMetacard(Product product)
+            throws UnsupportedEncodingException, WrongAdapter, WrongPolicy {
+        if (product != null) {
+            return getMetacard(getProductId(product));
+        }
+        return null;
     }
 
     public Metacard getMetacard(String id) {

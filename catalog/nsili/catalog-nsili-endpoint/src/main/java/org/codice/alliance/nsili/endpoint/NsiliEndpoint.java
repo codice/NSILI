@@ -72,6 +72,8 @@ public class NsiliEndpoint {
 
     private FilterBuilder filterBuilder;
 
+    private boolean enterpriseSearch = false;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(NsiliEndpoint.class);
 
     public NsiliEndpoint() {
@@ -141,6 +143,17 @@ public class NsiliEndpoint {
         this.framework = framework;
     }
 
+    public void setEnterpriseSearch(boolean enterpriseSearch) {
+        if (library != null) {
+            library.setEnterpriseSearch(enterpriseSearch);
+        }
+        this.enterpriseSearch = enterpriseSearch;
+    }
+
+    public boolean getEnterpriseSearch() {
+        return enterpriseSearch;
+    }
+
     public void setFilterBuilder(FilterBuilder filterBuilder) {
         this.filterBuilder = filterBuilder;
     }
@@ -184,6 +197,7 @@ public class NsiliEndpoint {
         Subject guestSubject = getGuestSubject();
         library.setGuestSubject(guestSubject);
         library.setFilterBuilder(filterBuilder);
+        library.setEnterpriseSearch(enterpriseSearch);
 
         org.omg.CORBA.Object objref = rootPOA.servant_to_reference(library);
 

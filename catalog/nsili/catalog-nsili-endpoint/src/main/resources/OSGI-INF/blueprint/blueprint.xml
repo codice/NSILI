@@ -34,6 +34,7 @@
         <property name="filterBuilder" ref="filterBuilder" />
         <property name="securityHandler" ref="securityHandler" />
         <property name="securityManager" ref="securityManager" />
+        <property name="enterpriseSearch" value="false" />
     </bean>
 
     <bean id="nsiliWebSvc" class="org.codice.alliance.nsili.endpoint.NsiliWebEndpoint">

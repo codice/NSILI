@@ -67,16 +67,6 @@ import ddf.security.service.SecurityServiceException;
 
 public class TestCatalogMgrImpl extends TestNsiliCommon {
 
-    private ORB orb = null;
-
-    private LibraryImpl library;
-
-    private POA rootPOA;
-
-    private Thread orbRunThread = null;
-
-    private CatalogFramework mockCatalogFramework = mock(CatalogFramework.class);
-
     private CatalogMgrImpl catalogMgr;
 
     private Query testQuery;
@@ -103,7 +93,7 @@ public class TestCatalogMgrImpl extends TestNsiliCommon {
 
         testQuery = new Query(NsiliConstants.NSIL_ALL_VIEW, bqsQuery);
 
-        catalogMgr = new CatalogMgrImpl(rootPOA, new GeotoolsFilterBuilder());
+        catalogMgr = new CatalogMgrImpl(rootPOA, new GeotoolsFilterBuilder(), false);
         catalogMgr.setGuestSubject(mockSubject);
         catalogMgr.setCatalogFramework(mockCatalogFramework);
     }
@@ -202,33 +192,6 @@ public class TestCatalogMgrImpl extends TestNsiliCommon {
         QueryResponse testResponse = new QueryResponseImpl(null, results, testTotalHits);
         when(mockCatalogFramework.query(any(QueryRequest.class))).thenReturn(testResponse);
 
-    }
-
-    private void setupOrb()
-            throws InvalidName, AdapterInactive, WrongPolicy, ServantNotActive, IOException,
-            SecurityServiceException {
-
-        //Let the system find the next avail port and use that
-        int port = 0;
-        java.util.Properties props = new java.util.Properties();
-        props.put("org.omg.CORBA.ORBInitialPort", port);
-        orb = ORB.init(new String[0], props);
-
-        rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
-
-        rootPOA.the_POAManager()
-                .activate();
-
-        library = new LibraryImpl(rootPOA);
-        library.setCatalogFramework(mockCatalogFramework);
-        Subject guestSubject = mockSubject;
-        library.setGuestSubject(guestSubject);
-        library.setFilterBuilder(new GeotoolsFilterBuilder());
-
-        org.omg.CORBA.Object objref = rootPOA.servant_to_reference(library);
-
-        rootPOA.the_POAManager()
-                .activate();
     }
 
     @After

@@ -17,6 +17,7 @@ import static org.hamcrest.CoreMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -28,7 +29,16 @@ import org.apache.shiro.authz.Permission;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.ExecutionException;
 import org.apache.shiro.subject.PrincipalCollection;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.POAHelper;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.ServantNotActive;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
 
+import ddf.catalog.CatalogFramework;
+import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.security.Subject;
 import ddf.security.service.SecurityManager;
 import ddf.security.service.SecurityServiceException;
@@ -38,6 +48,16 @@ public class TestNsiliCommon {
     protected SecurityManager securityManager = mock(SecurityManager.class);
 
     protected Subject mockSubject;
+
+    protected ORB orb = null;
+
+    protected LibraryImpl library;
+
+    protected POA rootPOA;
+
+    protected Thread orbRunThread = null;
+
+    protected CatalogFramework mockCatalogFramework = mock(CatalogFramework.class);
 
     protected void setupCommonMocks() throws SecurityServiceException {
         mockSubject = new Subject() {
@@ -215,5 +235,32 @@ public class TestNsiliCommon {
         };
 
         when(securityManager.getSubject(any(Object.class))).thenReturn(mockSubject);
+    }
+
+    protected void setupOrb()
+            throws InvalidName, AdapterInactive, WrongPolicy, ServantNotActive, IOException,
+            SecurityServiceException {
+
+        //Let the system find the next avail port and use that
+        int port = 0;
+        java.util.Properties props = new java.util.Properties();
+        props.put("org.omg.CORBA.ORBInitialPort", port);
+        orb = ORB.init(new String[0], props);
+
+        rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+
+        rootPOA.the_POAManager()
+                .activate();
+
+        library = new LibraryImpl(rootPOA);
+        library.setCatalogFramework(mockCatalogFramework);
+        Subject guestSubject = mockSubject;
+        library.setGuestSubject(guestSubject);
+        library.setFilterBuilder(new GeotoolsFilterBuilder());
+
+        org.omg.CORBA.Object objref = rootPOA.servant_to_reference(library);
+
+        rootPOA.the_POAManager()
+                .activate();
     }
 }

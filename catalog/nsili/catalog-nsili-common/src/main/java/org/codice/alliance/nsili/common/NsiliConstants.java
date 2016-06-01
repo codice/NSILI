@@ -303,4 +303,9 @@ public class NsiliConstants {
     //Related File
     public static final String THUMBNAIL_TYPE = "THUMBNAIL";
 
+    //Request Properties
+    public static final String PROP_PROTOCOL = "PROTOCOL";
+
+    public static final String PROP_PORT = "PORT";
+
 }

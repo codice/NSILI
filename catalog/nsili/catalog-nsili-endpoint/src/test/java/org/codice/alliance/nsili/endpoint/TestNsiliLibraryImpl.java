@@ -65,7 +65,7 @@ public class TestNsiliLibraryImpl extends TestNsiliCommon {
         String[] managerTypes = library.get_manager_types();
 
         assertThat(managerTypes, notNullValue());
-        assertThat(managerTypes.length, is(4));
+        assertThat(managerTypes.length, is(5));
     }
 
     @Test

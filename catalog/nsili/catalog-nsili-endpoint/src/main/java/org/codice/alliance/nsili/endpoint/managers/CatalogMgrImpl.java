@@ -17,16 +17,6 @@ import java.nio.charset.Charset;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import org.codice.alliance.nsili.endpoint.requests.SubmitQueryRequestImpl;
-import org.omg.CORBA.NO_IMPLEMENT;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
-import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
-import org.omg.PortableServer.POAPackage.WrongPolicy;
-import org.opengis.filter.Filter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.codice.alliance.nsili.common.BqsConverter;
 import org.codice.alliance.nsili.common.GIAS.CatalogMgrPOA;
 import org.codice.alliance.nsili.common.GIAS.HitCountRequest;
@@ -43,6 +33,15 @@ import org.codice.alliance.nsili.common.UCO.ProcessingFault;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
 import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
 import org.codice.alliance.nsili.endpoint.requests.HitCountRequestImpl;
+import org.codice.alliance.nsili.endpoint.requests.SubmitQueryRequestImpl;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
+import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.opengis.filter.Filter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.filter.FilterBuilder;
@@ -69,9 +68,12 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
 
     private FilterBuilder filterBuilder;
 
-    public CatalogMgrImpl(POA poa, FilterBuilder filterBuilder) {
+    private boolean enterpriseSearch;
+
+    public CatalogMgrImpl(POA poa, FilterBuilder filterBuilder, boolean enterpriseSearch) {
         this.poa_ = poa;
         this.filterBuilder = filterBuilder;
+        this.enterpriseSearch = enterpriseSearch;
         bqsConverter = new BqsConverter(filterBuilder);
     }
 
@@ -106,7 +108,7 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
     @Override
     public int get_timeout(Request aRequest)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return (int)defaultTimeout;
+        return (int) defaultTimeout;
     }
 
     @Override
@@ -125,7 +127,10 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
     public SubmitQueryRequest submit_query(Query aQuery, String[] result_attributes,
             SortAttribute[] sort_attributes, NameValue[] properties)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        SubmitQueryRequestImpl submitQueryRequest = new SubmitQueryRequestImpl(aQuery, bqsConverter, catalogFramework, guestSubject);
+        SubmitQueryRequestImpl submitQueryRequest = new SubmitQueryRequestImpl(aQuery,
+                bqsConverter,
+                catalogFramework,
+                guestSubject);
         submitQueryRequest.set_number_of_hits(maxNumResults);
         submitQueryRequest.setTimeout(defaultTimeout);
 
@@ -152,7 +157,8 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
 
         HitCountRequestImpl hitCountRequest = new HitCountRequestImpl(numResults);
 
-        String id = UUID.randomUUID().toString();
+        String id = UUID.randomUUID()
+                .toString();
 
         try {
             poa_.activate_object_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
@@ -161,9 +167,8 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
             LOGGER.error("hit_count : Unable to activate hitCountRequest object: {}", id, e);
         }
 
-        org.omg.CORBA.Object obj =
-                poa_.create_reference_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
-                        HitCountRequestHelper.id());
+        org.omg.CORBA.Object obj = poa_.create_reference_with_id(id.getBytes(Charset.forName(
+                NsiliEndpoint.ENCODING)), HitCountRequestHelper.id());
         HitCountRequest queryRequest = HitCountRequestHelper.narrow(obj);
 
         return queryRequest;
@@ -196,12 +201,12 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
         QueryImpl catalogQuery = new QueryImpl(parsedFilter);
 
         if (defaultTimeout > 0) {
-            catalogQuery.setTimeoutMillis(defaultTimeout*1000);
+            catalogQuery.setTimeoutMillis(defaultTimeout * 1000);
         }
 
         catalogQuery.setPageSize(1);
 
-        QueryRequestImpl catalogQueryRequest = new QueryRequestImpl(catalogQuery);
+        QueryRequestImpl catalogQueryRequest = new QueryRequestImpl(catalogQuery, enterpriseSearch);
 
         try {
             QueryCountCallable queryCallable = new QueryCountCallable(catalogQueryRequest);

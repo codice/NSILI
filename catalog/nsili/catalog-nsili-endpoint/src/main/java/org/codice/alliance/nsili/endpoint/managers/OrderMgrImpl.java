@@ -14,6 +14,8 @@
 package org.codice.alliance.nsili.endpoint.managers;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.codice.alliance.nsili.common.CorbaUtils;
@@ -28,6 +30,8 @@ import org.codice.alliance.nsili.common.GIAS.Request;
 import org.codice.alliance.nsili.common.GIAS.SetAvailabilityRequest;
 import org.codice.alliance.nsili.common.GIAS.ValidationResults;
 import org.codice.alliance.nsili.common.GIAS._SetAvailabilityRequestStub;
+import org.codice.alliance.nsili.common.NsiliConstants;
+import org.codice.alliance.nsili.common.PackagingSpecFormatType;
 import org.codice.alliance.nsili.common.UCO.InvalidInputParameter;
 import org.codice.alliance.nsili.common.UCO.NameValue;
 import org.codice.alliance.nsili.common.UCO.ProcessingFault;
@@ -35,6 +39,7 @@ import org.codice.alliance.nsili.common.UCO.SystemFault;
 import org.codice.alliance.nsili.common.UID.Product;
 import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
 import org.codice.alliance.nsili.endpoint.requests.OrderRequestImpl;
+import org.codice.alliance.nsili.transformer.DAGConverter;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
 import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
@@ -46,8 +51,6 @@ import ddf.catalog.filter.FilterBuilder;
 import ddf.security.Subject;
 
 public class OrderMgrImpl extends OrderMgrPOA {
-
-
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(OrderMgrImpl.class);
 
     private AccessManagerImpl accessManager = null;
@@ -72,7 +75,12 @@ public class OrderMgrImpl extends OrderMgrPOA {
 
     @Override
     public String[] get_package_specifications() throws ProcessingFault, SystemFault {
-        return new String[0];
+        List<String> supportedPackagingSpecs =
+                new ArrayList<>(PackagingSpecFormatType.values().length);
+        for (PackagingSpecFormatType packagingSpecFormatType : PackagingSpecFormatType.values()) {
+            supportedPackagingSpecs.add(packagingSpecFormatType.name());
+        }
+        return supportedPackagingSpecs.toArray(new String[0]);
     }
 
     @Override
@@ -84,11 +92,31 @@ public class OrderMgrImpl extends OrderMgrPOA {
     @Override
     public OrderRequest order(OrderContents order, NameValue[] properties)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        OrderRequestImpl orderRequestImpl = new OrderRequestImpl(order);
 
-        String id = UUID.randomUUID().toString();
+        String protocol = "http";
+        int port = 80;
+        for (NameValue prop : properties) {
+            if (prop.aname.equals(NsiliConstants.PROP_PROTOCOL)) {
+                protocol = DAGConverter.getString(prop.value);
+            } else if (prop.aname.equals(NsiliConstants.PROP_PORT)) {
+                Integer portInteger = DAGConverter.getLong(prop.value);
+                if (portInteger != null) {
+                    port = portInteger;
+                }
+            }
+        }
+
+        OrderRequestImpl orderRequestImpl = new OrderRequestImpl(order,
+                protocol,
+                port,
+                getAccessManager(),
+                catalogFramework,
+                subject);
+
+        String id = UUID.randomUUID()
+                .toString();
         try {
-            _poa().activate_object_with_id("order".getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
+            _poa().activate_object_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                     orderRequestImpl);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
             LOGGER.error("order : Unable to activate orderRequest object. {}", e);
@@ -118,7 +146,9 @@ public class OrderMgrImpl extends OrderMgrPOA {
     public int query_availability_delay(Product prod,
             AvailabilityRequirement availability_requirement, String use_mode)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        return getAccessManager().query_availability_delay(prod, availability_requirement, use_mode);
+        return getAccessManager().query_availability_delay(prod,
+                availability_requirement,
+                use_mode);
     }
 
     @Override
@@ -147,6 +177,7 @@ public class OrderMgrImpl extends OrderMgrPOA {
     @Override
     public void set_default_timeout(int new_default)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
+        getAccessManager().set_default_timeout(new_default);
     }
 
     @Override
@@ -168,7 +199,7 @@ public class OrderMgrImpl extends OrderMgrPOA {
     // LibraryMgr
     @Override
     public String[] get_property_names() throws ProcessingFault, SystemFault {
-        throw new NO_IMPLEMENT();
+        return new String[] {NsiliConstants.PROP_PORT, NsiliConstants.PROP_PROTOCOL};
     }
 
     @Override
@@ -191,7 +222,8 @@ public class OrderMgrImpl extends OrderMgrPOA {
 
             String managerId = UUID.randomUUID()
                     .toString();
-            if (!CorbaUtils.isIdActive(_poa(), managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
+            if (!CorbaUtils.isIdActive(_poa(),
+                    managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
                 try {
                     _poa().activate_object_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                             accessManager);
@@ -200,10 +232,11 @@ public class OrderMgrImpl extends OrderMgrPOA {
                 }
             }
 
-            _poa().create_reference_with_id(managerId.getBytes(
-                    Charset.forName(NsiliEndpoint.ENCODING)), AccessManagerHelper.id());
+            _poa().create_reference_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
+                    AccessManagerHelper.id());
         }
 
         return accessManager;
     }
+
 }
