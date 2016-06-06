@@ -15,22 +15,15 @@ package org.codice.alliance.nsili.common;
 
 import java.io.InputStream;
 
-import javax.print.attribute.standard.Media;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-import ddf.catalog.data.Metacard;
-
 @Path("/")
 public interface Nsili {
 
     @GET
-    @Produces(MediaType.TEXT_PLAIN)
+    @Produces(MediaType.WILDCARD)
     InputStream getIorFile();
-
-    @GET
-    @Produces(MediaType.TEXT_PLAIN)
-    InputStream getProduct();
 }

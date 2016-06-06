@@ -30,6 +30,14 @@
         <AD description="The Password to be used for authentication with HTTP server."
             name="HTTP/S Password" id="cxfPassword" required="false" type="Password" default=""/>
 
+        <AD description="The timeout (seconds) associated with retrieving the IOR file."
+            name="HTTP/S Timeout" id="cxfTimeout"
+            required="true" type="Integer" default="60"/>
+
+        <AD description="The timeout (seconds) associated with CORBA reads."
+            name="CORBA Timeout" id="corbaTimeout"
+            required="true" type="Integer" default="60"/>
+
         <AD description="The Maximum Hit Count for Queries to the Source" name="Max Hit Count"
             id="maxHitCount" required="true" type="Integer" default="250"/>
 
@@ -71,6 +79,14 @@
 
         <AD description="The Password to be used for authentication with HTTP server."
             name="HTTP/S Password" id="cxfPassword" required="false" type="Password" default=""/>
+
+        <AD description="The timeout (seconds) associated with retrieving the IOR file."
+            name="HTTP/S Timeout" id="cxfTimeout"
+            required="true" type="Integer" default="60"/>
+
+        <AD description="The timeout (seconds) associated with CORBA reads."
+            name="CORBA Timeout" id="corbaTimeout"
+            required="true" type="Integer" default="60"/>
 
         <AD description="The Maximum Hit Count for Queries to the Source" name="Max Hit Count"
             id="maxHitCount" required="true" type="Integer" default="250"/>

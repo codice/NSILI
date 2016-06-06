@@ -81,8 +81,6 @@ import org.opengis.filter.sort.SortBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
-
 import ddf.catalog.data.ContentType;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.Result;
@@ -109,6 +107,10 @@ public class NsiliSource extends MaskableImpl
     public static final String CXF_PASSWORD = "cxfPassword";
 
     public static final String CXF_USERNAME = "cxfUsername";
+
+    public static final String CXF_TIMEOUT = "cxfTimeout";
+
+    public static final String CORBA_TIMEOUT = "corbaTimeout";
 
     public static final String ID = "id";
 
@@ -183,6 +185,10 @@ public class NsiliSource extends MaskableImpl
     private String cxfUsername;
 
     private String cxfPassword;
+
+    private int cxfTimeout;
+
+    private int corbaTimeout;
 
     private String id;
 
@@ -264,7 +270,6 @@ public class NsiliSource extends MaskableImpl
     }
 
     public NsiliSource() {
-        initOrb();
         scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
@@ -274,15 +279,16 @@ public class NsiliSource extends MaskableImpl
     }
 
     private void createClientFactory() {
+        int timeoutMsec = cxfTimeout * 1000;
         if (StringUtils.isNotBlank(cxfUsername) && StringUtils.isNotBlank(cxfPassword)) {
             factory = new SecureCxfClientFactory(iorUrl,
                     Nsili.class,
                     null,
                     null,
                     true,
-                    false,
-                    null,
-                    null,
+                    true,
+                    timeoutMsec,
+                    timeoutMsec,
                     cxfUsername,
                     cxfPassword);
         } else {
@@ -291,9 +297,9 @@ public class NsiliSource extends MaskableImpl
                     null,
                     null,
                     true,
-                    false,
-                    null,
-                    null);
+                    true,
+                    timeoutMsec,
+                    timeoutMsec);
         }
     }
 
@@ -303,6 +309,7 @@ public class NsiliSource extends MaskableImpl
      * and views that it provides.
      */
     private void initCorbaClient() {
+        initOrb();
         getIorString();
         if (iorString != null) {
             initLibrary();
@@ -388,7 +395,14 @@ public class NsiliSource extends MaskableImpl
      * Initializes the Corba ORB with no additional arguments
      */
     private void initOrb() {
-        orb = org.omg.CORBA.ORB.init(new String[0], null);
+        if (orb != null) {
+            orb.shutdown(true);
+        }
+        long waitTimeMillis = corbaTimeout * 1000;
+        String waitTimeProp = "1:" + waitTimeMillis + ":" + waitTimeMillis + ":" + 1;
+        java.util.Properties props = new java.util.Properties();
+        props.put("com.sun.CORBA.transport.ORBTCPReadTimeouts", waitTimeProp);
+        orb = org.omg.CORBA.ORB.init(new String[0], props);
         if (orb != null) {
             LOGGER.debug("{} : Successfully initialized CORBA orb.", getId());
         } else {
@@ -401,6 +415,13 @@ public class NsiliSource extends MaskableImpl
      */
     private void initLibrary() {
         if (iorString != null) {
+
+            if (LOGGER.isDebugEnabled()) {
+                //Log the IOR content for debugging purposes
+                IOR ior = new IOR(iorString.getBytes());
+                ior.parse();
+            }
+
             org.omg.CORBA.Object obj = orb.string_to_object(iorString);
 
             library = LibraryHelper.narrow(obj);
@@ -592,6 +613,14 @@ public class NsiliSource extends MaskableImpl
         String cxfPassword = (String) configuration.get(CXF_PASSWORD);
         if (StringUtils.isNotBlank(cxfPassword) && !cxfPassword.equals(this.cxfPassword)) {
             setCxfPassword(cxfPassword);
+        }
+        Integer cxfTimeout = (Integer) configuration.get(CXF_TIMEOUT);
+        if (cxfTimeout != null && cxfTimeout != this.cxfTimeout) {
+            setCxfTimeout(cxfTimeout);
+        }
+        Integer corbaTimeout = (Integer) configuration.get(CORBA_TIMEOUT);
+        if (corbaTimeout != null && corbaTimeout != this.corbaTimeout) {
+            setCorbaTimeout(corbaTimeout);
         }
         String id = (String) configuration.get(ID);
         if (StringUtils.isNotBlank(id) && !id.equals(this.id)) {
@@ -876,6 +905,22 @@ public class NsiliSource extends MaskableImpl
 
     public void setCxfPassword(String cxfPassword) {
         this.cxfPassword = cxfPassword;
+    }
+
+    public Integer getCxfTimeout() {
+        return cxfTimeout;
+    }
+
+    public void setCxfTimeout(Integer cxfTimeout) {
+        this.cxfTimeout = cxfTimeout;
+    }
+
+    public Integer getCorbaTimeout() {
+        return corbaTimeout;
+    }
+
+    public void setCorbaTimeout(Integer corbaTimeout) {
+        this.corbaTimeout = corbaTimeout;
     }
 
     public void setId(String id) {

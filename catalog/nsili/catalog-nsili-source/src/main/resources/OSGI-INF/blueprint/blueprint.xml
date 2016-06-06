@@ -60,6 +60,8 @@
             <property name="iorUrl" value=""/>
             <property name="cxfUsername" value=""/>
             <property name="cxfPassword" value=""/>
+            <property name="cxfTimeout" value="60"/>
+            <property name="corbaTimeout" value="60"/>
             <property name="pollInterval" value="5"/>
             <property name="maxHitCount" value="250"/>
             <property name="numberWorkerThreads" value="4" />
@@ -85,6 +87,8 @@
             <property name="iorUrl" value=""/>
             <property name="cxfUsername" value=""/>
             <property name="cxfPassword" value=""/>
+            <property name="cxfTimeout" value="60"/>
+            <property name="corbaTimeout" value="60"/>
             <property name="pollInterval" value="5"/>
             <property name="maxHitCount" value="250"/>
             <property name="numberWorkerThreads" value="4" />
