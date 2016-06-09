@@ -1495,7 +1495,7 @@ public class NsiliAttributesGenerator {
     }
 
     public static List<AttributeInformation> getNsilTaskAttributes() {
-        String prefix = NsiliConstants.NSIL_TASK;
+        String prefix = NsiliConstants.NSIL_TASK + ".";
         Domain domain;
 
         List<AttributeInformation> attributes = new ArrayList<>();

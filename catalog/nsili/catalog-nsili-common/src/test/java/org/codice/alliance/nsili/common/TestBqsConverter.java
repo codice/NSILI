@@ -18,6 +18,12 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import java.math.BigInteger;
+import java.util.UUID;
+
+import javax.xml.bind.DatatypeConverter;
+
+import org.apache.commons.codec.binary.Hex;
 import org.junit.Before;
 import org.junit.Test;
 import org.opengis.filter.Filter;
@@ -110,7 +116,7 @@ public class TestBqsConverter {
         assertThat(filter, notNullValue());
         assertThat(filter.toString(),
                 containsString(
-                        "AND [ null > 15.3 ] AND [[ id is like Test ] OR [ targetNumber is like Test ]"));
+                        "[[ id is like Test ] OR [ targetNumber is like Test ]"));
     }
 
     @Test
@@ -119,7 +125,7 @@ public class TestBqsConverter {
         assertThat(filter, notNullValue());
         assertThat(filter.toString(),
                 containsString(
-                        "AND [ null > -15.3 ] AND [[ id is like Test ] OR [ targetNumber is like Test ]]"));
+                        "[[ id is like Test ] OR [ targetNumber is like Test ]]"));
     }
 
     @Test

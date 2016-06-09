@@ -98,7 +98,7 @@ public class NsiliConstants {
 
     public static final String NSIL_SECURITY = "NSIL_SECURITY";
 
-    public static final String NSIL_METADATA_SECURITY = "NSIL_METADATA_SECURITY";
+    public static final String NSIL_METADATA_SECURITY = "NSIL_METADATASECURITY";
 
     public static final String NSIL_FILE = "NSIL_FILE";
 
@@ -307,5 +307,7 @@ public class NsiliConstants {
     public static final String PROP_PROTOCOL = "PROTOCOL";
 
     public static final String PROP_PORT = "PORT";
+
+    public static final String UNKNOWN = "Unknown";
 
 }

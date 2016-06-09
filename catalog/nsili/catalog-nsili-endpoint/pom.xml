@@ -148,6 +148,12 @@
             <artifactId>catalog-nsili-transformer</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>ddf.catalog.core</groupId>
+            <artifactId>catalog-core-solr</artifactId>
+            <version>${ddf.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <resources>

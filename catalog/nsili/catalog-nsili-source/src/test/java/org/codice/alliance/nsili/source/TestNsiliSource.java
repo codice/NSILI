@@ -86,9 +86,9 @@ public class TestNsiliSource {
     private static final String GMTI = "GMTI";
 
     private static final String GMTI_EQ_FILTER =
-            "((NSIL_FILE.format = 'GMTI') or (NSIL_STREAM.standard = 'GMTI'))";
+            "((NSIL_FILE.format = 'GMTI') or (NSIL_STREAM.standard = 'GMTI')) and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')";
 
-    private static final String GMTI_LIKE_FILTER = "(GMTI like '%')";
+    private static final String GMTI_LIKE_FILTER = "(GMTI like '%') and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')";
 
     private static final String RELEVANCE = "RELEVANCE";
 

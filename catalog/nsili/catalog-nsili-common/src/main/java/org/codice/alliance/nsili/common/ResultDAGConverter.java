@@ -20,7 +20,20 @@ import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.UUID;
 
+import org.apache.commons.lang.StringUtils;
+import org.codice.alliance.nsili.common.UCO.AbsTime;
+import org.codice.alliance.nsili.common.UCO.AbsTimeHelper;
+import org.codice.alliance.nsili.common.UCO.DAG;
+import org.codice.alliance.nsili.common.UCO.Edge;
+import org.codice.alliance.nsili.common.UCO.Node;
+import org.codice.alliance.nsili.common.UCO.NodeType;
+import org.codice.alliance.nsili.common.UCO.Rectangle;
+import org.codice.alliance.nsili.common.UCO.RectangleHelper;
+import org.codice.alliance.nsili.common.UCO.Time;
+import org.codice.alliance.nsili.common.UID.Product;
+import org.codice.alliance.nsili.common.UID.ProductHelper;
 import org.codice.ddf.configuration.SystemBaseUrl;
 import org.codice.ddf.configuration.SystemInfo;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
@@ -33,17 +46,6 @@ import org.omg.PortableServer.POAPackage.WrongPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.codice.alliance.nsili.common.UCO.AbsTime;
-import org.codice.alliance.nsili.common.UCO.AbsTimeHelper;
-import org.codice.alliance.nsili.common.UCO.DAG;
-import org.codice.alliance.nsili.common.UCO.Edge;
-import org.codice.alliance.nsili.common.UCO.Node;
-import org.codice.alliance.nsili.common.UCO.NodeType;
-import org.codice.alliance.nsili.common.UCO.Rectangle;
-import org.codice.alliance.nsili.common.UCO.RectangleHelper;
-import org.codice.alliance.nsili.common.UCO.Time;
-import org.codice.alliance.nsili.common.UID.Product;
-import org.codice.alliance.nsili.common.UID.ProductHelper;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 
@@ -70,7 +72,8 @@ public class ResultDAGConverter {
 
         ProductImpl productImpl = new ProductImpl();
 
-        String id = result.getMetacard().getId();
+        String id = result.getMetacard()
+                .getId();
 
         if (!CorbaUtils.isIdActive(poa, id.getBytes(Charset.forName(ENCODING)))) {
             try {
@@ -83,9 +86,9 @@ public class ResultDAGConverter {
             }
         }
 
-        org.omg.CORBA.Object obj = poa.create_reference_with_id(result.getMetacard()
-                .getId()
-                .getBytes(Charset.forName(ENCODING)), ProductHelper.id());
+        org.omg.CORBA.Object obj =
+                poa.create_reference_with_id(id.getBytes(Charset.forName(ENCODING)),
+                        ProductHelper.id());
         Product product = ProductHelper.narrow(obj);
 
         Node productNode = createRootNode(orb);
@@ -98,6 +101,8 @@ public class ResultDAGConverter {
 
         addCardNodeWithAttributes(graph, productNode, metacard, orb);
         addFileNodeWithAttributes(graph, productNode, metacard, orb);
+        addSecurityNodeWithAttributes(graph, productNode, metacard, orb);
+        addMetadataSecurityNodeWithAttributes(graph, productNode, metacard, orb);
         addParts(graph, productNode, metacard, orb);
 
         if (metacard.getThumbnail() != null && metacard.getThumbnail().length > 0) {
@@ -137,6 +142,26 @@ public class ResultDAGConverter {
                     metacard.getCreatedDate(),
                     orb);
         }
+
+        if (StringUtils.isNotBlank(metacard.getSourceId())) {
+            addStringAttribute(graph,
+                    cardNode,
+                    NsiliConstants.SOURCE_LIBRARY,
+                    metacard.getSourceId(),
+                    orb);
+        } else {
+            addStringAttribute(graph,
+                    cardNode,
+                    NsiliConstants.SOURCE_LIBRARY,
+                    NsiliConstants.UNKNOWN,
+                    orb);
+        }
+
+        addStringAttribute(graph,
+                cardNode,
+                NsiliConstants.STATUS,
+                NsiliCardStatus.CHANGED.name(),
+                orb);
     }
 
     public static void addFileNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
@@ -151,16 +176,22 @@ public class ResultDAGConverter {
         Attribute pocAttr = metacard.getAttribute(Metacard.POINT_OF_CONTACT);
         if (pocAttr != null) {
             String pocString = String.valueOf(pocAttr.getValue());
-            if (pocString != null) {
+            if (StringUtils.isNotBlank(pocString)) {
                 addStringAttribute(graph, fileNode, NsiliConstants.CREATOR, pocString, orb);
+            } else {
+                addStringAttribute(graph, fileNode, NsiliConstants.CREATOR, SystemInfo.getSiteName(), orb);
             }
+        } else {
+            addStringAttribute(graph, fileNode, NsiliConstants.CREATOR, SystemInfo.getSiteName(), orb);
         }
 
         if (metacard.getResourceSize() != null) {
             try {
                 Double resSize = Double.valueOf(metacard.getResourceSize());
                 Double resSizeMB = convertToMegabytes(resSize);
-                addDoubleAttribute(graph, fileNode, NsiliConstants.EXTENT, resSizeMB, orb);
+                if (resSizeMB != null) {
+                    addDoubleAttribute(graph, fileNode, NsiliConstants.EXTENT, resSizeMB, orb);
+                }
             } catch (NumberFormatException nfe) {
                 LOGGER.warn("Couldn't convert the resource size to double: {}",
                         metacard.getResourceSize());
@@ -204,6 +235,53 @@ public class ResultDAGConverter {
             productLocal = false;
         }
         addBooleanAttribute(graph, fileNode, NsiliConstants.IS_PRODUCT_LOCAL, productLocal, orb);
+
+        if (metacard.getCreatedDate() != null) {
+            addDateAttribute(graph,
+                    fileNode,
+                    NsiliConstants.DATE_TIME_DECLARED,
+                    metacard.getCreatedDate(),
+                    orb);
+        } else {
+            addDateAttribute(graph, fileNode, NsiliConstants.DATE_TIME_DECLARED, new Date(), orb);
+        }
+    }
+
+    public static void addSecurityNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
+            Node productNode, Metacard metacard, ORB orb) {
+        Any any = orb.create_any();
+        Node securityNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_SECURITY, any);
+        graph.addVertex(securityNode);
+        graph.addEdge(productNode, securityNode);
+
+        //TODO -- Once taxonomy is complete, set real values
+        addStringAttribute(graph,
+                securityNode,
+                NsiliConstants.CLASSIFICATION,
+                NsiliClassification.UNCLASSIFIED.getSpecName(),
+                orb);
+        addStringAttribute(graph, securityNode, NsiliConstants.POLICY, "NATO", orb);
+        addStringAttribute(graph, securityNode, NsiliConstants.RELEASABILITY, "NATO", orb);
+    }
+
+    public static void addMetadataSecurityNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
+            Node productNode, Metacard metacard, ORB orb) {
+        Any any = orb.create_any();
+        Node metadataSecurityNode = new Node(0,
+                NodeType.ENTITY_NODE,
+                NsiliConstants.NSIL_METADATA_SECURITY,
+                any);
+        graph.addVertex(metadataSecurityNode);
+        graph.addEdge(productNode, metadataSecurityNode);
+
+        //TODO -- Once taxonomy is complete, set real values
+        addStringAttribute(graph,
+                metadataSecurityNode,
+                NsiliConstants.CLASSIFICATION,
+                NsiliClassification.UNCLASSIFIED.getSpecName(),
+                orb);
+        addStringAttribute(graph, metadataSecurityNode, NsiliConstants.POLICY, "NATO", orb);
+        addStringAttribute(graph, metadataSecurityNode, NsiliConstants.RELEASABILITY, "NATO", orb);
     }
 
     public static void addParts(DirectedAcyclicGraph<Node, Edge> graph, Node productNode,
@@ -217,10 +295,25 @@ public class ResultDAGConverter {
         boolean partAdded = false;
         String type = null;
 
+        String partIdentifier = "1";
+        addStringAttribute(graph, partNode, NsiliConstants.PART_IDENTIFIER, partIdentifier, orb);
+
+        addSecurityNodeWithAttributes(graph, partNode, metacard, orb);
         addCoverageNodeWithAttributes(graph, partNode, metacard, orb);
 
         if (metacardContainsImageryData(metacard)) {
             type = NsiliProductType.IMAGERY.getSpecName();
+
+            Any imageryAny = orb.create_any();
+            Node imageryNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_IMAGERY, imageryAny);
+            graph.addVertex(imageryNode);
+            graph.addEdge(partNode, imageryNode);
+
+            //TODO -- Once taxonomy is complete, set real values
+            addStringAttribute(graph, imageryNode, NsiliConstants.CATEGORY, NsiliImageryType.VIS.name(), orb);
+            addStringAttribute(graph, imageryNode, NsiliConstants.DECOMPRESSION_TECHNIQUE, NsiliImageryDecompressionTech.NC.name(), orb);
+            addStringAttribute(graph, imageryNode, NsiliConstants.IDENTIFIER, partIdentifier, orb);
+            addIntegerAttribute(graph, imageryNode, NsiliConstants.NUMBER_OF_BANDS, 1, orb);
         }
 
         if (metacardContainsGmtiData(metacard)) {
@@ -291,10 +384,11 @@ public class ResultDAGConverter {
         }
 
         if (metacard.getId() != null) {
+            UUID uuid = getUUIDFromCard(metacard.getId());
             addStringAttribute(graph,
                     commonNode,
                     NsiliConstants.IDENTIFIER_UUID,
-                    metacard.getId(),
+                    uuid.toString(),
                     orb);
         }
 
@@ -336,27 +430,42 @@ public class ResultDAGConverter {
     public static void addThumbnailRelatedFile(DirectedAcyclicGraph<Node, Edge> graph,
             Node productNode, Metacard metacard, ORB orb) {
         Any any = orb.create_any();
-        Node relatedFileNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_RELATED_FILE, any);
+        Node relatedFileNode = new Node(0,
+                NodeType.ENTITY_NODE,
+                NsiliConstants.NSIL_RELATED_FILE,
+                any);
         graph.addVertex(relatedFileNode);
         graph.addEdge(productNode, relatedFileNode);
 
         Attribute pocAttr = metacard.getAttribute(Metacard.POINT_OF_CONTACT);
         if (pocAttr != null) {
             String pocString = String.valueOf(pocAttr.getValue());
-            if (pocString != null) {
+            if (StringUtils.isNotBlank(pocString)) {
                 addStringAttribute(graph, relatedFileNode, NsiliConstants.CREATOR, pocString, orb);
+            } else {
+                addStringAttribute(graph, relatedFileNode, NsiliConstants.CREATOR, SystemInfo.getSiteName(), orb);
             }
+        } else {
+            addStringAttribute(graph, relatedFileNode, NsiliConstants.CREATOR, SystemInfo.getSiteName(), orb);
         }
 
-        addDateAttribute(graph,
-                relatedFileNode,
-                NsiliConstants.DATE_TIME_DECLARED,
-                metacard.getCreatedDate(),
-                orb);
+        if (metacard.getCreatedDate() != null) {
+            addDateAttribute(graph,
+                    relatedFileNode,
+                    NsiliConstants.DATE_TIME_DECLARED,
+                    metacard.getCreatedDate(),
+                    orb);
+        } else {
+            addDateAttribute(graph,
+                    relatedFileNode,
+                    NsiliConstants.DATE_TIME_DECLARED,
+                    new Date(),
+                    orb);
+        }
 
-        if (metacard.getResourceSize() != null) {
+        if (metacard.getThumbnail() != null) {
             try {
-                Double resSize = (double)metacard.getThumbnail().length;
+                Double resSize = (double) metacard.getThumbnail().length;
                 Double resSizeMB = convertToMegabytes(resSize);
                 addDoubleAttribute(graph, relatedFileNode, NsiliConstants.EXTENT, resSizeMB, orb);
             } catch (NumberFormatException nfe) {
@@ -367,8 +476,8 @@ public class ResultDAGConverter {
 
         try {
             String thumbnailURL = new URI(SystemBaseUrl.constructUrl(
-                    CATALOG_SOURCE_PATH + "/" + metacard.getSourceId() + "/" + metacard.getId() + "?transform="
-                            + THUMBNAIL_TRANSFORMER, true)).toASCIIString();
+                    CATALOG_SOURCE_PATH + "/" + metacard.getSourceId() + "/" + metacard.getId()
+                            + "?transform=" + THUMBNAIL_TRANSFORMER, true)).toASCIIString();
             addStringAttribute(graph, relatedFileNode, NsiliConstants.URL, thumbnailURL, orb);
         } catch (URISyntaxException e) {
             LOGGER.warn("Unable to construct URI: {}", e);
@@ -383,6 +492,7 @@ public class ResultDAGConverter {
             fileLocal = false;
         }
         addBooleanAttribute(graph, relatedFileNode, NsiliConstants.IS_FILE_LOCAL, fileLocal, orb);
+        addStringAttribute(graph, relatedFileNode, NsiliConstants.FILE_TYPE, NsiliConstants.THUMBNAIL_TYPE, orb);
     }
 
     public static Node createRootNode(ORB orb) {
@@ -392,7 +502,7 @@ public class ResultDAGConverter {
     public static void addStringAttribute(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode,
             String key, String value, ORB orb) {
         Any any = orb.create_any();
-        any.insert_wstring(value);
+        any.insert_string(value);
         Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
         graph.addVertex(node);
         graph.addEdge(parentNode, node);
@@ -471,8 +581,7 @@ public class ResultDAGConverter {
         Calendar cal = new GregorianCalendar();
         cal.setTime(date);
 
-        return new AbsTime(new org.codice.alliance.nsili.common.UCO.Date((short) cal.get(
-                Calendar.YEAR),
+        return new AbsTime(new org.codice.alliance.nsili.common.UCO.Date((short) cal.get(Calendar.YEAR),
                 (short) (cal.get(Calendar.MONTH) + 1),
                 (short) cal.get(Calendar.DAY_OF_MONTH)),
                 new Time((short) cal.get(Calendar.HOUR_OF_DAY),
@@ -521,6 +630,31 @@ public class ResultDAGConverter {
     }
 
     private static String modifyUrl(String url, String name) {
-        return url+"&nsiliFilename="+name;
+        return url + "&nsiliFilename=" + name;
+    }
+
+    private static UUID getUUIDFromCard(String id) {
+        UUID uuid = null;
+        try {
+            if (id.contains("-")) {
+                uuid = UUID.fromString(id);
+            } else if (id.length() == 32) {
+                //Attempt to parse as a UUID with no dashes
+                StringBuilder sb = new StringBuilder(id);
+                sb.insert(8, "-");
+                sb.insert(13, "-");
+                sb.insert(18, "-");
+                sb.insert(23, "-");
+                uuid = UUID.fromString(sb.toString());
+            }
+        } catch (Exception e) {
+        }
+
+        //If parsing fails, get a v3 UUID from the bytes of the metacard ID
+        if (uuid == null) {
+            uuid = UUID.nameUUIDFromBytes(id.getBytes());
+        }
+
+        return uuid;
     }
 }

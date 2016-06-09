@@ -63,11 +63,10 @@ public class LibraryImpl extends LibraryPOA {
             NsiliManagerType.CATALOG_MGR.getSpecName(),
             NsiliManagerType.CREATION_MGR.getSpecName(),
             NsiliManagerType.PRODUCT_MGR.getSpecName(),
-            NsiliManagerType.DATA_MODEL_MGR.getSpecName()
-//            NsiliManagerType.STANDING_QUERY_MGR.getSpecName()
+            NsiliManagerType.DATA_MODEL_MGR.getSpecName(),
+            NsiliManagerType.STANDING_QUERY_MGR.getSpecName()
                 /* Optional :
                 "QueryOrderMgr",
-                "StandingQueryMgr",
                 "UpdateMgr" */);
 
     private POA poa;
@@ -81,6 +80,10 @@ public class LibraryImpl extends LibraryPOA {
     private int maxNumResults = NsiliEndpoint.DEFAULT_MAX_NUM_RESULTS;
 
     private boolean enterpriseSearch = false;
+
+    private long defaultUpdateFrequencyMsec;
+
+    private int maxPendingResults;
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(LibraryImpl.class);
 
@@ -106,6 +109,14 @@ public class LibraryImpl extends LibraryPOA {
 
     public void setEnterpriseSearch(boolean enterpriseSearch) {
         this.enterpriseSearch = enterpriseSearch;
+    }
+
+    public void setDefaultUpdateFrequencyMsec(long defaultUpdateFrequencyMsec) {
+        this.defaultUpdateFrequencyMsec = defaultUpdateFrequencyMsec;
+    }
+
+    public void setMaxPendingResults(int maxPendingResults) {
+        this.maxPendingResults = maxPendingResults;
     }
 
     @Override
@@ -206,7 +217,12 @@ public class LibraryImpl extends LibraryPOA {
                     poa.create_reference_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                             CreationMgrHelper.id());
         } else if (manager_type.equals(NsiliManagerType.STANDING_QUERY_MGR.getSpecName())) {
-            StandingQueryMgrImpl standingQueryMgr = new StandingQueryMgrImpl();
+            StandingQueryMgrImpl standingQueryMgr = new StandingQueryMgrImpl(enterpriseSearch);
+            standingQueryMgr.setCatalogFramework(catalogFramework);
+            standingQueryMgr.setFilterBuilder(filterBuilder);
+            standingQueryMgr.setSubject(guestSubject);
+            standingQueryMgr.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencyMsec);
+            standingQueryMgr.setMaxPendingResults(maxPendingResults);
             if (!CorbaUtils.isIdActive(poa,
                     managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
                 try {

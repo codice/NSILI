@@ -245,6 +245,10 @@ public class TestNsiliCommon {
         int port = 0;
         java.util.Properties props = new java.util.Properties();
         props.put("org.omg.CORBA.ORBInitialPort", port);
+
+        System.setProperty("com.sun.CORBA.POA.ORBPersistentServerPort", String.valueOf(port));
+        System.setProperty("com.sun.CORBA.ORBServerPort", String.valueOf(port));
+
         orb = ORB.init(new String[0], props);
 
         rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));

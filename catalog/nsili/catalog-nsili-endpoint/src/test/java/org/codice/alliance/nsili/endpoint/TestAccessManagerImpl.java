@@ -75,7 +75,7 @@ public class TestAccessManagerImpl extends TestNsiliCommon {
 
     private Product testProduct = null;
 
-    private String testMetacardId = UUID.randomUUID().toString();
+    private String testMetacardId = UUID.randomUUID().toString().replaceAll("-", "");;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TestAccessManagerImpl.class);
 

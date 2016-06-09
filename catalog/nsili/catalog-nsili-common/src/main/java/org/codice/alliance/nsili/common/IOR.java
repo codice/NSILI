@@ -1,11 +1,3 @@
-/**
- * This utility class is reused from the OpenMap project.
- * Modified to use a logger vs PrintWriter and removed main.
- * <p>
- * File: https://github.com/OpenMap-java/openmap/blob/master/src/corba/com/bbn/openmap/util/corba/IOR.java
- * License: https://github.com/OpenMap-java/openmap/blob/master/LICENSE
- */
-
 // **********************************************************************
 //
 // <copyright>
@@ -28,7 +20,15 @@
 //
 // **********************************************************************
 
-package org.codice.alliance.nsili.source;
+/**
+ * This utility class is reused from the OpenMap project.
+ * Modified to use a logger vs PrintWriter and removed main.
+ * <p>
+ * File: https://github.com/OpenMap-java/openmap/blob/master/src/corba/com/bbn/openmap/util/corba/IOR.java
+ * License: https://github.com/OpenMap-java/openmap/blob/master/LICENSE
+ */
+
+package org.codice.alliance.nsili.common;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +47,7 @@ public class IOR {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IOR.class);
 
-    IOR(byte[] rawIOR) {
+    public IOR(byte[] rawIOR) {
         hex = rawIOR;
     }
 
@@ -84,7 +84,7 @@ public class IOR {
      * IOR.
      *
      */
-    void parse() {
+    public void parse() {
 
         // Make sure first four bytes are 'IOR:'
         String prefix = new String(hex, 0, 4);

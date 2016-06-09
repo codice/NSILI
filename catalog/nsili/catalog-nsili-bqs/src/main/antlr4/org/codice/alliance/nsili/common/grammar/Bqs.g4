@@ -11,7 +11,7 @@ primary :
     | attribute_name BLANK LIKE BLANK quoted_string
     | attribute_name BLANK EXISTS
     | LPAREN query RPAREN;
-attribute_name : CHARACTER | (CHARACTER UNDERSCORE CHARACTER COLON)* CHARACTER UNDERSCORE CHARACTER DOT CHARACTER ;
+attribute_name : CHARACTER | (CHARACTER UNDERSCORE CHARACTER COLON)* (CHARACTER UNDERSCORE)+ CHARACTER DOT CHARACTER ;
 comp_op : EQUAL | LT | GT | NOTEQ | LTE | GTE;
 constant_expression : number | quoted_string | date;
 date : SINGLEQT year SLASH month SLASH day (BLANK hour COLON minute COLON second)* SINGLEQT;

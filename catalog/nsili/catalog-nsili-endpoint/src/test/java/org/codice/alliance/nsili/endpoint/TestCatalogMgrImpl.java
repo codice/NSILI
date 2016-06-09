@@ -186,7 +186,7 @@ public class TestCatalogMgrImpl extends TestNsiliCommon {
         List<Result> results = new ArrayList<>(testTotalHits);
         MetacardImpl testMetacard = new MetacardImpl();
         testMetacard.setId(UUID.randomUUID()
-                .toString());
+                .toString().replaceAll("-", ""));
         Result testResult = new ResultImpl(testMetacard);
         results.add(testResult);
         QueryResponse testResponse = new QueryResponseImpl(null, results, testTotalHits);

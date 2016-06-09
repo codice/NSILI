@@ -33,7 +33,7 @@ import ddf.security.service.SecurityServiceException;
 
 public class TestNsiliLibraryImpl extends TestNsiliCommon {
 
-    private static final int TEST_CORBA_PORT = 20012;
+    private static final int TEST_CORBA_PORT = 0;
 
     private static final String TEST_HOSTNAME = "ddfhost";
 
@@ -65,7 +65,7 @@ public class TestNsiliLibraryImpl extends TestNsiliCommon {
         String[] managerTypes = library.get_manager_types();
 
         assertThat(managerTypes, notNullValue());
-        assertThat(managerTypes.length, is(5));
+        assertThat(managerTypes.length, is(6));
     }
 
     @Test

@@ -74,6 +74,10 @@ public class NsiliEndpoint {
 
     private boolean enterpriseSearch = false;
 
+    private int defaultUpdateFrequencySec = 60;
+
+    private int maxPendingResults = 10000;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(NsiliEndpoint.class);
 
     public NsiliEndpoint() {
@@ -81,16 +85,14 @@ public class NsiliEndpoint {
     }
 
     public void shutdown() {
-        if (orbRunThread != null) {
-            orbRunThread.interrupt();
-            orbRunThread = null;
-        }
-
         if (orb != null) {
-            LOGGER.debug("Attempting to stop ORB on port: {}", corbaPort);
+            LOGGER.debug("Stopping ORB on port: {}", corbaPort);
+            orb.shutdown(true);
             orb.destroy();
         }
 
+        orbRunThread = null;
+        orb = null;
         library = null;
     }
 
@@ -103,9 +105,11 @@ public class NsiliEndpoint {
     }
 
     public void setCorbaPort(int corbaPort) {
-        shutdown();
-        this.corbaPort = corbaPort;
-        init();
+        if (this.corbaPort != corbaPort) {
+            shutdown();
+            this.corbaPort = corbaPort;
+            init();
+        }
     }
 
     public int getMaxNumResults() {
@@ -116,6 +120,13 @@ public class NsiliEndpoint {
         this.maxNumResults = maxNumResults;
         if (library != null) {
             library.setMaxNumResults(maxNumResults);
+        }
+    }
+
+    public void setDefaultUpdateFrequencySec(int defaultUpdateFrequencySec) {
+        this.defaultUpdateFrequencySec = defaultUpdateFrequencySec;
+        if (library != null) {
+            library.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencySec * 1000);
         }
     }
 
@@ -158,12 +169,18 @@ public class NsiliEndpoint {
         this.filterBuilder = filterBuilder;
     }
 
+    public void setMaxPendingResults(int maxPendingResults) {
+        this.maxPendingResults = maxPendingResults;
+    }
+
     public void init() {
         try {
-            orb = getOrbForServer(corbaPort);
-            orbRunThread = new Thread(() -> orb.run());
-            orbRunThread.start();
-            LOGGER.info("Started ORB on port: {}", corbaPort);
+            if (orb == null) {
+                orb = getOrbForServer(corbaPort);
+                orbRunThread = new Thread(() -> orb.run());
+                orbRunThread.start();
+                LOGGER.info("Started ORB on port: {}", corbaPort);
+            }
         } catch (InvalidName | AdapterInactive | WrongPolicy | ServantNotActive e) {
             LOGGER.warn("Unable to start the CORBA server. {}", NsilCorbaExceptionUtil.getExceptionDetails(e));
             LOGGER.debug("CORBA server startup exception details", e);
@@ -182,10 +199,10 @@ public class NsiliEndpoint {
             throws InvalidName, AdapterInactive, WrongPolicy, ServantNotActive, IOException,
             SecurityServiceException {
 
-        java.util.Properties props = new java.util.Properties();
-        props.put("org.omg.CORBA.ORBInitialPort", port);
-        props.put("com.sun.CORBA.POA.ORBPersistentServerPort", port);
-        final ORB orb = ORB.init(new String[0], props);
+        System.setProperty("com.sun.CORBA.POA.ORBPersistentServerPort", String.valueOf(port));
+        System.setProperty("com.sun.CORBA.ORBServerPort", String.valueOf(port));
+
+        final ORB orb = ORB.init(new String[0], null);
 
         POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
 
@@ -198,6 +215,8 @@ public class NsiliEndpoint {
         library.setGuestSubject(guestSubject);
         library.setFilterBuilder(filterBuilder);
         library.setEnterpriseSearch(enterpriseSearch);
+        library.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencySec * 1000);
+        library.setMaxPendingResults(maxPendingResults);
 
         org.omg.CORBA.Object objref = rootPOA.servant_to_reference(library);
 

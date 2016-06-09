@@ -69,6 +69,7 @@ import org.codice.alliance.nsili.common.UCO.AbsTimeHelper;
 import org.codice.alliance.nsili.common.UCO.DAG;
 import org.codice.alliance.nsili.common.UCO.Edge;
 import org.codice.alliance.nsili.common.UCO.Node;
+import org.codice.alliance.nsili.common.UCO.NodeHelper;
 import org.codice.alliance.nsili.common.UCO.NodeType;
 import org.codice.alliance.nsili.common.UCO.RectangleHelper;
 import org.codice.alliance.nsili.common.UCO.Time;
@@ -270,7 +271,7 @@ public class TestDAGConverter {
     private DAGConverter dagConverter;
 
     private URLResourceReader mockResourceReader = mock(URLResourceReader.class);
-    
+
     private static final boolean SHOULD_PRINT_CARD = false;
 
     @Before
@@ -1636,6 +1637,46 @@ public class TestDAGConverter {
         checkCoverageAttributes(metacard);
     }
 
+    @Test
+    public void testGetNodeValue() {
+        Any any = orb.create_any();
+        any.insert_long(12);
+        String value = DAGConverter.getNodeValue(any);
+        assertThat(value, notNullValue());
+        assertThat(value.isEmpty(), is(false));
+
+        any = orb.create_any();
+        any.insert_string("test string");
+        value = DAGConverter.getNodeValue(any);
+        assertThat(value, notNullValue());
+        assertThat(value.isEmpty(), is(false));
+
+        any = orb.create_any();
+        any.insert_boolean(false);
+        value = DAGConverter.getNodeValue(any);
+        assertThat(value, notNullValue());
+        assertThat(value.isEmpty(), is(false));
+
+        any = orb.create_any();
+        any.insert_short((short) 12);
+        value = DAGConverter.getNodeValue(any);
+        assertThat(value, notNullValue());
+        assertThat(value.isEmpty(), is(false));
+
+        any = orb.create_any();
+        AbsTimeHelper.insert(any, getTestTime());
+        value = DAGConverter.getNodeValue(any);
+        assertThat(value, notNullValue());
+        assertThat(value.isEmpty(), is(false));
+
+        any = orb.create_any();
+        Any any2 = orb.create_any();
+        any2.insert_string("test value");
+        NodeHelper.insert(any, new Node(1, NodeType.ATTRIBUTE_NODE, "test", any2));
+        value = DAGConverter.getNodeValue(any);
+        assertThat(value, nullValue());
+    }
+
     private void checkTaskAttributes(MetacardImpl metacard) {
         Attribute commentAttr = metacard.getAttribute(NsiliTaskMetacardType.COMMENTS);
         assertThat(commentAttr, notNullValue());
@@ -1840,7 +1881,10 @@ public class TestDAGConverter {
 
     private void addRelatedFile(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
         Any any = orb.create_any();
-        Node relatedFileNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_RELATED_FILE, any);
+        Node relatedFileNode = new Node(0,
+                NodeType.ENTITY_NODE,
+                NsiliConstants.NSIL_RELATED_FILE,
+                any);
         graph.addVertex(relatedFileNode);
         graph.addEdge(productNode, relatedFileNode);
 
@@ -2670,20 +2714,22 @@ public class TestDAGConverter {
 
     public static void addTestDateAttribute(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode,
             String key, ORB orb) {
-        Calendar cal = getDefaultCalendar();
         Any any = orb.create_any();
+        AbsTime absTime = getTestTime();
+        AbsTimeHelper.insert(any, absTime);
+        Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
+        graph.addVertex(node);
+        graph.addEdge(parentNode, node);
+    }
 
-        AbsTime absTime = new AbsTime(new org.codice.alliance.nsili.common.UCO.Date((short) cal.get(
-                Calendar.YEAR),
+    private static AbsTime getTestTime() {
+        Calendar cal = getDefaultCalendar();
+        return new AbsTime(new org.codice.alliance.nsili.common.UCO.Date((short) cal.get(Calendar.YEAR),
                 (short) (cal.get(Calendar.MONTH) + 1),
                 (short) cal.get(Calendar.DAY_OF_MONTH)),
                 new Time((short) cal.get(Calendar.HOUR_OF_DAY),
                         (short) cal.get(Calendar.MINUTE),
                         (short) cal.get(Calendar.SECOND)));
-        AbsTimeHelper.insert(any, absTime);
-        Node node = new Node(0, NodeType.ATTRIBUTE_NODE, key, any);
-        graph.addVertex(node);
-        graph.addEdge(parentNode, node);
     }
 
     private static Calendar getDefaultCalendar() {
@@ -2700,9 +2746,13 @@ public class TestDAGConverter {
         byte[] testReturn = "TEST RETURN".getBytes();
         Resource mockResource = mock(Resource.class);
         ResourceResponse mockResponse = mock(ResourceResponse.class);
-        doReturn(Long.valueOf(testReturn.length)).when(mockResource).getSize();
-        doReturn(testReturn).when(mockResource).getByteArray();
-        doReturn(mockResource).when(mockResponse).getResource();
-        doReturn(mockResponse).when(mockResourceReader).retrieveResource(anyObject(), anyMap());
+        doReturn(Long.valueOf(testReturn.length)).when(mockResource)
+                .getSize();
+        doReturn(testReturn).when(mockResource)
+                .getByteArray();
+        doReturn(mockResource).when(mockResponse)
+                .getResource();
+        doReturn(mockResponse).when(mockResourceReader)
+                .retrieveResource(anyObject(), anyMap());
     }
 }

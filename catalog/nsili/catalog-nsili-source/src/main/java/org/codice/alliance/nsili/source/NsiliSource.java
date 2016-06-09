@@ -59,9 +59,11 @@ import org.codice.alliance.nsili.common.GIAS.OrderMgrHelper;
 import org.codice.alliance.nsili.common.GIAS.Polarity;
 import org.codice.alliance.nsili.common.GIAS.ProductMgr;
 import org.codice.alliance.nsili.common.GIAS.ProductMgrHelper;
+import org.codice.alliance.nsili.common.GIAS.RequirementMode;
 import org.codice.alliance.nsili.common.GIAS.SortAttribute;
 import org.codice.alliance.nsili.common.GIAS.SubmitQueryRequest;
 import org.codice.alliance.nsili.common.GIAS.View;
+import org.codice.alliance.nsili.common.IOR;
 import org.codice.alliance.nsili.common.NsilCorbaExceptionUtil;
 import org.codice.alliance.nsili.common.Nsili;
 import org.codice.alliance.nsili.common.NsiliConstants;
@@ -510,9 +512,29 @@ public class NsiliSource extends MaskableImpl
                         dataModelMgr.get_attributes(views[i].view_name, new NameValue[0]);
                 String[] resultAttributes = new String[attributeInformationArray.length];
 
+                LOGGER.debug("Attributes for view: {}", views[i].view_name);
+
                 for (int c = 0; c < attributeInformationArray.length; c++) {
                     AttributeInformation attributeInformation = attributeInformationArray[c];
                     resultAttributes[c] = attributeInformation.attribute_name;
+
+                    if (LOGGER.isDebugEnabled()) {
+                        if (attributeInformation.mode == RequirementMode.MANDATORY) {
+                            String modeStr = getMode(attributeInformation.mode);
+                            LOGGER.debug("\t {} mode: {}, sortable: {}",
+                                    attributeInformation.attribute_name,
+                                    modeStr,
+                                    String.valueOf(attributeInformation.sortable));
+                        } else {
+                            if (LOGGER.isTraceEnabled()) {
+                                String modeStr = getMode(attributeInformation.mode);
+                                LOGGER.trace("\t {} mode: {}, sortable: {}",
+                                        attributeInformation.attribute_name,
+                                        modeStr,
+                                        String.valueOf(attributeInformation.sortable));
+                            }
+                        }
+                    }
 
                     if (attributeInformation.sortable) {
                         sortableAttributesList.add(attributeInformation.attribute_name);
@@ -693,6 +715,7 @@ public class NsiliSource extends MaskableImpl
     private org.codice.alliance.nsili.common.GIAS.Query createQuery(Query query)
             throws UnsupportedQueryException {
         String filter = createFilter(query);
+        filter = filter + " and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')";
         LOGGER.debug("{} : BQS Query : {}", getId(), filter);
         return new org.codice.alliance.nsili.common.GIAS.Query(NsiliConstants.NSIL_ALL_VIEW,
                 filter);
@@ -1183,6 +1206,16 @@ public class NsiliSource extends MaskableImpl
             }
         }
         return false;
+    }
+
+    private String getMode(RequirementMode requirementMode) {
+        if (requirementMode == RequirementMode.MANDATORY) {
+            return "MANDATORY";
+        } else if (requirementMode == RequirementMode.OPTIONAL) {
+            return "OPTIONAL";
+        } else {
+            return String.valueOf(requirementMode);
+        }
     }
 
     /**

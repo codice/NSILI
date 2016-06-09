@@ -203,9 +203,14 @@ public class NsiliAttributeMap {
     public static String getDdfAttributeForNsili(String nsiliAttribute) {
         String attribute = nsiliAttribute;
         if (attribute.contains(".")) {
-            attribute = attribute.substring(attribute.lastIndexOf(":")+1);
+            attribute = attribute.substring(attribute.lastIndexOf(":") + 1);
         }
-        return nsiliToDdfMap.get(attribute);
+        String attributeName = nsiliToDdfMap.get(attribute);
+        if (attributeName != null && attributeName.equalsIgnoreCase("sourceLibrary")) {
+            attributeName = null;
+        }
+
+        return attributeName;
     }
 
     public static List<String> getNsiliAttributeForDdf(String ddfAttribute) {

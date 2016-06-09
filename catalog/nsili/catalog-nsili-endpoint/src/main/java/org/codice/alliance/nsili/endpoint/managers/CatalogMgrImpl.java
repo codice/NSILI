@@ -54,7 +54,7 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CatalogMgrImpl.class);
 
-    private POA poa_;
+    private POA poa;
 
     private CatalogFramework catalogFramework;
 
@@ -71,7 +71,7 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
     private boolean enterpriseSearch;
 
     public CatalogMgrImpl(POA poa, FilterBuilder filterBuilder, boolean enterpriseSearch) {
-        this.poa_ = poa;
+        this.poa = poa;
         this.filterBuilder = filterBuilder;
         this.enterpriseSearch = enterpriseSearch;
         bqsConverter = new BqsConverter(filterBuilder);
@@ -137,13 +137,13 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
         String queryId = UUID.randomUUID()
                 .toString();
         try {
-            poa_.activate_object_with_id(queryId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
+            poa.activate_object_with_id(queryId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                     submitQueryRequest);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
             LOGGER.error("submit_query : Unable to activate submitQueryRequest object.", e);
         }
 
-        org.omg.CORBA.Object obj = poa_.create_reference_with_id(queryId.getBytes(Charset.forName(
+        org.omg.CORBA.Object obj = poa.create_reference_with_id(queryId.getBytes(Charset.forName(
                 NsiliEndpoint.ENCODING)), SubmitQueryRequestHelper.id());
         SubmitQueryRequest queryRequest = SubmitQueryRequestHelper.narrow(obj);
         return queryRequest;
@@ -161,13 +161,13 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
                 .toString();
 
         try {
-            poa_.activate_object_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
+            poa.activate_object_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                     hitCountRequest);
         } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
             LOGGER.error("hit_count : Unable to activate hitCountRequest object: {}", id, e);
         }
 
-        org.omg.CORBA.Object obj = poa_.create_reference_with_id(id.getBytes(Charset.forName(
+        org.omg.CORBA.Object obj = poa.create_reference_with_id(id.getBytes(Charset.forName(
                 NsiliEndpoint.ENCODING)), HitCountRequestHelper.id());
         HitCountRequest queryRequest = HitCountRequestHelper.narrow(obj);
 

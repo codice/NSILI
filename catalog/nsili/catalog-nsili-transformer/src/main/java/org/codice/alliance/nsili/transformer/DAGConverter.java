@@ -69,8 +69,10 @@ import org.jgrapht.alg.DijkstraShortestPath;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.traverse.DepthFirstIterator;
 import org.joda.time.DateTime;
+import org.joda.time.IllegalFieldValueException;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -915,7 +917,7 @@ public class DAGConverter {
         }
     }
 
-    private Date convertDate(Any any) {
+    public static Date convertDate(Any any) {
         AbsTime absTime = AbsTimeHelper.extract(any);
         org.codice.alliance.nsili.common.UCO.Date ucoDate = absTime.aDate;
         org.codice.alliance.nsili.common.UCO.Time ucoTime = absTime.aTime;
@@ -1283,10 +1285,16 @@ public class DAGConverter {
             }
 
             DepthFirstIterator<Node, Edge> depthFirstIterator = new DepthFirstIterator<>(graph);
+            Node rootNode = null;
             while (depthFirstIterator.hasNext()) {
+                depthFirstIterator.setCrossComponentTraversal(false);
                 Node node = depthFirstIterator.next();
+                if (rootNode == null) {
+                    rootNode = node;
+                }
+
                 DijkstraShortestPath<Node, Edge> path = new DijkstraShortestPath<Node, Edge>(graph,
-                        dag.nodes[0],
+                        rootNode,
                         node);
 
                 if (node.node_type == NodeType.ATTRIBUTE_NODE) {
@@ -1340,6 +1348,21 @@ public class DAGConverter {
         } else if (any.type()
                 .kind() == TCKind.tk_ushort) {
             value = String.valueOf(any.extract_ushort());
+        } else if (any.type()
+                .kind() == TCKind.tk_boolean) {
+            value = String.valueOf(any.extract_boolean());
+        } else if (any.type().kind() == TCKind.tk_double) {
+            value = String.valueOf(any.extract_double());
+        } else {
+            try {
+                if (any.type().name().equals(AbsTime.class.getSimpleName())) {
+                    Date date = convertDate(any);
+                    if (date != null) {
+                        value = date.toString();
+                    }
+                }
+            } catch (org.omg.CORBA.MARSHAL | IllegalFieldValueException | BadKind ignore) {
+            }
         }
 
         return value;

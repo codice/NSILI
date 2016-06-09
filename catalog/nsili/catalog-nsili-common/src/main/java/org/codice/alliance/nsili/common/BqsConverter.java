@@ -33,17 +33,18 @@ import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.codice.alliance.nsili.common.GIAS.Query;
+import org.codice.alliance.nsili.common.grammar.BqsLexer;
+import org.codice.alliance.nsili.common.grammar.BqsListener;
+import org.codice.alliance.nsili.common.grammar.BqsParser;
 import org.codice.ddf.libs.geo.GeoFormatException;
 import org.codice.ddf.libs.geo.util.GeospatialUtil;
 import org.opengis.filter.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.codice.alliance.nsili.common.GIAS.Query;
-import org.codice.alliance.nsili.common.grammar.BqsLexer;
-import org.codice.alliance.nsili.common.grammar.BqsListener;
-import org.codice.alliance.nsili.common.grammar.BqsParser;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -51,18 +52,21 @@ import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.io.WKTWriter;
 import com.vividsolutions.jts.util.GeometricShapeFactory;
 
+import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.FilterBuilder;
 import ddf.measure.Distance;
 
 public class BqsConverter {
 
-    private static final String BQS_FULL_DATE_FORMAT = "yyyy/MM/dd HH:mm:ss";
-
     private static final String BQS_SHORT_DATE_FORMAT = "yyyy/MM/dd";
 
-    private static final DateTimeFormatter LONG_DATE_FORMATTER = DateTimeFormatter.ofPattern(BQS_FULL_DATE_FORMAT);
+    private static final String BQS_FULL_DATE_FORMAT = BQS_SHORT_DATE_FORMAT + " HH:mm:ss[.SSS]";
 
-    private static final DateTimeFormatter SHORT_DATE_FORMATTER = DateTimeFormatter.ofPattern(BQS_SHORT_DATE_FORMAT);
+    private static final DateTimeFormatter LONG_DATE_FORMATTER = DateTimeFormatter.ofPattern(
+            BQS_FULL_DATE_FORMAT);
+
+    private static final DateTimeFormatter SHORT_DATE_FORMATTER = DateTimeFormatter.ofPattern(
+            BQS_SHORT_DATE_FORMAT);
 
     private FilterBuilder filterBuilder;
 
@@ -93,7 +97,12 @@ public class BqsConverter {
 
         Filter filter = bqsListener.getFilter();
         if (filter != null) {
-            LOGGER.debug("Parsed Query: {}", filter.toString());
+            if (StringUtils.isNotBlank(filter.toString())) {
+                LOGGER.debug("Parsed Query: {}", filter);
+            } else {
+                filter = filterBuilder.attribute(Metacard.ID).is().text("*");
+                LOGGER.warn("After parsing filter, didn't have any query parameters. Defaulting to everything search: {}", filter);
+            }
         } else {
             LOGGER.debug("Unable to parse the query");
         }
@@ -325,23 +334,24 @@ public class BqsConverter {
         public void exitConstant_expression(BqsParser.Constant_expressionContext ctx) {
             BqsOperator bqsOperator = bqsOperatorStack.pop();
 
-            if (!dateStr.isEmpty()) {
+            if (!dateStr.isEmpty() && StringUtils.isNotBlank(attribute)) {
                 Filter filter = null;
                 try {
                     Date date;
                     try {
                         TemporalAccessor temporalAccessor = LONG_DATE_FORMATTER.parse(dateStr);
                         LocalDateTime dateTime = LocalDateTime.from(temporalAccessor);
-                        date = new Date(dateTime.toInstant(ZoneOffset.UTC).toEpochMilli());
+                        date = new Date(dateTime.toInstant(ZoneOffset.UTC)
+                                .toEpochMilli());
                     } catch (DateTimeParseException pe) {
                         TemporalAccessor temporalAccessor = SHORT_DATE_FORMATTER.parse(dateStr);
                         LocalDate localDate = LocalDate.from(temporalAccessor);
                         LocalDateTime dateTime = localDate.atStartOfDay();
-                        date = new Date(dateTime.toInstant(ZoneOffset.UTC).toEpochMilli());
+                        date = new Date(dateTime.toInstant(ZoneOffset.UTC)
+                                .toEpochMilli());
                     }
 
                     if (date != null) {
-
                         if (bqsOperator == BqsOperator.GTE) {
                             filter = filterBuilder.anyOf(filterBuilder.attribute(attribute)
                                             .after()
@@ -382,7 +392,7 @@ public class BqsConverter {
                 } catch (DateTimeParseException e) {
                     LOGGER.warn("Unable to parse date from: {}", dateStr);
                 }
-            } else if (!numberStr.isEmpty()) {
+            } else if (!numberStr.isEmpty() && StringUtils.isNotBlank(attribute)) {
                 Filter filter = null;
                 try {
                     Number number = getNumber(numberStr);
@@ -531,7 +541,7 @@ public class BqsConverter {
                     LOGGER.info("Unable to convert to a number: {}", numberStr);
                 }
 
-            } else if (!quotedStr.isEmpty()) {
+            } else if (!quotedStr.isEmpty() && StringUtils.isNotBlank(attribute)) {
                 Filter filter = null;
                 quotedStr = normalizeSearchString(quotedStr);
                 if (bqsOperator == BqsOperator.NOT) {
@@ -819,19 +829,21 @@ public class BqsConverter {
             BqsOperator bqsOperator = bqsOperatorStack.peek();
 
             String stringValue = normalizeSearchString(ctx.getText());
-            if (bqsOperator == BqsOperator.LIKE || bqsOperator == BqsOperator.EQUAL) {
-                Filter filter = filterBuilder.attribute(attribute)
-                        .like()
-                        .text(stringValue);
+            if (StringUtils.isNotBlank(attribute)) {
+                if (bqsOperator == BqsOperator.LIKE || bqsOperator == BqsOperator.EQUAL) {
+                    Filter filter = filterBuilder.attribute(attribute)
+                            .like()
+                            .text(stringValue);
 
-                if (!nestedOperatorStack.isEmpty() && filter != null) {
-                    List<Filter> filters = filterBy.get(nestedOperatorStack.peek());
-                    filters.add(filter);
-                } else {
-                    currFilter = filter;
+                    if (!nestedOperatorStack.isEmpty() && filter != null) {
+                        List<Filter> filters = filterBy.get(nestedOperatorStack.peek());
+                        filters.add(filter);
+                    } else {
+                        currFilter = filter;
+                    }
+
+                    print("FILTER: " + filter);
                 }
-
-                print("FILTER: " + filter);
             }
 
             attribute = "";
@@ -1146,8 +1158,6 @@ public class BqsConverter {
                     sb.append("   ");
                 }
                 sb.append(text);
-                sb.append("\n");
-
                 LOGGER.trace(sb.toString());
             }
         }

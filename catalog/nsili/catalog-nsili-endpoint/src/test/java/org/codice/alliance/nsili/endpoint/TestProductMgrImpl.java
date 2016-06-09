@@ -78,7 +78,7 @@ public class TestProductMgrImpl extends TestNsiliCommon {
 
     private Product testProduct = null;
 
-    private String testMetacardId = UUID.randomUUID().toString();
+    private String testMetacardId = UUID.randomUUID().toString().replaceAll("-", "");
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TestProductMgrImpl.class);
 
@@ -316,13 +316,13 @@ public class TestProductMgrImpl extends TestNsiliCommon {
 
     @After
     public void tearDown() {
+        if (orb != null) {
+            orb.destroy();
+        }
+
         if (orbRunThread != null) {
             orbRunThread.interrupt();
             orbRunThread = null;
-        }
-
-        if (orb != null) {
-            orb.destroy();
         }
 
         library = null;

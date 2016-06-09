@@ -11,22 +11,31 @@
  * is distributed along with this program and can be found at
  * <http://www.gnu.org/licenses/lgpl.html>.
  */
-package org.codice.alliance.nsili.common;
+package org.codice.alliance.nsili.endpoint.requests;
 
-import org.omg.CORBA.BAD_INV_ORDER;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAPackage.ObjectNotActive;
-import org.omg.PortableServer.POAPackage.WrongPolicy;
+import java.util.ArrayList;
+import java.util.List;
 
-public class CorbaUtils {
+import org.codice.alliance.nsili.common.UCO.DAG;
 
-    public static boolean isIdActive(POA poa, byte[] oid) {
-        boolean idActive = false;
-        try {
-            poa.id_to_servant(oid);
-            idActive = true;
-        } catch (ObjectNotActive | WrongPolicy | BAD_INV_ORDER ignore) {}
+public class DAGQueryResult {
 
-        return idActive;
+    private List<DAG> results = new ArrayList<>();
+
+    private long timeOfResult;
+
+    public DAGQueryResult(long timeOfResult, List<DAG> results) {
+        if (results != null) {
+            this.results.addAll(results);
+        }
+        this.timeOfResult = timeOfResult;
+    }
+
+    public List<DAG> getResults() {
+        return results;
+    }
+
+    public long getTimeOfResult() {
+        return timeOfResult;
     }
 }

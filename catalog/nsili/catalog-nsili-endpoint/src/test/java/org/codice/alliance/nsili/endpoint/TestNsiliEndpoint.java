@@ -27,7 +27,7 @@ import org.codice.alliance.nsili.common.NsiliManagerType;
 import ddf.security.service.SecurityServiceException;
 
 public class TestNsiliEndpoint extends TestNsiliCommon {
-    public static final int TEST_CORBA_PORT = 20010;
+    public static final int TEST_CORBA_PORT = 0;
 
     private NsiliEndpoint nsiliEndpoint;
 

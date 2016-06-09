@@ -35,6 +35,8 @@
         <property name="securityHandler" ref="securityHandler" />
         <property name="securityManager" ref="securityManager" />
         <property name="enterpriseSearch" value="false" />
+        <property name="defaultUpdateFrequencySec" value="60" />
+        <property name="maxPendingResults" value="10000" />
     </bean>
 
     <bean id="nsiliWebSvc" class="org.codice.alliance.nsili.endpoint.NsiliWebEndpoint">
