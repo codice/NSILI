@@ -44,9 +44,9 @@ public class NsiliEndpoint {
 
     public static final String ENCODING = StandardCharsets.ISO_8859_1.name();
 
-     public static final int DEFAULT_MAX_NUM_RESULTS = 500;
+    public static final int DEFAULT_MAX_NUM_RESULTS = 500;
 
-    public static final int DEFAULT_CORBA_PORT = 20003;
+    public static final int DEFAULT_CORBA_PORT = 2809;
 
     private static final String DEFAULT_IP_ADDRESS = "127.0.0.1";
 
@@ -203,6 +203,9 @@ public class NsiliEndpoint {
         System.setProperty("com.sun.CORBA.ORBServerPort", String.valueOf(port));
 
         final ORB orb = ORB.init(new String[0], null);
+
+        System.clearProperty("com.sun.CORBA.POA.ORBPersistentServerPort");
+        System.clearProperty("com.sun.CORBA.ORBServerPort");
 
         POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
 

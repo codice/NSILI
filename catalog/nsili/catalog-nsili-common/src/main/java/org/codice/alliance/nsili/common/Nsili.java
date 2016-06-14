@@ -15,6 +15,7 @@ package org.codice.alliance.nsili.common;
 
 import java.io.InputStream;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -24,6 +25,7 @@ import javax.ws.rs.core.MediaType;
 public interface Nsili {
 
     @GET
-    @Produces(MediaType.WILDCARD)
+    @Consumes({MediaType.TEXT_PLAIN, MediaType.APPLICATION_OCTET_STREAM, MediaType.WILDCARD})
+    @Produces({MediaType.TEXT_PLAIN, MediaType.APPLICATION_OCTET_STREAM, MediaType.WILDCARD})
     InputStream getIorFile();
 }
