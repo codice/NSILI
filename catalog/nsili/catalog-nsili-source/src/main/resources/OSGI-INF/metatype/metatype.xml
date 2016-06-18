@@ -41,27 +41,37 @@
         <AD description="The Maximum Hit Count for Queries to the Source" name="Max Hit Count"
             id="maxHitCount" required="true" type="Integer" default="250"/>
 
+        <AD description="NSILI Query Parameters to always include" name="Additional Query Params"
+            id="additionalQueryParams" required="false" type="String"
+            default="and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')"/>
+
         <AD description="Poll Interval to Check if the Source is available (in minutes - minimum 1)."
             name="Poll Interval" id="pollInterval"
             required="true" type="Integer" default="5"/>
 
-        <AD description="Maximum parallel threads for converting results and retrieving thumbnails" name="Num Worker Threads"
+        <AD description="Maximum parallel threads for converting results and retrieving thumbnails"
+            name="Num Worker Threads"
             id="numberWorkerThreads" required="true" type="Integer" default="4"/>
 
         <AD description="Whether or not to exclude sort order in query."
-            name="Exclude Sort Order" id="excludeSortOrder" required="false" type="Boolean" default="false"/>
+            name="Exclude Sort Order" id="excludeSortOrder" required="false" type="Boolean"
+            default="false"/>
 
         <AD description="Swap coordinates for systems that send latitude in the X field of the coordinate."
-            name="Swap X/Y Coordinates" id="swapCoordinates" required="false" type="Boolean" default="false"/>
+            name="Swap X/Y Coordinates" id="swapCoordinates" required="false" type="Boolean"
+            default="false"/>
 
         <AD description="User ID for NSILI Access Criteria"
-            name="NSILI Access Criteria User" id="accessUserId" required="false" type="String" default=""/>
+            name="NSILI Access Criteria User" id="accessUserId" required="false" type="String"
+            default=""/>
 
         <AD description="Password for NSILI Access Criteria"
-            name="NSILI Access Criteria Password" id="accessPassword" required="false" type="Password" default=""/>
+            name="NSILI Access Criteria Password" id="accessPassword" required="false"
+            type="Password" default=""/>
 
         <AD description="License Key for NSILI Access Criteria"
-            name="NSILI Access Criteria License Key" id="accessLicenseKey" required="false" type="String" default=""/>
+            name="NSILI Access Criteria License Key" id="accessLicenseKey" required="false"
+            type="String" default=""/>
     </OCD>
 
     <OCD name="NSILI Connected Source" id="NSILI_Connected_Source"
@@ -91,27 +101,37 @@
         <AD description="The Maximum Hit Count for Queries to the Source" name="Max Hit Count"
             id="maxHitCount" required="true" type="Integer" default="250"/>
 
+        <AD description="NSILI Query Parameters to always include" name="Additional Query Params"
+            id="additionalQueryParams" required="false" type="String"
+            default="and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')"/>
+
         <AD description="Poll Interval to Check if the Source is available (in minutes - minimum 1)."
             name="Poll Interval" id="pollInterval"
             required="true" type="Integer" default="5"/>
 
-        <AD description="Maximum parallel threads for converting results and retrieving thumbnails" name="Num Worker Threads"
+        <AD description="Maximum parallel threads for converting results and retrieving thumbnails"
+            name="Num Worker Threads"
             id="numberWorkerThreads" required="true" type="Integer" default="4"/>
 
         <AD description="Whether or not to exclude sort order in query."
-            name="Exclude Sort Order" id="excludeSortOrder" required="false" type="Boolean" default="false"/>
+            name="Exclude Sort Order" id="excludeSortOrder" required="false" type="Boolean"
+            default="false"/>
 
         <AD description="Swap coordinates for systems that send latitude in the X field of the coordinate."
-            name="Swap X/Y Coordinates" id="swapCoordinates" required="false" type="Boolean" default="false"/>
+            name="Swap X/Y Coordinates" id="swapCoordinates" required="false" type="Boolean"
+            default="false"/>
 
         <AD description="User ID for NSILI Access Criteria"
-            name="NSILI Access Criteria User" id="accessUserId" required="false" type="String" default=""/>
+            name="NSILI Access Criteria User" id="accessUserId" required="false" type="String"
+            default=""/>
 
         <AD description="Password for NSILI Access Criteria"
-            name="NSILI Access Criteria Password" id="accessPassword" required="false" type="Password" default=""/>
+            name="NSILI Access Criteria Password" id="accessPassword" required="false"
+            type="Password" default=""/>
 
         <AD description="License Key for NSILI Access Criteria"
-            name="NSILI Access Criteria License Key" id="accessLicenseKey" required="false" type="String" default=""/>
+            name="NSILI Access Criteria License Key" id="accessLicenseKey" required="false"
+            type="String" default=""/>
     </OCD>
 
     <Designate pid="NSILI_Federated_Source" factoryPid="NSILI_Federated_Source">

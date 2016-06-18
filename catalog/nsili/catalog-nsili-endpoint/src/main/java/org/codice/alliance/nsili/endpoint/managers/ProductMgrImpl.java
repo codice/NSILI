@@ -72,12 +72,12 @@ public class ProductMgrImpl extends ProductMgrPOA {
 
     private Subject subject;
 
+    private List<String> querySources;
+
     private AccessManagerImpl accessManager;
 
-    private boolean enterpriseSearch = false;
-
-    public ProductMgrImpl(boolean enterpriseSearch) {
-        this.enterpriseSearch = enterpriseSearch;
+    public ProductMgrImpl(List<String> querySources) {
+        this.querySources = querySources;
     }
 
     public void setCatalogFramework(CatalogFramework catalogFramework) {
@@ -110,7 +110,7 @@ public class ProductMgrImpl extends ProductMgrPOA {
                     catalogFramework,
                     filterBuilder,
                     subject,
-                    enterpriseSearch);
+                    querySources);
             _poa().activate_object_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                     getParametersRequest);
 
@@ -273,6 +273,7 @@ public class ProductMgrImpl extends ProductMgrPOA {
             accessManager.setCatalogFramework(catalogFramework);
             accessManager.setFilterBuilder(filterBuilder);
             accessManager.setSubject(subject);
+            accessManager.setQuerySources(querySources);
 
             String managerId = UUID.randomUUID()
                     .toString();

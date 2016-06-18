@@ -21,11 +21,6 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.apache.shiro.subject.ExecutionException;
-import org.omg.CORBA.NO_IMPLEMENT;
-import org.opengis.filter.Filter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.codice.alliance.nsili.common.BqsConverter;
 import org.codice.alliance.nsili.common.CB.Callback;
 import org.codice.alliance.nsili.common.GIAS.DelayEstimate;
@@ -45,6 +40,10 @@ import org.codice.alliance.nsili.common.UCO.Status;
 import org.codice.alliance.nsili.common.UCO.StringDAGListHolder;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
 import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.opengis.filter.Filter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Result;
@@ -71,14 +70,20 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
 
     private int totalHitsReturned = 0;
 
+    private List<String> querySources = new ArrayList<>();
+
     private Map<String, Callback> callbacks = new HashMap<>();
 
     public SubmitQueryRequestImpl(Query query, BqsConverter bqsConverter,
-            CatalogFramework catalogFramework, Subject guestSubject) {
+            CatalogFramework catalogFramework, Subject guestSubject, List<String> querySources) {
         this.query = query;
         this.bqsConverter = bqsConverter;
         this.catalogFramework = catalogFramework;
         this.guestSubject = guestSubject;
+
+        if (querySources != null) {
+            this.querySources.addAll(querySources);
+        }
 
         notifyCallbacks();
     }
@@ -93,6 +98,13 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
         this.maxNumReturnedHits = hits;
     }
 
+    public void setQuerySources(List<String> querySources) {
+        this.querySources.clear();
+        if (querySources != null) {
+            this.querySources.addAll(querySources);
+        }
+    }
+
     @Override
     public State complete_DAG_results(DAGListHolder results) throws ProcessingFault, SystemFault {
         DAG[] noResults = new DAG[0];
@@ -101,6 +113,9 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
         List<DAG> dags = new ArrayList<>();
         int totalHits = 0;
         List<Result> queryResults = getResults(query, totalHitsReturned);
+
+        LOGGER.debug("Query: {} return NSILI results: {}", query.bqs_query, queryResults.size());
+
         for (Result result : queryResults) {
             DAG dag = ResultDAGConverter.convertResult(result, _orb(), _poa());
             if (dag != null) {
@@ -192,7 +207,8 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
                 try {
                     callback._notify(State.COMPLETED, requestDescription);
                 } catch (InvalidInputParameter | SystemFault | ProcessingFault e) {
-                    LOGGER.error("Unable to notify callback {}", NsilCorbaExceptionUtil.getExceptionDetails(e));
+                    LOGGER.error("Unable to notify callback {}",
+                            NsilCorbaExceptionUtil.getExceptionDetails(e));
                     LOGGER.debug("Callback notification exception details", e);
                 }
             }
@@ -216,7 +232,12 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
             catalogQuery.setTimeoutMillis(timeout * 1000);
         }
 
-        QueryRequestImpl catalogQueryRequest = new QueryRequestImpl(catalogQuery);
+        QueryRequestImpl catalogQueryRequest;
+        if (querySources == null || querySources.isEmpty()) {
+            catalogQueryRequest = new QueryRequestImpl(catalogQuery);
+        } else {
+            catalogQueryRequest = new QueryRequestImpl(catalogQuery, false, querySources, null);
+        }
 
         try {
             QueryResultsCallable queryCallable = new QueryResultsCallable(catalogQueryRequest);
@@ -241,11 +262,16 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
         public List<Result> call() throws Exception {
             List<Result> results = new ArrayList<>();
 
-            QueryResponse queryResponse = catalogFramework.query(catalogQueryRequest);
-            if (queryResponse.getResults() != null) {
-                results.addAll(queryResponse.getResults());
+            try {
+                QueryResponse queryResponse = catalogFramework.query(catalogQueryRequest);
+                if (queryResponse.getResults() != null) {
+                    results.addAll(queryResponse.getResults());
+                }
+                return results;
+            } catch (Exception e) {
+                LOGGER.error("Unable to query catalog: {}", catalogQueryRequest.getQuery(), e);
+                throw e;
             }
-            return results;
         }
     }
 

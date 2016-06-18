@@ -14,6 +14,7 @@
 package org.codice.alliance.nsili.endpoint;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -79,11 +80,11 @@ public class LibraryImpl extends LibraryPOA {
 
     private int maxNumResults = NsiliEndpoint.DEFAULT_MAX_NUM_RESULTS;
 
-    private boolean enterpriseSearch = false;
-
     private long defaultUpdateFrequencyMsec;
 
     private int maxPendingResults;
+
+    private List<String> querySources = new ArrayList<>();
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(LibraryImpl.class);
 
@@ -107,10 +108,6 @@ public class LibraryImpl extends LibraryPOA {
         this.filterBuilder = filterBuilder;
     }
 
-    public void setEnterpriseSearch(boolean enterpriseSearch) {
-        this.enterpriseSearch = enterpriseSearch;
-    }
-
     public void setDefaultUpdateFrequencyMsec(long defaultUpdateFrequencyMsec) {
         this.defaultUpdateFrequencyMsec = defaultUpdateFrequencyMsec;
     }
@@ -119,8 +116,16 @@ public class LibraryImpl extends LibraryPOA {
         this.maxPendingResults = maxPendingResults;
     }
 
+    public void setQuerySources(List<String> querySources) {
+        this.querySources.clear();
+        if (querySources != null) {
+            this.querySources.addAll(querySources);
+        }
+    }
+
     @Override
     public String[] get_manager_types() throws ProcessingFault, SystemFault {
+        LOGGER.trace("get_manager_types() called");
         String[] managerArr = new String[managers.size()];
         return managers.toArray(managerArr);
     }
@@ -128,13 +133,12 @@ public class LibraryImpl extends LibraryPOA {
     @Override
     public LibraryManager get_manager(String manager_type, AccessCriteria access_criteria)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-
         org.omg.CORBA.Object obj;
         String managerId = UUID.randomUUID()
                 .toString();
 
         if (manager_type.equals(NsiliManagerType.CATALOG_MGR.getSpecName())) {
-            CatalogMgrImpl catalogMgr = new CatalogMgrImpl(poa, filterBuilder, enterpriseSearch);
+            CatalogMgrImpl catalogMgr = new CatalogMgrImpl(poa, filterBuilder, querySources);
             catalogMgr.setCatalogFramework(catalogFramework);
             catalogMgr.setGuestSubject(guestSubject);
             if (!CorbaUtils.isIdActive(poa,
@@ -169,7 +173,7 @@ public class LibraryImpl extends LibraryPOA {
                     poa.create_reference_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                             OrderMgrHelper.id());
         } else if (manager_type.equals(NsiliManagerType.PRODUCT_MGR.getSpecName())) {
-            ProductMgrImpl productMgr = new ProductMgrImpl(enterpriseSearch);
+            ProductMgrImpl productMgr = new ProductMgrImpl(querySources);
             productMgr.setCatalogFramework(catalogFramework);
             productMgr.setFilterBuilder(filterBuilder);
             productMgr.setSubject(guestSubject);
@@ -217,7 +221,7 @@ public class LibraryImpl extends LibraryPOA {
                     poa.create_reference_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                             CreationMgrHelper.id());
         } else if (manager_type.equals(NsiliManagerType.STANDING_QUERY_MGR.getSpecName())) {
-            StandingQueryMgrImpl standingQueryMgr = new StandingQueryMgrImpl(enterpriseSearch);
+            StandingQueryMgrImpl standingQueryMgr = new StandingQueryMgrImpl(querySources);
             standingQueryMgr.setCatalogFramework(catalogFramework);
             standingQueryMgr.setFilterBuilder(filterBuilder);
             standingQueryMgr.setSubject(guestSubject);
@@ -245,11 +249,15 @@ public class LibraryImpl extends LibraryPOA {
         }
 
         LibraryManager libraryManager = LibraryManagerHelper.narrow(obj);
+
+        LOGGER.trace("get_manager, type: {}, id: {}", manager_type, managerId);
+
         return libraryManager;
     }
 
     @Override
     public LibraryDescription get_library_description() throws ProcessingFault, SystemFault {
+        LOGGER.trace("get_library_description called");
         String host = System.getProperty("org.codice.ddf.system.hostname");
         String country = System.getProperty("user.country");
         String organization = System.getProperty("org.codice.ddf.system.organization");
@@ -260,6 +268,7 @@ public class LibraryImpl extends LibraryPOA {
     @Override
     public LibraryDescription[] get_other_libraries(AccessCriteria access_criteria)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
+        LOGGER.trace("get_other_libraries called");
         throw new NO_IMPLEMENT();
     }
 

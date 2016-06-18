@@ -437,7 +437,7 @@ public class  NsiliFilterDelegate extends FilterDelegate<String> {
 
     @Override
     public String propertyIsLike(String propertyName, String pattern, boolean isCaseSensitive) {
-        String filter = filterFactory.buildPropertyIsLike(pattern);
+        String filter = filterFactory.buildPropertyIsLike(propertyName, pattern);
         return filter;
     }
 

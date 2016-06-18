@@ -61,6 +61,8 @@ public class OrderMgrImpl extends OrderMgrPOA {
 
     private Subject subject;
 
+    private List<String> querySources = new ArrayList<>();
+
     public void setCatalogFramework(CatalogFramework catalogFramework) {
         this.catalogFramework = catalogFramework;
     }
@@ -71,6 +73,13 @@ public class OrderMgrImpl extends OrderMgrPOA {
 
     public void setSubject(Subject subject) {
         this.subject = subject;
+    }
+
+    public void setQuerySources(List<String> querySources) {
+        this.querySources.clear();
+        if (querySources != null) {
+            this.querySources.addAll(querySources);
+        }
     }
 
     @Override
@@ -219,6 +228,7 @@ public class OrderMgrImpl extends OrderMgrPOA {
             accessManager.setCatalogFramework(catalogFramework);
             accessManager.setFilterBuilder(filterBuilder);
             accessManager.setSubject(subject);
+            accessManager.setQuerySources(querySources);
 
             String managerId = UUID.randomUUID()
                     .toString();

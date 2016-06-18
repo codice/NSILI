@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 import org.apache.shiro.subject.ExecutionException;
 import org.codice.alliance.nsili.common.BqsConverter;
@@ -132,7 +133,7 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
 
     private long updateFrequencyMsec;
 
-    private boolean enterpriseSearch;
+    private List<String> querySources;
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(
             SubmitStandingQueryRequestImpl.class);
@@ -140,7 +141,7 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
     public SubmitStandingQueryRequestImpl(Query aQuery, String[] result_attributes,
             SortAttribute[] sort_attributes, QueryLifeSpan lifespan, NameValue[] properties,
             CatalogFramework catalogFramework, Subject subject, FilterBuilder filterBuilder,
-            long defaultUpdateFrequencyMsec, boolean enterpriseSearch, int maxPendingResults) {
+            long defaultUpdateFrequencyMsec, List<String> querySources, int maxPendingResults) {
         id = UUID.randomUUID()
                 .toString();
         this.resultAttributes = result_attributes;
@@ -153,7 +154,7 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
         this.maxPendingResults = maxPendingResults;
         this.bqsConverter = new BqsConverter(filterBuilder);
         this.query = aQuery;
-        this.enterpriseSearch = enterpriseSearch;
+        this.querySources = querySources;
         this.bqsFilter = bqsConverter.convertBQSToDDF(aQuery);
 
         parseLifeSpan(lifespan);
@@ -484,7 +485,19 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
                 catalogQuery.setStartIndex(startIndex);
             }
 
-            QueryRequestImpl catalogQueryRequest = new QueryRequestImpl(catalogQuery, enterpriseSearch);
+            QueryRequestImpl catalogQueryRequest;
+            if(querySources == null || querySources.isEmpty()) {
+                LOGGER.trace("Query request will be local, no sources specified");
+                catalogQueryRequest = new QueryRequestImpl(catalogQuery);
+            } else {
+                if (LOGGER.isTraceEnabled()) {
+                    String sourceList = querySources.stream()
+                            .sorted()
+                            .collect(Collectors.joining(", "));
+                    LOGGER.trace("Query will use the following sources: {}", sourceList);
+                }
+                catalogQueryRequest = new QueryRequestImpl(catalogQuery, false, querySources, null);
+            }
 
             try {
                 QueryResultsCallable queryCallable = new QueryResultsCallable(catalogQueryRequest);

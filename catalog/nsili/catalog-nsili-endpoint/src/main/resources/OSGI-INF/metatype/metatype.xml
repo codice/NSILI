@@ -27,11 +27,6 @@
                 default="500"
         />
         <AD
-                description="Select for enterprise searching (deselected is local catalog only)."
-                name="Enterprise Search" id="enterpriseSearch" required="true" type="Boolean"
-                default="false"
-        />
-        <AD
                 description="Default update rate for standing queries (seconds)"
                 name="Standing Query Update Rate" id="defaultUpdateFrequencySec" required="true" type="Integer"
                 default="60"
@@ -41,6 +36,10 @@
                 name="Maximum Number Pending Results" id="maxPendingResults" required="true" type="Integer"
                 default="10000"
         />
+
+        <AD name="Sources to Query:" id="querySources" description="Configured sources to query from this endpoint. Empty list defaults to local only."
+            required="true" type="String" cardinality="1000"
+            default=""/>
     </OCD>
 
     <Designate pid="org.codice.alliance.nsili.endpoint">

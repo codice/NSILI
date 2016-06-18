@@ -14,6 +14,8 @@
 package org.codice.alliance.nsili.endpoint.managers;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
@@ -62,19 +64,18 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
 
     private long defaultTimeout = AccessManagerImpl.DEFAULT_TIMEOUT;
 
-    private BqsConverter bqsConverter;
-
     private Subject guestSubject;
 
     private FilterBuilder filterBuilder;
 
-    private boolean enterpriseSearch;
+    private List<String> querySources = new ArrayList<>();
 
-    public CatalogMgrImpl(POA poa, FilterBuilder filterBuilder, boolean enterpriseSearch) {
+    public CatalogMgrImpl(POA poa, FilterBuilder filterBuilder, List<String> querySources) {
         this.poa = poa;
         this.filterBuilder = filterBuilder;
-        this.enterpriseSearch = enterpriseSearch;
-        bqsConverter = new BqsConverter(filterBuilder);
+        if (querySources != null) {
+            this.querySources.addAll(querySources);
+        }
     }
 
     public void setCatalogFramework(CatalogFramework catalogFramework) {
@@ -127,10 +128,12 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
     public SubmitQueryRequest submit_query(Query aQuery, String[] result_attributes,
             SortAttribute[] sort_attributes, NameValue[] properties)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
+        BqsConverter bqsConverter = new BqsConverter(filterBuilder);
         SubmitQueryRequestImpl submitQueryRequest = new SubmitQueryRequestImpl(aQuery,
                 bqsConverter,
                 catalogFramework,
-                guestSubject);
+                guestSubject,
+                querySources);
         submitQueryRequest.set_number_of_hits(maxNumResults);
         submitQueryRequest.setTimeout(defaultTimeout);
 
@@ -196,6 +199,7 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
     protected long getResultCount(Query aQuery) {
         long resultCount = 0;
 
+        BqsConverter bqsConverter = new BqsConverter(filterBuilder);
         Filter parsedFilter = bqsConverter.convertBQSToDDF(aQuery);
 
         QueryImpl catalogQuery = new QueryImpl(parsedFilter);
@@ -206,7 +210,12 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
 
         catalogQuery.setPageSize(1);
 
-        QueryRequestImpl catalogQueryRequest = new QueryRequestImpl(catalogQuery, enterpriseSearch);
+        QueryRequestImpl catalogQueryRequest = null;
+        if (querySources == null || querySources.isEmpty()) {
+            catalogQueryRequest = new QueryRequestImpl(catalogQuery);
+        } else {
+            catalogQueryRequest = new QueryRequestImpl(catalogQuery, false, querySources, null);
+        }
 
         try {
             QueryCountCallable queryCallable = new QueryCountCallable(catalogQueryRequest);

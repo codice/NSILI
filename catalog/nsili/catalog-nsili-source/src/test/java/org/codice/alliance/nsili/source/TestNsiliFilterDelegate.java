@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.TimeZone;
 
 import org.apache.commons.lang3.StringUtils;
-
 import org.codice.alliance.nsili.common.GIAS.AttributeInformation;
 import org.codice.alliance.nsili.common.GIAS.AttributeType;
 import org.codice.alliance.nsili.common.GIAS.DateRange;
@@ -37,7 +36,6 @@ import org.codice.alliance.nsili.common.GIAS.RequirementMode;
 import org.codice.alliance.nsili.common.NsiliConstants;
 import org.codice.alliance.nsili.common.UCO.Coordinate2d;
 import org.codice.alliance.nsili.common.UCO.Rectangle;
-
 import org.junit.Before;
 import org.junit.Test;
 
@@ -45,11 +43,13 @@ import ddf.catalog.data.Metacard;
 
 public class TestNsiliFilterDelegate {
 
-    private static final String ANY_TEXT = "anyText";
+    private static final String ANY_TEXT = Metacard.ANY_TEXT;
 
     private static NsiliFilterDelegate filterDelegate;
 
-    private static final String PROPERTY = "property";
+    private static final String PROPERTY = "publisher";
+
+    private static final String DATE_PROPERTY = Metacard.MODIFIED;
 
     private static final String ATTRIBUTE = "attribute";
 
@@ -99,15 +99,17 @@ public class TestNsiliFilterDelegate {
     @Test
     public void testPropertyIsEqualToStringLiteral() {
         String filter = filterDelegate.propertyIsEqualTo(PROPERTY, ATTRIBUTE, false);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.EQ,
-                NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.EQ,
+                        NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
     }
 
     @Test
     public void testPropertyIsEqualToDateLiteral() {
         String filter = filterDelegate.propertyIsEqualTo(PROPERTY, DATE);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.EQ,
-                NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.EQ,
+                        NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
     }
 
     @Test
@@ -143,8 +145,9 @@ public class TestNsiliFilterDelegate {
     @Test
     public void testPropertyIsEqualToBooleanLiteral() {
         String filter = filterDelegate.propertyIsEqualTo(PROPERTY, false);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.EQ,
-                NsiliFilterDelegate.SQ + FALSE + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.EQ,
+                        NsiliFilterDelegate.SQ + FALSE + NsiliFilterDelegate.SQ)));
     }
 
     @Test(expected = UnsupportedOperationException.class)
@@ -160,57 +163,55 @@ public class TestNsiliFilterDelegate {
     @Test
     public void testPropertyIsNotEqualToStringLiteral() {
         String filter = filterDelegate.propertyIsNotEqualTo(PROPERTY, ATTRIBUTE, false);
-        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ,
-                NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ,
+                        NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
     }
 
     @Test
     public void testPropertyIsNotEqualToDateLiteral() {
         String filter = filterDelegate.propertyIsNotEqualTo(PROPERTY, DATE);
-        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ,
-                NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ,
+                        NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
     }
 
     @Test
     public void testPropertyIsNotEqualToIntLiteral() {
         String filter = filterDelegate.propertyIsNotEqualTo(PROPERTY, INT);
-        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ,
-                INT)));
+        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ, INT)));
     }
 
     @Test
     public void testPropertyIsNotEqualToShortLiteral() {
         String filter = filterDelegate.propertyIsNotEqualTo(PROPERTY, (short) INT);
-        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ,
-                INT)));
+        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ, INT)));
     }
 
     @Test
     public void testPropertyIsNotEqualToLongLiteral() {
         String filter = filterDelegate.propertyIsNotEqualTo(PROPERTY, (long) INT);
-        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ,
-                INT)));
+        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ, INT)));
     }
 
     @Test
     public void testPropertyIsNotEqualToFloatLiteral() {
         String filter = filterDelegate.propertyIsNotEqualTo(PROPERTY, FLOAT);
-        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ,
-                FLOAT)));
+        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ, FLOAT)));
     }
 
     @Test
     public void testPropertyIsNotEqualToDoubleLiteral() {
         String filter = filterDelegate.propertyIsNotEqualTo(PROPERTY, (double) FLOAT);
-        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ,
-                FLOAT)));
+        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ, FLOAT)));
     }
 
     @Test
     public void testPropertyIsNotEqualToBooleanLiteral() {
         String filter = filterDelegate.propertyIsNotEqualTo(PROPERTY, false);
-        assertThat(filter, is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ,
-                NsiliFilterDelegate.SQ + FALSE + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterFactory.EQ,
+                        NsiliFilterDelegate.SQ + FALSE + NsiliFilterDelegate.SQ)));
     }
 
     @Test(expected = UnsupportedOperationException.class)
@@ -226,15 +227,17 @@ public class TestNsiliFilterDelegate {
     @Test
     public void testPropertyIsGreaterThanStringLiteral() {
         String filter = filterDelegate.propertyIsGreaterThan(PROPERTY, ATTRIBUTE);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.GT,
-                NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.GT,
+                        NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
     }
 
     @Test
     public void testPropertyIsGreaterThanDateLiteral() {
         String filter = filterDelegate.propertyIsGreaterThan(PROPERTY, DATE);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.GT,
-                NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.GT,
+                        NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
     }
 
     @Test
@@ -285,15 +288,17 @@ public class TestNsiliFilterDelegate {
     @Test
     public void testPropertyIsGreaterThanOrEqualToStringLiteral() {
         String filter = filterDelegate.propertyIsGreaterThanOrEqualTo(PROPERTY, ATTRIBUTE);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.GTE,
-                NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.GTE,
+                        NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
     }
 
     @Test
     public void testPropertyIsGreaterThanOrEqualToDateLiteral() {
         String filter = filterDelegate.propertyIsGreaterThanOrEqualTo(PROPERTY, DATE);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.GTE,
-                NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.GTE,
+                        NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
     }
 
     @Test
@@ -344,15 +349,17 @@ public class TestNsiliFilterDelegate {
     @Test
     public void testPropertyIsLessThanStringLiteral() {
         String filter = filterDelegate.propertyIsLessThan(PROPERTY, ATTRIBUTE);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.LT,
-                NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.LT,
+                        NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
     }
 
     @Test
     public void testPropertyIsLessThanDateLiteral() {
         String filter = filterDelegate.propertyIsLessThan(PROPERTY, DATE);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.LT,
-                NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.LT,
+                        NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
     }
 
     @Test
@@ -403,15 +410,17 @@ public class TestNsiliFilterDelegate {
     @Test
     public void testPropertyIsLessThanOrEqualToStringLiteral() {
         String filter = filterDelegate.propertyIsLessThanOrEqualTo(PROPERTY, ATTRIBUTE);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.LTE,
-                NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.LTE,
+                        NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ)));
     }
 
     @Test
     public void testPropertyIsLessThanOrEqualToDateLiteral() {
         String filter = filterDelegate.propertyIsLessThanOrEqualTo(PROPERTY, DATE);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.LTE,
-                NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.LTE,
+                        NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
     }
 
     @Test
@@ -462,52 +471,53 @@ public class TestNsiliFilterDelegate {
     @Test
     public void testPropertyBetweenStringLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, ATTRIBUTE, ATTRIBUTE);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.BTW,
-                NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ
-                        + NsiliFilterFactory.COMMA + NsiliFilterDelegate.SQ + ATTRIBUTE
-                        + NsiliFilterDelegate.SQ)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.BTW,
+                        NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ
+                                + NsiliFilterFactory.COMMA + NsiliFilterDelegate.SQ + ATTRIBUTE
+                                + NsiliFilterDelegate.SQ)));
     }
 
     @Test
     public void testPropertyBetweenIntLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, INT, INT);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.BTW,
-                INT + NsiliFilterFactory.COMMA + INT)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.BTW, INT + NsiliFilterFactory.COMMA + INT)));
     }
 
     @Test
     public void testPropertyBetweenShortLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, (short) INT, (short) INT);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.BTW,
-                INT + NsiliFilterFactory.COMMA + INT)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.BTW, INT + NsiliFilterFactory.COMMA + INT)));
     }
 
     @Test
     public void testPropertyBetweenLongLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, (long) INT, (long) INT);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.BTW,
-                INT + NsiliFilterFactory.COMMA + INT)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.BTW, INT + NsiliFilterFactory.COMMA + INT)));
     }
 
     @Test
     public void testPropertyBetweenFloatLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, FLOAT, FLOAT);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.BTW,
-                FLOAT + NsiliFilterFactory.COMMA + FLOAT)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.BTW, FLOAT + NsiliFilterFactory.COMMA + FLOAT)));
     }
 
     @Test
     public void testPropertyBetweenDoubleLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, (double) FLOAT, (double) FLOAT);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.BTW,
-                FLOAT + NsiliFilterFactory.COMMA + FLOAT)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.BTW, FLOAT + NsiliFilterFactory.COMMA + FLOAT)));
     }
 
     @Test
     public void testPropertyNull() {
         String filter = filterDelegate.propertyIsNull(PROPERTY);
-        assertThat(filter, is(
-                NsiliFilterFactory.NOT + getPrimary(NsiliFilterDelegate.EMPTY_STRING,
+        assertThat(filter,
+                is(NsiliFilterFactory.NOT + getPrimary(NsiliFilterDelegate.EMPTY_STRING,
                         NsiliFilterFactory.EXISTS)));
     }
 
@@ -567,8 +577,8 @@ public class TestNsiliFilterDelegate {
         List<String> filterList = new ArrayList<>();
         filterList.add(filterDelegate.propertyIsBetween(PROPERTY, INT, INT));
         String filter = filterDelegate.and(filterList);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.BTW,
-                INT + NsiliFilterFactory.COMMA + INT)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.BTW, INT + NsiliFilterFactory.COMMA + INT)));
     }
 
     @Test
@@ -597,8 +607,8 @@ public class TestNsiliFilterDelegate {
         List<String> filterList = new ArrayList<>();
         filterList.add(filterDelegate.propertyIsBetween(PROPERTY, INT, INT));
         String filter = filterDelegate.or(filterList);
-        assertThat(filter, is(getPrimary(NsiliFilterFactory.BTW,
-                INT + NsiliFilterFactory.COMMA + INT)));
+        assertThat(filter,
+                is(getPrimary(NsiliFilterFactory.BTW, INT + NsiliFilterFactory.COMMA + INT)));
     }
 
     @Test(expected = UnsupportedOperationException.class)
@@ -618,8 +628,7 @@ public class TestNsiliFilterDelegate {
 
     @Test
     public void testNullAttributesList() {
-        NsiliFilterDelegate filterDelegate = new NsiliFilterDelegate(
-                generateAttributeInformation(),
+        NsiliFilterDelegate filterDelegate = new NsiliFilterDelegate(generateAttributeInformation(),
                 PROPERTY);
         String filter = filterDelegate.propertyIsLike(PROPERTY, ATTRIBUTE, false);
         assertThat(filter, is(NsiliFilterDelegate.EMPTY_STRING));
@@ -633,10 +642,11 @@ public class TestNsiliFilterDelegate {
 
     @Test
     public void testBeforeSupportedTemporal() {
-        String filter = filterDelegate.before(NsiliConstants.DATE_TIME_MODIFIED, DATE);
-        assertThat(filter, is(getPrimary(NsiliConstants.DATE_TIME_MODIFIED,
-                NsiliFilterFactory.LTE,
-                NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
+        String filter = filterDelegate.before(DATE_PROPERTY, DATE);
+        assertThat(filter,
+                is(getPrimary(NsiliConstants.NSIL_CARD + "." + NsiliConstants.DATE_TIME_MODIFIED,
+                        NsiliFilterFactory.LTE,
+                        NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
     }
 
     @Test
@@ -647,10 +657,11 @@ public class TestNsiliFilterDelegate {
 
     @Test
     public void testAfterSupportedTemporal() {
-        String filter = filterDelegate.after(NsiliConstants.DATE_TIME_MODIFIED, DATE);
-        assertThat(filter, is(getPrimary(NsiliConstants.DATE_TIME_MODIFIED,
-                NsiliFilterFactory.GTE,
-                NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
+        String filter = filterDelegate.after(DATE_PROPERTY, DATE);
+        assertThat(filter,
+                is(getPrimary(NsiliConstants.NSIL_CARD + "." + NsiliConstants.DATE_TIME_MODIFIED,
+                        NsiliFilterFactory.GTE,
+                        NsiliFilterDelegate.SQ + DATE_STRING + NsiliFilterDelegate.SQ)));
     }
 
     @Test
@@ -661,7 +672,7 @@ public class TestNsiliFilterDelegate {
 
     @Test
     public void testDuringSupported() {
-        String filter = filterDelegate.during(NsiliConstants.DATE_TIME_MODIFIED, DATE, DATE);
+        String filter = filterDelegate.during(DATE_PROPERTY, DATE, DATE);
         assertThat(StringUtils.isEmpty(filter), is(false));
     }
 
@@ -749,7 +760,8 @@ public class TestNsiliFilterDelegate {
         Domain domain = new Domain();
 
         domain.t(36);
-        attributeInformationList.add(createAttributeInformation(NsiliConstants.IDENTIFIER_UUID,
+        attributeInformationList.add(createAttributeInformation(
+                NsiliConstants.NSIL_COMMON + "." + NsiliConstants.IDENTIFIER_UUID,
                 AttributeType.TEXT,
                 domain,
                 NsiliFilterDelegate.EMPTY_STRING,
@@ -762,7 +774,8 @@ public class TestNsiliFilterDelegate {
         domain = new Domain();
         DateRange dateRange = new DateRange();
         domain.d(dateRange);
-        attributeInformationList.add(createAttributeInformation(NsiliConstants.DATE_TIME_MODIFIED,
+        attributeInformationList.add(createAttributeInformation(
+                NsiliConstants.NSIL_CARD + "." + NsiliConstants.DATE_TIME_MODIFIED,
                 AttributeType.TEXT,
                 domain,
                 NsiliFilterDelegate.EMPTY_STRING,
@@ -774,7 +787,8 @@ public class TestNsiliFilterDelegate {
 
         domain = new Domain();
         domain.g(RECTANGLE_DOMAIN);
-        attributeInformationList.add(createAttributeInformation(NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX,
+        attributeInformationList.add(createAttributeInformation(
+                NsiliConstants.NSIL_COVERAGE + "." + NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX,
                 AttributeType.UCOS_RECTANGLE,
                 domain,
                 NsiliFilterDelegate.EMPTY_STRING,
@@ -786,7 +800,8 @@ public class TestNsiliFilterDelegate {
 
         domain = new Domain();
         domain.ir(new IntegerRange(0, 100));
-        attributeInformationList.add(createAttributeInformation(NsiliConstants.NUMBER_OF_BANDS,
+        attributeInformationList.add(createAttributeInformation(
+                NsiliConstants.NSIL_IMAGERY + "." + NsiliConstants.NUMBER_OF_BANDS,
                 AttributeType.INTEGER,
                 domain,
                 NsiliFilterDelegate.EMPTY_STRING,
@@ -817,12 +832,11 @@ public class TestNsiliFilterDelegate {
     }
 
     private String getPrimary(String operator, Object attribute) {
-        return getPrimary(PROPERTY, operator, attribute);
+        return getPrimary(NsiliConstants.NSIL_CARD + "." + PROPERTY, operator, attribute);
     }
 
     private String getPrimary(String property, String operator, Object attribute) {
-        return NsiliFilterFactory.LP + property + operator + attribute
-                + NsiliFilterFactory.RP;
+        return NsiliFilterFactory.LP + property + operator + attribute + NsiliFilterFactory.RP;
     }
 
     private static Date getDate() {

@@ -99,7 +99,7 @@ public class TestProductMgrImpl extends TestNsiliCommon {
         }
 
         String managerId = UUID.randomUUID().toString();
-        productMgr = new ProductMgrImpl(false);
+        productMgr = new ProductMgrImpl(null);
         productMgr.setFilterBuilder(new GeotoolsFilterBuilder());
         productMgr.setSubject(mockSubject);
         productMgr.setCatalogFramework(mockCatalogFramework);

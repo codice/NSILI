@@ -383,7 +383,7 @@ public class TestSubmitStandingQueryRequestImpl extends TestNsiliCommon {
                 mockSubject,
                 filterBuilder,
                 defaultUpdateFrequencyMsec,
-                false,
+                null,
                 maxPendingResults);
         standingQueryRequest.register_callback(mockCallback2);
 

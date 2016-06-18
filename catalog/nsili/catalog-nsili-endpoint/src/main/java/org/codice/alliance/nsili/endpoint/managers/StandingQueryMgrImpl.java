@@ -14,6 +14,8 @@
 package org.codice.alliance.nsili.endpoint.managers;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.codice.alliance.nsili.common.GIAS.Event;
@@ -60,12 +62,14 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
 
     private int maxPendingResults;
 
-    private boolean enterpriseSearch;
+    private List<String> querySources = new ArrayList<>();
 
     private long defaultTimeout = AccessManagerImpl.DEFAULT_TIMEOUT;
 
-    public StandingQueryMgrImpl(boolean enterpriseSearch) {
-        this.enterpriseSearch = enterpriseSearch;
+    public StandingQueryMgrImpl(List<String> querySources) {
+        if (querySources != null) {
+            this.querySources.addAll(querySources);
+        }
         init();
     }
 
@@ -131,7 +135,7 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
                 subject,
                 filterBuilder,
                 defaultUpdateFrequencyMsec,
-                enterpriseSearch,
+                querySources,
                 maxPendingResults);
 
         String id = UUID.randomUUID()

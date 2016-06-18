@@ -66,6 +66,8 @@ public class AccessManagerImpl extends AccessManagerPOA {
 
     private Subject subject;
 
+    private List<String> querySources = new ArrayList<>();
+
     private int defaultTimeout = DEFAULT_TIMEOUT;
 
     public AccessManagerImpl() {
@@ -82,6 +84,13 @@ public class AccessManagerImpl extends AccessManagerPOA {
 
     public void setSubject(Subject subject) {
         this.subject = subject;
+    }
+
+    public void setQuerySources(List<String> querySources) {
+        this.querySources.clear();
+        if (querySources != null) {
+            this.querySources.addAll(querySources);
+        }
     }
 
     @Override
@@ -190,7 +199,13 @@ public class AccessManagerImpl extends AccessManagerPOA {
         catalogQuery.setRequestsTotalResultsCount(false);
         catalogQuery.setPageSize(10);
 
-        QueryRequestImpl catalogQueryRequest = new QueryRequestImpl(catalogQuery);
+        QueryRequestImpl catalogQueryRequest;
+
+        if (querySources == null || querySources.isEmpty()) {
+            catalogQueryRequest = new QueryRequestImpl(catalogQuery);
+        } else {
+            catalogQueryRequest = new QueryRequestImpl(catalogQuery, false, querySources, null);
+        }
 
         try {
             QueryResultsCallable

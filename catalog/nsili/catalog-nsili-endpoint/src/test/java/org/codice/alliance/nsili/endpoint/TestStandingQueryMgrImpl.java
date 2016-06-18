@@ -104,7 +104,7 @@ public class TestStandingQueryMgrImpl extends TestNsiliCommon {
         }
 
         String managerId = UUID.randomUUID().toString();
-        standingQueryMgr = new StandingQueryMgrImpl(false);
+        standingQueryMgr = new StandingQueryMgrImpl(null);
         standingQueryMgr.setFilterBuilder(new GeotoolsFilterBuilder());
         standingQueryMgr.setSubject(mockSubject);
         standingQueryMgr.setCatalogFramework(mockCatalogFramework);

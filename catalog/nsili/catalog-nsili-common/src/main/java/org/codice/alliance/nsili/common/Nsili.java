@@ -25,7 +25,6 @@ import javax.ws.rs.core.MediaType;
 public interface Nsili {
 
     @GET
-    @Consumes({MediaType.TEXT_PLAIN, MediaType.APPLICATION_OCTET_STREAM, MediaType.WILDCARD})
     @Produces({MediaType.TEXT_PLAIN, MediaType.APPLICATION_OCTET_STREAM, MediaType.WILDCARD})
     InputStream getIorFile();
 }

@@ -93,7 +93,7 @@ public class TestCatalogMgrImpl extends TestNsiliCommon {
 
         testQuery = new Query(NsiliConstants.NSIL_ALL_VIEW, bqsQuery);
 
-        catalogMgr = new CatalogMgrImpl(rootPOA, new GeotoolsFilterBuilder(), false);
+        catalogMgr = new CatalogMgrImpl(rootPOA, new GeotoolsFilterBuilder(), null);
         catalogMgr.setGuestSubject(mockSubject);
         catalogMgr.setCatalogFramework(mockCatalogFramework);
     }

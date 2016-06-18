@@ -23,15 +23,21 @@
     <!-- Metacard Type Subclasses to register -->
     <bean id="nsiliMetacardType" class="org.codice.alliance.nsili.common.NsiliMetacardType"/>
     <bean id="nsiliCxpMetacardType" class="org.codice.alliance.nsili.common.NsiliCxpMetacardType"/>
-    <bean id="nsiliGmtiMetacardType" class="org.codice.alliance.nsili.common.NsiliGmtiMetacardType"/>
-    <bean id="nsiliImageryMetacardType" class="org.codice.alliance.nsili.common.NsiliImageryMetacardType"/>
+    <bean id="nsiliGmtiMetacardType"
+          class="org.codice.alliance.nsili.common.NsiliGmtiMetacardType"/>
+    <bean id="nsiliImageryMetacardType"
+          class="org.codice.alliance.nsili.common.NsiliImageryMetacardType"/>
     <bean id="nsiliIRMetacardType" class="org.codice.alliance.nsili.common.NsiliIRMetacardType"/>
-    <bean id="nsiliMessageMetacardType" class="org.codice.alliance.nsili.common.NsiliMessageMetacardType"/>
-    <bean id="nsiliReportMetacardType" class="org.codice.alliance.nsili.common.NsiliReportMetacardType"/>
+    <bean id="nsiliMessageMetacardType"
+          class="org.codice.alliance.nsili.common.NsiliMessageMetacardType"/>
+    <bean id="nsiliReportMetacardType"
+          class="org.codice.alliance.nsili.common.NsiliReportMetacardType"/>
     <bean id="nsiliRfiMetacardType" class="org.codice.alliance.nsili.common.NsiliRfiMetacardType"/>
-    <bean id="nsiliTaskMetacardType" class="org.codice.alliance.nsili.common.NsiliTaskMetacardType"/>
+    <bean id="nsiliTaskMetacardType"
+          class="org.codice.alliance.nsili.common.NsiliTaskMetacardType"/>
     <bean id="nsiliTdlMetacardType" class="org.codice.alliance.nsili.common.NsiliTdlMetacardType"/>
-    <bean id="nsiliVideoMetacardType" class="org.codice.alliance.nsili.common.NsiliVideoMetacardType"/>
+    <bean id="nsiliVideoMetacardType"
+          class="org.codice.alliance.nsili.common.NsiliVideoMetacardType"/>
 
     <reference id="filterAdapter" interface="ddf.catalog.filter.FilterAdapter"/>
 
@@ -64,11 +70,13 @@
             <property name="corbaTimeout" value="60"/>
             <property name="pollInterval" value="5"/>
             <property name="maxHitCount" value="250"/>
-            <property name="numberWorkerThreads" value="4" />
-            <property name="accessUserId" value="" />
-            <property name="accessPassword" value="" />
-            <property name="accessLicenseKey" value="" />
-            <property name="excludeSortOrder" value="false" />
+            <property name="additionalQueryParams"
+                      value="and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')"/>
+            <property name="numberWorkerThreads" value="4"/>
+            <property name="accessUserId" value=""/>
+            <property name="accessPassword" value=""/>
+            <property name="accessLicenseKey" value=""/>
+            <property name="excludeSortOrder" value="false"/>
             <property name="filterAdapter" ref="filterAdapter"/>
             <property name="resourceReader" ref="urlReader"/>
         </cm:managed-component>
@@ -91,11 +99,13 @@
             <property name="corbaTimeout" value="60"/>
             <property name="pollInterval" value="5"/>
             <property name="maxHitCount" value="250"/>
-            <property name="numberWorkerThreads" value="4" />
-            <property name="accessUserId" value="" />
-            <property name="accessPassword" value="" />
-            <property name="accessLicenseKey" value="" />
-            <property name="excludeSortOrder" value="false" />
+            <property name="additionalQueryParams"
+                      value="and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')"/>
+            <property name="numberWorkerThreads" value="4"/>
+            <property name="accessUserId" value=""/>
+            <property name="accessPassword" value=""/>
+            <property name="accessLicenseKey" value=""/>
+            <property name="excludeSortOrder" value="false"/>
             <property name="filterAdapter" ref="filterAdapter"/>
             <property name="resourceReader" ref="urlReader"/>
         </cm:managed-component>

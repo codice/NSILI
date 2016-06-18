@@ -16,6 +16,7 @@ package org.codice.alliance.nsili.endpoint.requests;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 import org.apache.shiro.subject.ExecutionException;
 import org.codice.alliance.nsili.common.CB.Callback;
@@ -42,6 +43,7 @@ import ddf.catalog.data.Metacard;
 import ddf.catalog.data.Result;
 import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.operation.Query;
+import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
@@ -62,17 +64,17 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
 
     private Subject guestSubject;
 
-    private boolean enterpriseSearch = false;
+    private List<String> querySources;
 
     public GetParametersRequestImpl(String productIdStr, String[] desiredParameters,
             CatalogFramework catalogFramework, FilterBuilder filterBuilder, Subject guestSubject,
-            boolean enterpriseSearch) {
+            List<String> querySources) {
         this.productIdStr = productIdStr;
         this.desiredParameters = desiredParameters;
         this.catalogFramework = catalogFramework;
         this.filterBuilder = filterBuilder;
         this.guestSubject = guestSubject;
-        this.enterpriseSearch = enterpriseSearch;
+        this.querySources = querySources;
     }
 
     @Override
@@ -150,7 +152,20 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
     }
 
     private Result getResult(Query query) {
-        QueryRequestImpl queryRequest = new QueryRequestImpl(query, enterpriseSearch);
+        QueryRequestImpl queryRequest;
+        if (querySources == null || querySources.isEmpty()) {
+            LOGGER.trace("Query request will be local, no sources specified");
+            queryRequest = new QueryRequestImpl(query);
+        } else {
+            if (LOGGER.isTraceEnabled()) {
+                String sourceList = querySources.stream()
+                        .sorted()
+                        .collect(Collectors.joining(", "));
+                LOGGER.trace("Query will use the following sources: {}", sourceList);
+            }
+
+            queryRequest = new QueryRequestImpl(query, false, querySources, null);
+        }
         Result result = null;
         try {
             QueryResultsCallable queryCallable = new QueryResultsCallable(queryRequest);
@@ -179,9 +194,9 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
     }
 
     class QueryResultsCallable implements Callable<List<Result>> {
-        QueryRequestImpl catalogQueryRequest;
+        QueryRequest catalogQueryRequest;
 
-        public QueryResultsCallable(QueryRequestImpl catalogQueryRequest) {
+        public QueryResultsCallable(QueryRequest catalogQueryRequest) {
             this.catalogQueryRequest = catalogQueryRequest;
         }
 

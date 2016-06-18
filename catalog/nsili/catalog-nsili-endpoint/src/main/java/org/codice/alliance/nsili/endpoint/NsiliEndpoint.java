@@ -17,6 +17,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.codice.ddf.security.handler.api.AuthenticationHandler;
 import org.codice.ddf.security.handler.api.BaseAuthenticationToken;
@@ -72,11 +74,11 @@ public class NsiliEndpoint {
 
     private FilterBuilder filterBuilder;
 
-    private boolean enterpriseSearch = false;
-
     private int defaultUpdateFrequencySec = 60;
 
     private int maxPendingResults = 10000;
+
+    private List<String> querySources = new ArrayList<>();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NsiliEndpoint.class);
 
@@ -85,6 +87,8 @@ public class NsiliEndpoint {
     }
 
     public void shutdown() {
+        LOGGER.info("Attempting to Shutdown the ORB");
+
         if (orb != null) {
             LOGGER.debug("Stopping ORB on port: {}", corbaPort);
             orb.shutdown(true);
@@ -123,6 +127,21 @@ public class NsiliEndpoint {
         }
     }
 
+    public List<String> getQuerySources() {
+        return querySources;
+    }
+
+    public void setQuerySources(List<String> querySources) {
+        this.querySources.clear();
+        if (querySources != null) {
+            this.querySources.addAll(querySources);
+        }
+
+        if (library != null) {
+            library.setQuerySources(querySources);
+        }
+    }
+
     public void setDefaultUpdateFrequencySec(int defaultUpdateFrequencySec) {
         this.defaultUpdateFrequencySec = defaultUpdateFrequencySec;
         if (library != null) {
@@ -152,17 +171,6 @@ public class NsiliEndpoint {
 
     public void setFramework(CatalogFramework framework) {
         this.framework = framework;
-    }
-
-    public void setEnterpriseSearch(boolean enterpriseSearch) {
-        if (library != null) {
-            library.setEnterpriseSearch(enterpriseSearch);
-        }
-        this.enterpriseSearch = enterpriseSearch;
-    }
-
-    public boolean getEnterpriseSearch() {
-        return enterpriseSearch;
     }
 
     public void setFilterBuilder(FilterBuilder filterBuilder) {
@@ -217,9 +225,9 @@ public class NsiliEndpoint {
         Subject guestSubject = getGuestSubject();
         library.setGuestSubject(guestSubject);
         library.setFilterBuilder(filterBuilder);
-        library.setEnterpriseSearch(enterpriseSearch);
         library.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencySec * 1000);
         library.setMaxPendingResults(maxPendingResults);
+        library.setQuerySources(querySources);
 
         org.omg.CORBA.Object objref = rootPOA.servant_to_reference(library);
 

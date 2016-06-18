@@ -22,7 +22,6 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -119,6 +118,8 @@ public class NsiliSource extends MaskableImpl
     public static final String KEY = "key";
 
     public static final String IOR_URL = "iorUrl";
+
+    public static final String ADDITIONAL_QUERY_PARAMS = "additionalQueryParams";
 
     public static final String POLL_INTERVAL = "pollInterval";
 
@@ -244,9 +245,13 @@ public class NsiliSource extends MaskableImpl
 
     private boolean swapCoordinates = false;
 
+    private String additionalQueryParams = "";
+
     private ExecutorService executorService;
 
     private CompletionService<Result> completionService;
+
+    private Object queryLockObj = new Object();
 
     static {
         try (InputStream properties = NsiliSource.class.getResourceAsStream(
@@ -419,9 +424,13 @@ public class NsiliSource extends MaskableImpl
         if (iorString != null) {
 
             if (LOGGER.isDebugEnabled()) {
-                //Log the IOR content for debugging purposes
-                IOR ior = new IOR(iorString.getBytes());
-                ior.parse();
+                try {
+                    //Log the IOR content for debugging purposes
+                    IOR ior = new IOR(iorString.getBytes());
+                    ior.parse();
+                } catch (Exception e) {
+                    LOGGER.debug("Unable to parse IOR file", e);
+                }
             }
 
             org.omg.CORBA.Object obj = orb.string_to_object(iorString);
@@ -652,6 +661,10 @@ public class NsiliSource extends MaskableImpl
         if (StringUtils.isNotBlank(iorUrl) && !iorUrl.equals(this.iorUrl)) {
             setIorUrl(iorUrl);
         }
+        
+        String additionalQueryParams = (String) configuration.get(ADDITIONAL_QUERY_PARAMS);
+        setAdditionalQueryParams(additionalQueryParams);
+
         Integer pollInterval = (Integer) configuration.get(POLL_INTERVAL);
         if (pollInterval != null && !pollInterval.equals(this.pollInterval)) {
             setPollInterval(pollInterval);
@@ -715,7 +728,9 @@ public class NsiliSource extends MaskableImpl
     private org.codice.alliance.nsili.common.GIAS.Query createQuery(Query query)
             throws UnsupportedQueryException {
         String filter = createFilter(query);
-        filter = filter + " and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')";
+        if (StringUtils.isNotBlank(additionalQueryParams)) {
+            filter = filter + " " + additionalQueryParams;
+        }
         LOGGER.debug("{} : BQS Query : {}", getId(), filter);
         return new org.codice.alliance.nsili.common.GIAS.Query(NsiliConstants.NSIL_ALL_VIEW,
                 filter);
@@ -732,8 +747,10 @@ public class NsiliSource extends MaskableImpl
             NameValue[] properties) {
         IntHolder intHolder = new IntHolder();
         try {
-            HitCountRequest hitCountRequest = catalogMgr.hit_count(query, properties);
-            hitCountRequest.complete(intHolder);
+            synchronized (queryLockObj) {
+                HitCountRequest hitCountRequest = catalogMgr.hit_count(query, properties);
+                hitCountRequest.complete(intHolder);
+            }
         } catch (ProcessingFault | SystemFault | InvalidInputParameter e) {
             LOGGER.error("{} : Unable to get hit count for query. : {}",
                     getId(),
@@ -762,31 +779,33 @@ public class NsiliSource extends MaskableImpl
 
         SourceResponseImpl sourceResponse = null;
 
+        long numHits = 0;
         try {
-            LOGGER.debug("{} : Submit query: {}", id, query.bqs_query);
-            LOGGER.debug("{} : Requesting result attributes: {}",
-                    id,
-                    Arrays.toString(resultAttributes));
-            LOGGER.debug("{} : Sort Attributes: {}", id, Arrays.toString(sortAttributes));
-            LOGGER.debug("{} : Properties: {}", id, Arrays.toString(properties));
-            HitCountRequest hitCountRequest = catalogMgr.hit_count(query, properties);
-            IntHolder hitHolder = new IntHolder();
-            hitCountRequest.complete(hitHolder);
-            SubmitQueryRequest submitQueryRequest;
-            if (hitHolder.value > 1) {
-                submitQueryRequest = catalogMgr.submit_query(query,
-                        resultAttributes,
-                        sortAttributes,
-                        properties);
-            } else {
-                submitQueryRequest = catalogMgr.submit_query(query,
-                        resultAttributes,
-                        new SortAttribute[0],
-                        new NameValue[0]);
+            synchronized (queryLockObj) {
+                LOGGER.debug("{} : Submit query: {}", id, query.bqs_query);
+                LOGGER.debug("{} : Requesting result attributes: {}", id, Arrays.toString(resultAttributes));
+                LOGGER.debug("{} : Sort Attributes: {}", id, Arrays.toString(sortAttributes));
+                LOGGER.debug("{} : Properties: {}", id, Arrays.toString(properties));
+                HitCountRequest hitCountRequest = catalogMgr.hit_count(query, properties);
+                IntHolder hitHolder = new IntHolder();
+                hitCountRequest.complete(hitHolder);
+                numHits = hitHolder.value;
+                SubmitQueryRequest submitQueryRequest;
+                if (hitHolder.value > 1) {
+                    submitQueryRequest = catalogMgr.submit_query(query,
+                            resultAttributes,
+                            sortAttributes,
+                            properties);
+                } else {
+                    submitQueryRequest = catalogMgr.submit_query(query,
+                            resultAttributes,
+                            new SortAttribute[0],
+                            new NameValue[0]);
+                }
+                submitQueryRequest.set_user_info(ddfOrgName);
+                submitQueryRequest.set_number_of_hits(maxHitCount);
+                submitQueryRequest.complete_DAG_results(dagListHolder);
             }
-            submitQueryRequest.set_user_info(ddfOrgName);
-            submitQueryRequest.set_number_of_hits(maxHitCount);
-            submitQueryRequest.complete_DAG_results(dagListHolder);
         } catch (ProcessingFault | SystemFault | InvalidInputParameter e) {
             LOGGER.error("{} : Unable to query source. {}",
                     id,
@@ -795,8 +814,7 @@ public class NsiliSource extends MaskableImpl
         }
 
         if (dagListHolder.value != null) {
-            List<Result> results =
-                    Collections.synchronizedList(new ArrayList<>(dagListHolder.value.length));
+            List<Result> results = new ArrayList<>();
             String id = getId();
             List<Future> futures = new ArrayList<>(dagListHolder.value.length);
 
@@ -805,7 +823,9 @@ public class NsiliSource extends MaskableImpl
                     DAGConverter dagConverter = new DAGConverter(resourceReader);
                     Metacard card = dagConverter.convertDAG(dag, swapCoordinates, id);
                     if (card != null) {
-                        DAGConverter.logMetacard(card, getId());
+                        if (LOGGER.isTraceEnabled()) {
+                            DAGConverter.logMetacard(card, getId());
+                        }
                         return new ResultImpl(card);
                     } else {
                         LOGGER.warn("{} : Unable to convert DAG to metacard, returned card is null",
@@ -831,7 +851,7 @@ public class NsiliSource extends MaskableImpl
 
             sourceResponse = new SourceResponseImpl(queryRequest,
                     results,
-                    (long) getHitCount(query, properties));
+                    numHits);
 
         } else {
             LOGGER.warn("{} : Source returned empty DAG list", getId());
@@ -919,7 +939,9 @@ public class NsiliSource extends MaskableImpl
     }
 
     private String createFilter(Query query) throws UnsupportedQueryException {
-        return this.filterAdapter.adapt(query, nsiliFilterDelegate);
+        String filter = filterAdapter.adapt(query, nsiliFilterDelegate);
+        LOGGER.debug("Converted internal filter to BQS: {}", filter);
+        return filter;
     }
 
     public void setCxfUsername(String cxfUsername) {
@@ -995,6 +1017,14 @@ public class NsiliSource extends MaskableImpl
 
     public void setSwapCoordinates(boolean swapCoordinates) {
         this.swapCoordinates = swapCoordinates;
+    }
+
+    public String getAdditionalQueryParams() {
+        return additionalQueryParams;
+    }
+
+    public void setAdditionalQueryParams(String additionalQueryParams) {
+        this.additionalQueryParams = additionalQueryParams;
     }
 
     public String getAccessUserId() {

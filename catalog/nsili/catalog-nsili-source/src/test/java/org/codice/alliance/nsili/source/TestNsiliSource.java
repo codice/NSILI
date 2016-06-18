@@ -366,6 +366,7 @@ public class TestNsiliSource {
         source.setCatalogMgr(getMockCatalogMgr());
         source.setFilterAdapter(new GeotoolsFilterAdapterImpl());
         source.setNumberWorkerThreads(6);
+        source.setAdditionalQueryParams("and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')");
 
         // Suppress CORBA communications to test refresh
         doNothing().when(source)

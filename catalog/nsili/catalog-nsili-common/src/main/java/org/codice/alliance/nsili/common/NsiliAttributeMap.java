@@ -58,7 +58,7 @@ public class NsiliAttributeMap {
         nsiliToDdfMap.put(NsiliConstants.NSIL_COMMON + "." + NsiliConstants.TARGET_NUMBER,
                 "targetNumber");
         nsiliToDdfMap.put(NsiliConstants.NSIL_COMMON + "." + NsiliConstants.TYPE, "productType");
-        nsiliToDdfMap.put(NsiliConstants.NSIL_CXP + "." + NsiliConstants.STATUS, "status");
+        nsiliToDdfMap.put(NsiliConstants.NSIL_CXP + "." + NsiliConstants.STATUS, "cxpStatus");
         nsiliToDdfMap.put(NsiliConstants.NSIL_COVERAGE + "." + NsiliConstants.SPATIAL_COUNTRY_CODE,
                 "countryCode");
         nsiliToDdfMap.put(
@@ -148,7 +148,7 @@ public class NsiliAttributeMap {
                 "forInformation");
         nsiliToDdfMap.put(NsiliConstants.NSIL_RFI + "." + NsiliConstants.SERIAL_NUMBER,
                 "serialNumber");
-        nsiliToDdfMap.put(NsiliConstants.NSIL_RFI + "." + NsiliConstants.STATUS, "status");
+        nsiliToDdfMap.put(NsiliConstants.NSIL_RFI + "." + NsiliConstants.STATUS, "rfiStatus");
         nsiliToDdfMap.put(NsiliConstants.NSIL_RFI + "." + NsiliConstants.WORKFLOW_STATUS,
                 "workflowStatus");
         nsiliToDdfMap.put(NsiliConstants.NSIL_SDS + "." + NsiliConstants.OPERATIONAL_STATUS,
@@ -168,7 +168,7 @@ public class NsiliAttributeMap {
         nsiliToDdfMap.put(NsiliConstants.NSIL_STREAM + "." + NsiliConstants.SOURCE_URL,
                 Metacard.RESOURCE_DOWNLOAD_URL);
         nsiliToDdfMap.put(NsiliConstants.NSIL_TASK + "." + NsiliConstants.COMMENTS, "comments");
-        nsiliToDdfMap.put(NsiliConstants.NSIL_TASK + "." + NsiliConstants.STATUS, "status");
+        nsiliToDdfMap.put(NsiliConstants.NSIL_TASK + "." + NsiliConstants.STATUS, "taskStatus");
         nsiliToDdfMap.put(NsiliConstants.NSIL_TDL + "." + NsiliConstants.ACTIVITY, "activity");
         nsiliToDdfMap.put(NsiliConstants.NSIL_TDL + "." + NsiliConstants.MESSAGE_NUM,
                 "messageNumber");

@@ -15,6 +15,7 @@ package org.codice.alliance.nsili.source;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -90,18 +91,10 @@ public class NsiliFilterFactory {
         this.view = view;
     }
 
-    public String buildPropertyIsLike(String value) {
+    public String buildPropertyIsLike(String propertyName, String value) {
         if (queryableAttributes == null) {
             return NsiliFilterDelegate.EMPTY_STRING;
         }
-
-        List<AttributeInformation> attributeInformationList = queryableAttributes.get(view);
-
-        if (attributeInformationList == null) {
-            return NsiliFilterDelegate.EMPTY_STRING;
-        }
-
-        List<String> filters = new ArrayList<>();
 
         // Replace * with %, since * is not a valid wildcard in BQS
         value = value.replaceAll("\\*", NsiliFilterDelegate.WILDCARD);
@@ -117,31 +110,74 @@ public class NsiliFilterFactory {
             addPostfixWildcard = true;
         }
 
-        for (AttributeInformation attributeInformation : attributeInformationList) {
-            if (isTextAttributeType(attributeInformation)) {
-                String filterString =
-                        LP + attributeInformation.attribute_name + LIKE + NsiliFilterDelegate.SQ;
+        List<AttributeInformation> attributeInformationList = queryableAttributes.get(view);
 
-                if (isAttributeListDomain(attributeInformation)) {
-                    filterString =
-                            LP + attributeInformation.attribute_name + EQ + NsiliFilterDelegate.SQ;
+        if (attributeInformationList == null) {
+            return NsiliFilterDelegate.EMPTY_STRING;
+        }
+
+        Map<String, AttributeInformation> attrInfoMap = createAttrInfoMap(attributeInformationList);
+        List<String> filters = new ArrayList<>();
+
+        //anyText searches we will grab each attribute in NSILI, else we add only the attribute
+        if (propertyName.equals(Metacard.ANY_TEXT)) {
+            for (AttributeInformation attributeInformation : attributeInformationList) {
+                if (isTextAttributeType(attributeInformation)) {
+                    String filterString = LP + attributeInformation.attribute_name + LIKE
+                            + NsiliFilterDelegate.SQ;
+
+                    if (isAttributeListDomain(attributeInformation)) {
+                        filterString = LP + attributeInformation.attribute_name + EQ
+                                + NsiliFilterDelegate.SQ;
+                    }
+
+                    if (addPrefixWildcard) {
+                        filterString = filterString + NsiliFilterDelegate.WILDCARD;
+                    }
+
+                    filterString = filterString + value;
+
+                    if (addPostfixWildcard) {
+                        filterString = filterString + NsiliFilterDelegate.WILDCARD;
+                    }
+
+                    filterString = filterString + NsiliFilterDelegate.SQ + RP;
+                    filters.add(filterString);
                 }
+            }
+        } else {
+            List<String> propertyList = mapToNsilQuery(propertyName);
+            String operator = EQ;
+            if (addPostfixWildcard || addPostfixWildcard) {
+                operator = LIKE;
+            }
+            for (String property : propertyList) {
+                String filterString = LP + property + LIKE + NsiliFilterDelegate.SQ;
+                AttributeInformation attrInfo = attrInfoMap.get(property);
 
-                if (addPrefixWildcard) {
-                    filterString = filterString + NsiliFilterDelegate.WILDCARD;
+                if (attrInfo != null) {
+                    if (isAttributeListDomain(attrInfo)) {
+                        filterString = LP + attrInfo.attribute_name + operator + NsiliFilterDelegate.SQ;
+                    }
+
+                    if (addPrefixWildcard) {
+                        filterString = filterString + NsiliFilterDelegate.WILDCARD;
+                    }
+
+                    filterString = filterString + value;
+
+                    if (addPostfixWildcard) {
+                        filterString = filterString + NsiliFilterDelegate.WILDCARD;
+                    }
+
+                    filterString = filterString + NsiliFilterDelegate.SQ + RP;
+                    filters.add(filterString);
                 }
-
-                filterString = filterString + value;
-
-                if (addPostfixWildcard) {
-                    filterString = filterString + NsiliFilterDelegate.WILDCARD;
-                }
-
-                filterString = filterString + NsiliFilterDelegate.SQ + RP;
-                filters.add(filterString);
             }
         }
-        return buildOrFilter(filters);
+
+        String filter = buildOrFilter(filters);
+        return filter;
     }
 
     public boolean isTextAttributeType(AttributeInformation attributeInformation) {
@@ -260,11 +296,21 @@ public class NsiliFilterFactory {
     }
 
     public String buildPropertyIsNull(String property) {
-        return buildNotFilter(LP + property + EXISTS + RP);
+        List<String> propertyList = mapToNsilQuery(property);
+        List<String> filters = new ArrayList<>();
+        for (String ddfProperty : propertyList) {
+            String filter = buildNotFilter(LP + ddfProperty + EXISTS + RP);
+            filters.add(filter);
+        }
+        return buildOrFilter(filters);
     }
 
     public String buildNotFilter(String filter) {
-        return NOT + filter;
+        if (StringUtils.isNotBlank(filter)) {
+            return NOT + filter;
+        } else {
+            return filter;
+        }
     }
 
     public String buildIntersectsFilter(String propertyName, String wkt) {
@@ -343,15 +389,14 @@ public class NsiliFilterFactory {
         List<String> nsiliProperties = NsiliAttributeMap.getNsiliAttributeForDdf(attribute);
         if (nsiliProperties == null) {
             nsiliProperties = new ArrayList<>();
-            nsiliProperties.add(attribute);
-            LOGGER.warn("Unable to map " + attribute + " to NSILI attribute, using attribute name");
         }
         return nsiliProperties;
     }
 
     public static List<String> mapToNsilQuery(String attribute) {
         if (attribute.equals(Metacard.ANY_GEO)) {
-            return Arrays.asList(new String[] {NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX});
+            return Arrays.asList(new String[] {NsiliConstants.NSIL_COVERAGE + "."
+                    + NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX});
         } else {
             return mapToNsil(attribute);
         }
@@ -381,5 +426,14 @@ public class NsiliFilterFactory {
                 .substring(0,
                         result.toString()
                                 .length() - 1) + RP;
+    }
+
+    private Map<String, AttributeInformation> createAttrInfoMap(
+            List<AttributeInformation> attributeInformationList) {
+        Map<String, AttributeInformation> attrInfoMap = new HashMap<>();
+        for (AttributeInformation attrInfo : attributeInformationList) {
+            attrInfoMap.put(attrInfo.attribute_name, attrInfo);
+        }
+        return attrInfoMap;
     }
 }
