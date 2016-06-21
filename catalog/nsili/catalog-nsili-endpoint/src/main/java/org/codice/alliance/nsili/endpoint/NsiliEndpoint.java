@@ -20,6 +20,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.codice.alliance.nsili.common.NsilCorbaExceptionUtil;
+import org.codice.alliance.nsili.orb.api.CorbaOrb;
+import org.codice.alliance.nsili.orb.api.CorbaServiceListener;
 import org.codice.ddf.security.handler.api.AuthenticationHandler;
 import org.codice.ddf.security.handler.api.BaseAuthenticationToken;
 import org.codice.ddf.security.handler.api.GuestAuthenticationToken;
@@ -28,13 +31,13 @@ import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.ObjectNotActive;
 import org.omg.PortableServer.POAPackage.ServantNotActive;
+import org.omg.PortableServer.POAPackage.WrongAdapter;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.codice.alliance.nsili.common.NsilCorbaExceptionUtil;
 
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.filter.FilterBuilder;
@@ -42,17 +45,13 @@ import ddf.security.Subject;
 import ddf.security.service.SecurityManager;
 import ddf.security.service.SecurityServiceException;
 
-public class NsiliEndpoint {
+public class NsiliEndpoint implements CorbaServiceListener {
 
     public static final String ENCODING = StandardCharsets.ISO_8859_1.name();
 
     public static final int DEFAULT_MAX_NUM_RESULTS = 500;
 
-    public static final int DEFAULT_CORBA_PORT = 2809;
-
     private static final String DEFAULT_IP_ADDRESS = "127.0.0.1";
-
-    private int corbaPort = DEFAULT_CORBA_PORT;
 
     private int maxNumResults = DEFAULT_MAX_NUM_RESULTS;
 
@@ -66,8 +65,6 @@ public class NsiliEndpoint {
 
     private String iorString;
 
-    private Thread orbRunThread = null;
-
     private AuthenticationHandler securityHandler;
 
     private SecurityManager securityManager;
@@ -78,6 +75,12 @@ public class NsiliEndpoint {
 
     private int maxPendingResults = 10000;
 
+    private POA rootPOA  = null;
+
+    private CorbaOrb corbaOrb = null;
+
+    private org.omg.CORBA.Object libraryRef = null;
+
     private List<String> querySources = new ArrayList<>();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NsiliEndpoint.class);
@@ -86,34 +89,8 @@ public class NsiliEndpoint {
         LOGGER.debug("NSILI Endpoint constructed");
     }
 
-    public void shutdown() {
-        LOGGER.info("Attempting to Shutdown the ORB");
-
-        if (orb != null) {
-            LOGGER.debug("Stopping ORB on port: {}", corbaPort);
-            orb.shutdown(true);
-            orb.destroy();
-        }
-
-        orbRunThread = null;
-        orb = null;
-        library = null;
-    }
-
     public String getIorString() {
         return iorString;
-    }
-
-    public int getCorbaPort() {
-        return corbaPort;
-    }
-
-    public void setCorbaPort(int corbaPort) {
-        if (this.corbaPort != corbaPort) {
-            shutdown();
-            this.corbaPort = corbaPort;
-            init();
-        }
     }
 
     public int getMaxNumResults() {
@@ -155,6 +132,15 @@ public class NsiliEndpoint {
 
     public void setSecurityManager(SecurityManager securityManager) {
         this.securityManager = securityManager;
+        if (library != null) {
+            Subject guestSubject = null;
+            try {
+                guestSubject = getGuestSubject();
+                library.setGuestSubject(guestSubject);
+            } catch (SecurityServiceException e) {
+                LOGGER.error("Unable to update subject on NSILI Library");
+            }
+        }
     }
 
     public BundleContext getContext() {
@@ -171,26 +157,76 @@ public class NsiliEndpoint {
 
     public void setFramework(CatalogFramework framework) {
         this.framework = framework;
+        if (library != null) {
+            library.setCatalogFramework(framework);
+        }
     }
 
     public void setFilterBuilder(FilterBuilder filterBuilder) {
         this.filterBuilder = filterBuilder;
+        if (library != null) {
+            library.setFilterBuilder(filterBuilder);
+        }
     }
 
     public void setMaxPendingResults(int maxPendingResults) {
         this.maxPendingResults = maxPendingResults;
+        if (library != null) {
+            library.setMaxPendingResults(maxPendingResults);
+        }
+    }
+
+    public void setCorbaOrb(CorbaOrb corbaOrb) {
+        this.corbaOrb = corbaOrb;
+        this.orb = corbaOrb.getOrb();
+        corbaOrb.addCorbaServiceListener(this);
+    }
+
+    public void setOrb(ORB orb) {
+        this.orb = orb;
+    }
+
+    public void destroy() {
+        LOGGER.debug("Destroying NSILI Endpoint");
+        if (corbaOrb != null) {
+            corbaOrb.removeCorbaServiceListener(this);
+        }
+        library = null;
+        iorString = "";
+    }
+
+    @Override
+    public void corbaInitialized() {
+        try {
+            orb = corbaOrb.getOrb();
+            initCorba();
+        } catch (InvalidName | AdapterInactive | WrongPolicy | ServantNotActive | IOException | SecurityServiceException e) {
+            LOGGER.error("Unable to initialize Corba connection {}", e);
+        }
+    }
+
+    @Override
+    public void corbaShutdown() {
+        if (library != null && rootPOA !=null && libraryRef != null) {
+            try {
+                rootPOA.deactivate_object(rootPOA.reference_to_id(libraryRef));
+            } catch (ObjectNotActive | WrongPolicy | WrongAdapter e) {
+                LOGGER.info("Unable to deactivate LibraryImpl", e);
+            }
+            rootPOA.destroy(true, true);
+        }
+
+        orb = null;
+        library = null;
     }
 
     public void init() {
+        LOGGER.debug("Initializing NSILI Endpoint");
         try {
-            if (orb == null) {
-                orb = getOrbForServer(corbaPort);
-                orbRunThread = new Thread(() -> orb.run());
-                orbRunThread.start();
-                LOGGER.info("Started ORB on port: {}", corbaPort);
-            }
+            initCorba();
         } catch (InvalidName | AdapterInactive | WrongPolicy | ServantNotActive e) {
-            LOGGER.warn("Unable to start the CORBA server. {}", NsilCorbaExceptionUtil.getExceptionDetails(e));
+            LOGGER.warn("Unable to start the CORBA server. {}",
+                    NsilCorbaExceptionUtil.getExceptionDetails(e));
             LOGGER.debug("CORBA server startup exception details", e);
         } catch (IOException e) {
             LOGGER.warn("Unable to generate the IOR file.", e);
@@ -203,44 +239,38 @@ public class NsiliEndpoint {
         return library;
     }
 
-    private ORB getOrbForServer(int port)
+    private void initCorba()
             throws InvalidName, AdapterInactive, WrongPolicy, ServantNotActive, IOException,
             SecurityServiceException {
 
-        System.setProperty("com.sun.CORBA.POA.ORBPersistentServerPort", String.valueOf(port));
-        System.setProperty("com.sun.CORBA.ORBServerPort", String.valueOf(port));
-
-        final ORB orb = ORB.init(new String[0], null);
-
-        System.clearProperty("com.sun.CORBA.POA.ORBPersistentServerPort");
-        System.clearProperty("com.sun.CORBA.ORBServerPort");
-
-        POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+        rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
 
         rootPOA.the_POAManager()
                 .activate();
 
         library = new LibraryImpl(rootPOA);
         library.setCatalogFramework(framework);
-        Subject guestSubject = getGuestSubject();
-        library.setGuestSubject(guestSubject);
+        if (securityManager != null) {
+            Subject guestSubject = getGuestSubject();
+            library.setGuestSubject(guestSubject);
+        }
         library.setFilterBuilder(filterBuilder);
         library.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencySec * 1000);
         library.setMaxPendingResults(maxPendingResults);
         library.setQuerySources(querySources);
 
-        org.omg.CORBA.Object objref = rootPOA.servant_to_reference(library);
+        libraryRef = rootPOA.servant_to_reference(library);
 
-        iorString = orb.object_to_string(objref);
+        iorString = orb.object_to_string(libraryRef);
 
-        return orb;
-
+        LOGGER.debug("Initialized NSILI Endpoint with IOR: {}", iorString);
     }
 
     private Subject getGuestSubject() throws SecurityServiceException {
         String ip = DEFAULT_IP_ADDRESS;
         try {
-            ip = InetAddress.getLocalHost().getHostAddress();
+            ip = InetAddress.getLocalHost()
+                    .getHostAddress();
         } catch (UnknownHostException e) {
             LOGGER.warn("Could not get IP address for localhost", e);
         }
@@ -248,7 +278,8 @@ public class NsiliEndpoint {
         LOGGER.debug("Guest token ip: {}", ip);
 
         String guestTokenId = ip;
-        GuestAuthenticationToken guestToken = new GuestAuthenticationToken(BaseAuthenticationToken.ALL_REALM, guestTokenId);
+        GuestAuthenticationToken guestToken =
+                new GuestAuthenticationToken(BaseAuthenticationToken.ALL_REALM, guestTokenId);
         return securityManager.getSubject(guestToken);
     }
 }

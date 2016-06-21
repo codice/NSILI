@@ -154,6 +154,11 @@
             <version>${ddf.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.codice.alliance.nsili</groupId>
+            <artifactId>catalog-nsili-orb-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
     <build>
         <resources>

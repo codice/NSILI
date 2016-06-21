@@ -50,19 +50,18 @@ import org.codice.alliance.nsili.common.UCO.DAGListHolder;
 import org.codice.alliance.nsili.common.UCO.NameValue;
 import org.codice.alliance.nsili.common.UCO.State;
 import org.codice.alliance.nsili.common.UCO.Status;
-
 import org.codice.ddf.cxf.SecureCxfClientFactory;
 import org.codice.ddf.spatial.ogc.catalog.common.AvailabilityTask;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.omg.CORBA.IntHolder;
+import org.omg.CORBA.ORB;
 import org.opengis.filter.sort.SortBy;
 import org.opengis.filter.sort.SortOrder;
-
-
 
 import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.impl.SortByImpl;
@@ -88,7 +87,8 @@ public class TestNsiliSource {
     private static final String GMTI_EQ_FILTER =
             "((NSIL_FILE.format = 'GMTI') or (NSIL_STREAM.standard = 'GMTI')) and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')";
 
-    private static final String GMTI_LIKE_FILTER = "(GMTI like '%') and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')";
+    private static final String GMTI_LIKE_FILTER =
+            "(GMTI like '%') and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')";
 
     private static final String RELEVANCE = "RELEVANCE";
 
@@ -104,12 +104,28 @@ public class TestNsiliSource {
 
     private AttributeInformation[] attributeInformations = new AttributeInformation[0];
 
+    private ORB orb;
+
+    private Thread orbRunThread;
+
     private HashMap<String, List<AttributeInformation>> attributeInformationMap =
             getAttributeInformationMap();
 
     @Before
     public void setUp() throws Exception {
+        orb = ORB.init(new String[0], null);
+        orbRunThread = new Thread(() -> orb.run());
+        orbRunThread.start();
         source = buildSource();
+    }
+
+    @After
+    public void tearDown() {
+        if (orb != null) {
+            orb.destroy();
+        }
+
+        orb = null;
     }
 
     @Test
@@ -355,7 +371,8 @@ public class TestNsiliSource {
         source = Mockito.spy(new NsiliSource(factory,
                 resultAttributes,
                 sortableAttributes,
-                new NsiliFilterDelegate(attributeInformationMap, NsiliConstants.NSIL_ALL_VIEW)));
+                new NsiliFilterDelegate(attributeInformationMap, NsiliConstants.NSIL_ALL_VIEW),
+                orb));
         source.setIorUrl(IOR_URL);
         source.setCxfUsername(NsiliSource.CXF_USERNAME);
         source.setCxfPassword(NsiliSource.CXF_PASSWORD);

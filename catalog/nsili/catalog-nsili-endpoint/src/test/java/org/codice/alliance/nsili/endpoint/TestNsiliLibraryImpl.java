@@ -17,23 +17,29 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+
+import java.io.IOException;
 
 import org.codice.alliance.nsili.common.GIAS.LibraryDescription;
 import org.codice.alliance.nsili.common.UCO.InvalidInputParameter;
 import org.codice.alliance.nsili.common.UCO.ProcessingFault;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
+import org.codice.alliance.nsili.orb.api.CorbaOrb;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.ServantNotActive;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
 
 import ddf.security.service.SecurityManager;
 import ddf.security.service.SecurityServiceException;
 
 public class TestNsiliLibraryImpl extends TestNsiliCommon {
-
-    private static final int TEST_CORBA_PORT = 0;
 
     private static final String TEST_HOSTNAME = "ddfhost";
 
@@ -49,13 +55,19 @@ public class TestNsiliLibraryImpl extends TestNsiliCommon {
 
     private SecurityManager securityManager = mock(SecurityManager.class);
 
+    private CorbaOrb mockCorbaOrb = mock(CorbaOrb.class);
+
     @Before
-    public void setUp() throws SecurityServiceException {
+    public void setUp()
+            throws SecurityServiceException, AdapterInactive, InvalidName, ServantNotActive,
+            WrongPolicy, IOException {
         System.setProperty("org.codice.ddf.system.hostname", TEST_HOSTNAME);
         System.setProperty("user.country", TEST_COUNTRY);
         System.setProperty("org.codice.ddf.system.organization", TEST_ORGANIZATION);
 
         setupCommonMocks();
+        setupOrb();
+        doReturn(orb).when(mockCorbaOrb).getOrb();
         createNsiliEndpoint();
         library = nsiliEndpoint.getLibrary();
     }
@@ -88,14 +100,17 @@ public class TestNsiliLibraryImpl extends TestNsiliCommon {
 
     @After
     public void tearDown() {
-        if (nsiliEndpoint != null) {
-            nsiliEndpoint.shutdown();
+        if (orb != null) {
+            orb.destroy();
         }
+
+        orb = null;
     }
 
     private void createNsiliEndpoint() {
         nsiliEndpoint = new NsiliEndpoint();
         nsiliEndpoint.setSecurityManager(securityManager);
-        nsiliEndpoint.setCorbaPort(TEST_CORBA_PORT);
+        nsiliEndpoint.setCorbaOrb(mockCorbaOrb);
+        nsiliEndpoint.init();
     }
 }

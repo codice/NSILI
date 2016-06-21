@@ -15,7 +15,12 @@ package org.codice.alliance.nsili.endpoint;
 
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
+import java.io.IOException;
+
+import org.codice.alliance.nsili.orb.api.CorbaOrb;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,6 +28,10 @@ import org.junit.Test;
 import org.codice.alliance.nsili.common.GIAS.AccessCriteria;
 import org.codice.alliance.nsili.common.GIAS.LibraryManager;
 import org.codice.alliance.nsili.common.NsiliManagerType;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.ServantNotActive;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
 
 import ddf.security.service.SecurityServiceException;
 
@@ -33,11 +42,26 @@ public class TestNsiliEndpoint extends TestNsiliCommon {
 
     private AccessCriteria testAccessCriteria;
 
+    private CorbaOrb mockCorbaOrb = mock(CorbaOrb.class);
+
     @Before
-    public void setUp() throws SecurityServiceException {
+    public void setUp()
+            throws SecurityServiceException, AdapterInactive, InvalidName, ServantNotActive,
+            WrongPolicy, IOException {
+        setupCommonMocks();
+        setupOrb();
+        doReturn(orb).when(mockCorbaOrb).getOrb();
         testAccessCriteria = new AccessCriteria("", "", "");
         createEndpoint();
-        setupCommonMocks();
+    }
+
+    @After
+    public void tearDown() {
+        if (orb != null) {
+            orb.destroy();
+        }
+
+        orb = null;
     }
 
     @Test
@@ -88,14 +112,10 @@ public class TestNsiliEndpoint extends TestNsiliCommon {
         assertThat(standingQueryMgr, notNullValue());
     }
 
-    @After
-    public void tearDown() {
-        nsiliEndpoint.shutdown();
-    }
-
     private void createEndpoint() {
         nsiliEndpoint = new NsiliEndpoint();
+        nsiliEndpoint.setCorbaOrb(mockCorbaOrb);
         nsiliEndpoint.setSecurityManager(securityManager);
-        nsiliEndpoint.setCorbaPort(TEST_CORBA_PORT);
+        nsiliEndpoint.init();
     }
 }

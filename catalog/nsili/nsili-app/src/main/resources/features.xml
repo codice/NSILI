@@ -16,19 +16,34 @@
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.3.0 http://karaf.apache.org/xmlns/features/v1.3.0">
 
+    <feature name="catalog-nsili-orb-api" install="manual" version="${project.version}"
+             description="Alliance NSILI ORB API" >
+        <bundle>mvn:org.codice.alliance.nsili/catalog-nsili-orb-api/${project.version}</bundle>
+    </feature>
+
+    <feature name="catalog-nsili-orb-impl" install="manual" version="${project.version}"
+             description="Alliance NSILI ORB Implementation" >
+        <feature prerequisite="true">catalog-nsili-orb-api</feature>
+        <bundle>mvn:org.codice.alliance.nsili/catalog-nsili-orb-impl/${project.version}</bundle>
+    </feature>
+
     <feature name="catalog-nsili-source" install="manual" version="${project.version}"
              description="Alliance NSILI Source">
+        <feature prerequisite="true">catalog-nsili-orb-impl</feature>
         <bundle>mvn:org.codice.alliance.nsili/catalog-nsili-source/${project.version}</bundle>
     </feature>
 
     <feature name="catalog-nsili-endpoint" install="manual" version="${project.version}"
              description="Alliance NSILI Endpoint">
+        <feature prerequisite="true">catalog-nsili-orb-impl</feature>
         <bundle>mvn:org.codice.alliance.nsili/catalog-nsili-endpoint/${project.version}</bundle>
     </feature>
 
     <feature name="nsili-app" install="auto" version="${project.version}"
              description="The Alliance NSILI App provides interoperability with STANAG 4559 compliant services. ::Alliance NSILI">
         <feature prerequisite="true">catalog-app</feature>
+        <feature>catalog-nsili-orb-api</feature>
+        <feature>catalog-nsili-orb-impl</feature>
         <feature>catalog-nsili-source</feature>
         <feature>catalog-nsili-endpoint</feature>
     </feature>

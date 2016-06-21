@@ -132,6 +132,12 @@
             <artifactId>catalog-core-urlresourcereader</artifactId>
             <version>${ddf.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.codice.alliance.nsili</groupId>
+            <artifactId>catalog-nsili-orb-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.apache.cxf</groupId>
@@ -176,7 +182,6 @@
                             security-rest-cxfwrapper,
                             spatial-ogc-common,
                             ddf-security-common,
-                            platform-util,
                             platform-util-unavailableurls,
                             joda-time,
                             jts,

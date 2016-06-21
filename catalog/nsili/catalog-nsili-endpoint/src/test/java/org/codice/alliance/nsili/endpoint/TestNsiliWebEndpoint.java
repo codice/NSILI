@@ -16,12 +16,21 @@ package org.codice.alliance.nsili.endpoint;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+
+import java.io.IOException;
 
 import javax.ws.rs.core.Response;
 
+import org.codice.alliance.nsili.orb.api.CorbaOrb;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.ServantNotActive;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
 
 import ddf.security.service.SecurityServiceException;
 
@@ -33,9 +42,15 @@ public class TestNsiliWebEndpoint extends TestNsiliCommon {
 
     private NsiliWebEndpoint nsiliWebEndpoint;
 
+    private CorbaOrb mockCorbaOrb = mock(CorbaOrb.class);
+
     @Before
-    public void setUp() throws SecurityServiceException {
+    public void setUp()
+            throws SecurityServiceException, AdapterInactive, InvalidName, ServantNotActive,
+            WrongPolicy, IOException {
         setupCommonMocks();
+        setupOrb();
+        doReturn(orb).when(mockCorbaOrb).getOrb();
         createNsiliEndpoint();
         createWebEndpoint();
     }
@@ -51,13 +66,18 @@ public class TestNsiliWebEndpoint extends TestNsiliCommon {
 
     @After
     public void tearDown() {
-        nsiliEndpoint.shutdown();
+        if (orb != null) {
+            orb.destroy();
+        }
+
+        orb = null;
     }
 
     private void createNsiliEndpoint() {
         nsiliEndpoint = new NsiliEndpoint();
         nsiliEndpoint.setSecurityManager(securityManager);
-        nsiliEndpoint.setCorbaPort(TEST_CORBA_PORT);
+        nsiliEndpoint.setCorbaOrb(mockCorbaOrb);
+        nsiliEndpoint.init();
     }
 
     private void createWebEndpoint() {

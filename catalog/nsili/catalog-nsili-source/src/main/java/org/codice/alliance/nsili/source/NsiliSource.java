@@ -72,12 +72,15 @@ import org.codice.alliance.nsili.common.UCO.InvalidInputParameter;
 import org.codice.alliance.nsili.common.UCO.NameValue;
 import org.codice.alliance.nsili.common.UCO.ProcessingFault;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
+import org.codice.alliance.nsili.orb.api.CorbaOrb;
+import org.codice.alliance.nsili.orb.api.CorbaServiceListener;
 import org.codice.alliance.nsili.transformer.DAGConverter;
 import org.codice.ddf.cxf.SecureCxfClientFactory;
 import org.codice.ddf.spatial.ogc.catalog.common.AvailabilityCommand;
 import org.codice.ddf.spatial.ogc.catalog.common.AvailabilityTask;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.IntHolder;
+import org.omg.CORBA.ORB;
 import org.opengis.filter.sort.SortBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,15 +106,13 @@ import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.util.impl.MaskableImpl;
 
 public class NsiliSource extends MaskableImpl
-        implements FederatedSource, ConnectedSource, ConfiguredService {
+        implements FederatedSource, ConnectedSource, ConfiguredService, CorbaServiceListener {
 
     public static final String CXF_PASSWORD = "cxfPassword";
 
     public static final String CXF_USERNAME = "cxfUsername";
 
     public static final String CXF_TIMEOUT = "cxfTimeout";
-
-    public static final String CORBA_TIMEOUT = "corbaTimeout";
 
     public static final String ID = "id";
 
@@ -191,8 +192,6 @@ public class NsiliSource extends MaskableImpl
 
     private int cxfTimeout;
 
-    private int corbaTimeout;
-
     private String id;
 
     private String iorString;
@@ -251,6 +250,8 @@ public class NsiliSource extends MaskableImpl
 
     private CompletionService<Result> completionService;
 
+    private CorbaOrb corbaOrb = null;
+
     private Object queryLockObj = new Object();
 
     static {
@@ -266,23 +267,38 @@ public class NsiliSource extends MaskableImpl
      * Constructor used for testing.
      */
     NsiliSource(SecureCxfClientFactory factory, HashMap<String, String[]> resultAttributes,
-            HashMap<String, List<String>> sortableAttributes, NsiliFilterDelegate filterDelegate) {
+            HashMap<String, List<String>> sortableAttributes, NsiliFilterDelegate filterDelegate,
+            ORB orb) {
         scheduler = Executors.newSingleThreadScheduledExecutor();
         this.factory = factory;
         this.resultAttributes = resultAttributes;
         this.nsiliFilterDelegate = filterDelegate;
         this.sortableAttributes = sortableAttributes;
         ddfOrgName = System.getProperty("org.codice.ddf.system.organization", DEFAULT_USER_INFO);
-        initOrb();
+        this.orb = orb;
     }
 
-    public NsiliSource() {
+    public NsiliSource(CorbaOrb corbaOrb) {
         scheduler = Executors.newSingleThreadScheduledExecutor();
+        setCorbaOrb(corbaOrb);
     }
 
     public void init() {
+        corbaOrb.addCorbaServiceListener(this);
         initCorbaClient();
         setupAvailabilityPoll();
+    }
+
+    @Override
+    public void corbaInitialized() {
+        orb = corbaOrb.getOrb();
+        initCorbaClient();
+    }
+
+    @Override
+    public void corbaShutdown() {
+        orb = null;
+        corbaOrb = null;
     }
 
     private void createClientFactory() {
@@ -316,7 +332,6 @@ public class NsiliSource extends MaskableImpl
      * and views that it provides.
      */
     private void initCorbaClient() {
-        initOrb();
         getIorString();
         if (iorString != null) {
             initLibrary();
@@ -326,6 +341,8 @@ public class NsiliSource extends MaskableImpl
             initQueryableAttributes();
             initSortableAndResultAttributes();
             setFilterDelegate();
+
+            LOGGER.debug("Initialized source {} with IOR: {}", getId(), iorString);
         }
     }
 
@@ -395,25 +412,6 @@ public class NsiliSource extends MaskableImpl
             LOGGER.debug("{} : Successfully obtained IOR file from {}", getId(), iorUrl);
         } else {
             LOGGER.error("{} : Received an empty or null IOR String.", id);
-        }
-    }
-
-    /**
-     * Initializes the Corba ORB with no additional arguments
-     */
-    private void initOrb() {
-        if (orb != null) {
-            orb.shutdown(true);
-        }
-        long waitTimeMillis = corbaTimeout * 1000;
-        String waitTimeProp = "1:" + waitTimeMillis + ":" + waitTimeMillis + ":" + 1;
-        java.util.Properties props = new java.util.Properties();
-        props.put("com.sun.CORBA.transport.ORBTCPReadTimeouts", waitTimeProp);
-        orb = org.omg.CORBA.ORB.init(new String[0], props);
-        if (orb != null) {
-            LOGGER.debug("{} : Successfully initialized CORBA orb.", getId());
-        } else {
-            LOGGER.error("{} : Unable to initialize CORBA orb.", getId());
         }
     }
 
@@ -621,7 +619,9 @@ public class NsiliSource extends MaskableImpl
     }
 
     public void destroy() {
-        orb.shutdown(true);
+        if (corbaOrb != null) {
+            corbaOrb.removeCorbaServiceListener(this);
+        }
         availabilityPollFuture.cancel(true);
         scheduler.shutdownNow();
     }
@@ -649,10 +649,6 @@ public class NsiliSource extends MaskableImpl
         if (cxfTimeout != null && cxfTimeout != this.cxfTimeout) {
             setCxfTimeout(cxfTimeout);
         }
-        Integer corbaTimeout = (Integer) configuration.get(CORBA_TIMEOUT);
-        if (corbaTimeout != null && corbaTimeout != this.corbaTimeout) {
-            setCorbaTimeout(corbaTimeout);
-        }
         String id = (String) configuration.get(ID);
         if (StringUtils.isNotBlank(id) && !id.equals(this.id)) {
             setId(id);
@@ -661,7 +657,7 @@ public class NsiliSource extends MaskableImpl
         if (StringUtils.isNotBlank(iorUrl) && !iorUrl.equals(this.iorUrl)) {
             setIorUrl(iorUrl);
         }
-        
+
         String additionalQueryParams = (String) configuration.get(ADDITIONAL_QUERY_PARAMS);
         setAdditionalQueryParams(additionalQueryParams);
 
@@ -960,14 +956,6 @@ public class NsiliSource extends MaskableImpl
         this.cxfTimeout = cxfTimeout;
     }
 
-    public Integer getCorbaTimeout() {
-        return corbaTimeout;
-    }
-
-    public void setCorbaTimeout(Integer corbaTimeout) {
-        this.corbaTimeout = corbaTimeout;
-    }
-
     public void setId(String id) {
         this.id = id;
         super.setId(id);
@@ -981,6 +969,12 @@ public class NsiliSource extends MaskableImpl
 
     public void setMaxHitCount(Integer maxHitCount) {
         this.maxHitCount = maxHitCount;
+    }
+
+    public void setCorbaOrb(CorbaOrb corbaOrb) {
+        this.corbaOrb = corbaOrb;
+        this.orb = corbaOrb.getOrb();
+        corbaOrb.addCorbaServiceListener(this);
     }
 
     public String getIorUrl() {

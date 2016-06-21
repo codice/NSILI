@@ -26,6 +26,8 @@
     <modules>
         <module>catalog-nsili-bqs</module>
         <module>catalog-nsili-common</module>
+        <module>catalog-nsili-orb-api</module>
+        <module>catalog-nsili-orb-impl</module>
         <module>catalog-nsili-source</module>
         <module>catalog-nsili-transformer</module>
         <module>catalog-nsili-endpoint</module>

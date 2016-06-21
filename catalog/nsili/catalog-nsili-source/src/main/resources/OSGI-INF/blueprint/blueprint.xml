@@ -43,6 +43,9 @@
 
     <reference id="mimeTypeMapper" interface="ddf.mime.MimeTypeMapper"/>
 
+    <reference id="nsiliCorbaOrb" interface="org.codice.alliance.nsili.orb.api.CorbaOrb"
+               availability="mandatory"/>
+
     <bean id="urlReader" class="ddf.catalog.resource.impl.URLResourceReader">
         <argument ref="mimeTypeMapper"/>
         <property name="rootResourceDirectories">
@@ -59,6 +62,7 @@
             interface="ddf.catalog.source.FederatedSource">
         <cm:managed-component class="org.codice.alliance.nsili.source.NsiliSource"
                               init-method="init" destroy-method="destroy">
+            <argument ref="nsiliCorbaOrb" />
 
             <cm:managed-properties persistent-id="" update-strategy="component-managed"
                                    update-method="refresh"/>
@@ -67,7 +71,6 @@
             <property name="cxfUsername" value=""/>
             <property name="cxfPassword" value=""/>
             <property name="cxfTimeout" value="60"/>
-            <property name="corbaTimeout" value="60"/>
             <property name="pollInterval" value="5"/>
             <property name="maxHitCount" value="250"/>
             <property name="additionalQueryParams"
@@ -88,6 +91,7 @@
             interface="ddf.catalog.source.ConnectedSource">
         <cm:managed-component class="org.codice.alliance.nsili.source.NsiliSource"
                               init-method="init" destroy-method="destroy">
+            <argument ref="nsiliCorbaOrb" />
 
             <cm:managed-properties persistent-id="" update-strategy="component-managed"
                                    update-method="refresh"/>
@@ -96,7 +100,6 @@
             <property name="cxfUsername" value=""/>
             <property name="cxfPassword" value=""/>
             <property name="cxfTimeout" value="60"/>
-            <property name="corbaTimeout" value="60"/>
             <property name="pollInterval" value="5"/>
             <property name="maxHitCount" value="250"/>
             <property name="additionalQueryParams"

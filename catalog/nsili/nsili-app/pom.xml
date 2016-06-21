@@ -38,6 +38,16 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.codice.alliance.nsili</groupId>
+            <artifactId>catalog-nsili-orb-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codice.alliance.nsili</groupId>
+            <artifactId>catalog-nsili-orb-impl</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>ddf.catalog.core</groupId>
             <artifactId>catalog-core-api</artifactId>
             <version>${ddf.version}</version>

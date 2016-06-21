@@ -237,7 +237,7 @@ public class TestNsiliCommon {
         when(securityManager.getSubject(any(Object.class))).thenReturn(mockSubject);
     }
 
-    protected void setupOrb()
+    public void setupOrb()
             throws InvalidName, AdapterInactive, WrongPolicy, ServantNotActive, IOException,
             SecurityServiceException {
 
