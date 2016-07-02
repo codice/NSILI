@@ -17,30 +17,14 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-
-import org.codice.alliance.nsili.endpoint.managers.AccessManagerImpl;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.omg.CORBA.ORB;
-import org.omg.CORBA.ORBPackage.InvalidName;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAHelper;
-import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
-import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
-import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
-import org.omg.PortableServer.POAPackage.ServantNotActive;
-import org.omg.PortableServer.POAPackage.WrongPolicy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.codice.alliance.nsili.common.CorbaUtils;
 import org.codice.alliance.nsili.common.GIAS.ProductMgrHelper;
@@ -51,8 +35,19 @@ import org.codice.alliance.nsili.common.ResultDAGConverter;
 import org.codice.alliance.nsili.common.UCO.DAG;
 import org.codice.alliance.nsili.common.UID.Product;
 import org.codice.alliance.nsili.common.UID.ProductHelper;
+import org.codice.alliance.nsili.endpoint.managers.AccessManagerImpl;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
+import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
+import org.omg.PortableServer.POAPackage.ServantNotActive;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.Result;
 import ddf.catalog.data.impl.AttributeImpl;
@@ -62,7 +57,6 @@ import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryResponseImpl;
-import ddf.security.Subject;
 import ddf.security.service.SecurityServiceException;
 
 public class TestAccessManagerImpl extends TestNsiliCommon {
@@ -75,7 +69,11 @@ public class TestAccessManagerImpl extends TestNsiliCommon {
 
     private Product testProduct = null;
 
-    private String testMetacardId = UUID.randomUUID().toString().replaceAll("-", "");;
+    private String testMetacardId = UUID.randomUUID()
+            .toString()
+            .replaceAll("-", "");
+
+    ;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TestAccessManagerImpl.class);
 
@@ -97,7 +95,8 @@ public class TestAccessManagerImpl extends TestNsiliCommon {
 
         testQuery = new Query(NsiliConstants.NSIL_ALL_VIEW, bqsQuery);
 
-        String managerId = UUID.randomUUID().toString();
+        String managerId = UUID.randomUUID()
+                .toString();
         accessManager = new AccessManagerImpl();
         accessManager.setFilterBuilder(new GeotoolsFilterBuilder());
         accessManager.setSubject(mockSubject);
@@ -124,7 +123,11 @@ public class TestAccessManagerImpl extends TestNsiliCommon {
         testMetacard.setTitle("JUnit Test Card");
         Result testResult = new ResultImpl(testMetacard);
 
-        DAG dag = ResultDAGConverter.convertResult(testResult, orb, rootPOA, new ArrayList<>());
+        DAG dag = ResultDAGConverter.convertResult(testResult,
+                orb,
+                rootPOA,
+                new ArrayList<>(),
+                new HashMap<>());
         Product product = ProductHelper.extract(dag.nodes[0].value);
         boolean avail = accessManager.is_available(product, null);
         assertThat(avail, is(false));
@@ -138,7 +141,8 @@ public class TestAccessManagerImpl extends TestNsiliCommon {
         MetacardImpl testMetacard = new MetacardImpl();
         testMetacard.setId(testMetacardId);
         testMetacard.setTitle("JUnit Test Card");
-        testMetacard.setAttribute(new AttributeImpl(Metacard.RESOURCE_DOWNLOAD_URL, "http://localhost:20000/not/present"));
+        testMetacard.setAttribute(new AttributeImpl(Metacard.RESOURCE_DOWNLOAD_URL,
+                "http://localhost:20000/not/present"));
         Result testResult = new ResultImpl(testMetacard);
 
         List<Result> results = new ArrayList<>();
@@ -146,7 +150,11 @@ public class TestAccessManagerImpl extends TestNsiliCommon {
         QueryResponse testResponse = new QueryResponseImpl(null, results, results.size());
         when(mockCatalogFramework.query(any(QueryRequest.class))).thenReturn(testResponse);
 
-        DAG dag = ResultDAGConverter.convertResult(testResult, orb, rootPOA, new ArrayList<>());
+        DAG dag = ResultDAGConverter.convertResult(testResult,
+                orb,
+                rootPOA,
+                new ArrayList<>(),
+                new HashMap<>());
         Product product = ProductHelper.extract(dag.nodes[0].value);
         boolean avail = accessManager.is_available(product, null);
         assertThat(avail, is(false));

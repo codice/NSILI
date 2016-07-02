@@ -70,6 +70,8 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
 
     private List<String> querySources = new ArrayList<>();
 
+    private boolean outgoingValidationEnabled;
+
     public CatalogMgrImpl(POA poa, FilterBuilder filterBuilder, List<String> querySources) {
         this.poa = poa;
         this.filterBuilder = filterBuilder;
@@ -88,6 +90,10 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
 
     public void setGuestSubject(Subject guestSubject) {
         this.guestSubject = guestSubject;
+    }
+
+    public void setOutgoingValidationEnabled(boolean outgoingValidationEnabled) {
+        this.outgoingValidationEnabled = outgoingValidationEnabled;
     }
 
     @Override
@@ -136,6 +142,7 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
                 querySources);
         submitQueryRequest.set_number_of_hits(maxNumResults);
         submitQueryRequest.setTimeout(defaultTimeout);
+        submitQueryRequest.setOutgoingValidationEnabled(outgoingValidationEnabled);
 
         submitQueryRequest.setResultAttributes(result_attributes);
 

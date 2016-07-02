@@ -14,10 +14,14 @@
 package org.codice.alliance.nsili.common;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.codice.alliance.nsili.common.UCO.DAG;
@@ -51,14 +55,79 @@ public class TestResultDAGConverter {
         String sourceAttr = NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_CARD + "."
                 + NsiliConstants.SOURCE_LIBRARY;
 
-        DAG dag = ResultDAGConverter.convertResult(result, orb, rootPOA, new ArrayList<>());
+        DAG dag = ResultDAGConverter.convertResult(result,
+                orb,
+                rootPOA,
+                new ArrayList<>(),
+                new HashMap<>());
         assertThat(checkDagContains(dag, sourceAttr), is(true));
 
         List<String> singleAttrList = new ArrayList<>();
         singleAttrList.add(NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_CARD + "."
                 + NsiliConstants.IDENTIFIER);
-        DAG oneAttrDAG = ResultDAGConverter.convertResult(result, orb, rootPOA, singleAttrList);
+        DAG oneAttrDAG = ResultDAGConverter.convertResult(result,
+                orb,
+                rootPOA,
+                singleAttrList,
+                new HashMap<>());
         assertThat(checkDagContains(oneAttrDAG, sourceAttr), is(false));
+    }
+
+    @Test(expected = DagParsingException.class)
+    public void testMandatoryAttributesFail() throws Exception {
+        String id = UUID.randomUUID()
+                .toString();
+        MetacardImpl card = new MetacardImpl();
+        card.setId(id);
+        card.setTitle("Test Title");
+        card.setSourceId("Test Source");
+
+        ResultImpl result = new ResultImpl();
+        result.setMetacard(card);
+
+        ORB orb = ORB.init(new String[0], null);
+        POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+        rootPOA.the_POAManager()
+                .activate();
+
+        String sourceAttr = NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_CARD + "."
+                + NsiliConstants.SOURCE_LIBRARY;
+
+        Map<String, List<String>> mandatoryAttrs = new HashMap<>();
+        mandatoryAttrs.put(NsiliConstants.NSIL_COMMON,
+                Arrays.asList(NsiliConstants.IDENTIFIER_MISSION));
+        DAG dag = ResultDAGConverter.convertResult(result,
+                orb,
+                rootPOA,
+                new ArrayList<>(),
+                mandatoryAttrs);
+    }
+
+    @Test
+    public void testMandatoryAttributesSuccess() throws Exception {
+        String id = UUID.randomUUID()
+                .toString();
+        MetacardImpl card = new MetacardImpl();
+        card.setId(id);
+        card.setTitle("Test Title");
+        card.setSourceId("Test Source");
+
+        ResultImpl result = new ResultImpl();
+        result.setMetacard(card);
+
+        ORB orb = ORB.init(new String[0], null);
+        POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+        rootPOA.the_POAManager()
+                .activate();
+
+        Map<String, List<String>> mandatoryAttrs = new HashMap<>();
+        mandatoryAttrs.put(NsiliConstants.NSIL_CARD, Arrays.asList(NsiliConstants.IDENTIFIER));
+        DAG dag = ResultDAGConverter.convertResult(result,
+                orb,
+                rootPOA,
+                new ArrayList<>(),
+                mandatoryAttrs);
+        assertThat(dag, notNullValue());
     }
 
     private static boolean checkDagContains(DAG dag, String attribute) {

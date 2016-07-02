@@ -84,6 +84,8 @@ public class LibraryImpl extends LibraryPOA {
 
     private int maxPendingResults;
 
+    private boolean outgoingValidationEnabled;
+
     private List<String> querySources = new ArrayList<>();
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(LibraryImpl.class);
@@ -123,6 +125,10 @@ public class LibraryImpl extends LibraryPOA {
         }
     }
 
+    public void setOutgoingValidationEnabled(boolean outgoingValidationEnabled) {
+        this.outgoingValidationEnabled = outgoingValidationEnabled;
+    }
+
     @Override
     public String[] get_manager_types() throws ProcessingFault, SystemFault {
         LOGGER.trace("get_manager_types() called");
@@ -141,6 +147,7 @@ public class LibraryImpl extends LibraryPOA {
             CatalogMgrImpl catalogMgr = new CatalogMgrImpl(poa, filterBuilder, querySources);
             catalogMgr.setCatalogFramework(catalogFramework);
             catalogMgr.setGuestSubject(guestSubject);
+            catalogMgr.setOutgoingValidationEnabled(outgoingValidationEnabled);
             if (!CorbaUtils.isIdActive(poa,
                     managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
                 try {
@@ -177,6 +184,7 @@ public class LibraryImpl extends LibraryPOA {
             productMgr.setCatalogFramework(catalogFramework);
             productMgr.setFilterBuilder(filterBuilder);
             productMgr.setSubject(guestSubject);
+            productMgr.setOutgoingValidationEnabled(outgoingValidationEnabled);
             if (!CorbaUtils.isIdActive(poa,
                     managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
                 try {
@@ -227,6 +235,7 @@ public class LibraryImpl extends LibraryPOA {
             standingQueryMgr.setSubject(guestSubject);
             standingQueryMgr.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencyMsec);
             standingQueryMgr.setMaxPendingResults(maxPendingResults);
+            standingQueryMgr.setOutgoingValidationEnabled(outgoingValidationEnabled);
             if (!CorbaUtils.isIdActive(poa,
                     managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
                 try {

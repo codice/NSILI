@@ -76,6 +76,8 @@ public class ProductMgrImpl extends ProductMgrPOA {
 
     private AccessManagerImpl accessManager;
 
+    private boolean outgoingValidationEnabled;
+
     public ProductMgrImpl(List<String> querySources) {
         this.querySources = querySources;
     }
@@ -90,6 +92,10 @@ public class ProductMgrImpl extends ProductMgrPOA {
 
     public void setSubject(Subject subject) {
         this.subject = subject;
+    }
+
+    public void setOutgoingValidationEnabled(boolean outgoingValidationEnabled) {
+        this.outgoingValidationEnabled = outgoingValidationEnabled;
     }
 
     @Override
@@ -110,7 +116,8 @@ public class ProductMgrImpl extends ProductMgrPOA {
                     catalogFramework,
                     filterBuilder,
                     subject,
-                    querySources);
+                    querySources,
+                    outgoingValidationEnabled);
             _poa().activate_object_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
                     getParametersRequest);
 

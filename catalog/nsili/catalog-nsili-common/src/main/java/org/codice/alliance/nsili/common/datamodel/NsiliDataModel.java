@@ -20,6 +20,7 @@ import java.util.Map;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.codice.alliance.nsili.common.GIAS.RequirementMode;
 import org.codice.alliance.nsili.common.NsiliConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -277,6 +278,8 @@ public class NsiliDataModel {
 
     private List<Association> associations = new ArrayList<>();
 
+    private Map<String, Map<String, List<String>>> requiredAttrMap = new HashMap<>();
+
     public NsiliDataModel() {
         init();
     }
@@ -414,8 +417,10 @@ public class NsiliDataModel {
         conceptualPairs.add(modificationDatePair);
         conceptualPairs.add(productTitlePair);
         conceptualPairs.add(uniqueIdPair);
-
         conceptualAttrMap.put(NsiliConstants.NSIL_ALL_VIEW, conceptualPairs);
+        updateMandatoryAttrs(NsiliConstants.NSIL_ALL_VIEW, viewNodes);
+
+
     }
 
     private void initImageryViewGraph() {
@@ -445,8 +450,9 @@ public class NsiliDataModel {
         conceptualPairs.add(modificationDatePair);
         conceptualPairs.add(productTitlePair);
         conceptualPairs.add(uniqueIdPair);
-
         conceptualAttrMap.put(NsiliConstants.NSIL_IMAGERY_VIEW, conceptualPairs);
+
+        updateMandatoryAttrs(NsiliConstants.NSIL_IMAGERY_VIEW, viewNodes);
     }
 
     private void initGmtiViewGraph() {
@@ -481,8 +487,8 @@ public class NsiliDataModel {
         conceptualPairs.add(modificationDatePair);
         conceptualPairs.add(productTitlePair);
         conceptualPairs.add(uniqueIdPair);
-
         conceptualAttrMap.put(NsiliConstants.NSIL_GMTI_VIEW, conceptualPairs);
+        updateMandatoryAttrs(NsiliConstants.NSIL_GMTI_VIEW, viewNodes);
     }
 
     private void initMessageViewGraph() {
@@ -516,8 +522,8 @@ public class NsiliDataModel {
         conceptualPairs.add(modificationDatePair);
         conceptualPairs.add(productTitlePair);
         conceptualPairs.add(uniqueIdPair);
-
         conceptualAttrMap.put(NsiliConstants.NSIL_MESSAGE_VIEW, conceptualPairs);
+        updateMandatoryAttrs(NsiliConstants.NSIL_MESSAGE_VIEW, viewNodes);
     }
 
     private void initVideoViewGraph() {
@@ -554,6 +560,7 @@ public class NsiliDataModel {
         conceptualPairs.add(uniqueIdPair);
 
         conceptualAttrMap.put(NsiliConstants.NSIL_VIDEO_VIEW, conceptualPairs);
+        updateMandatoryAttrs(NsiliConstants.NSIL_VIDEO_VIEW, viewNodes);
     }
 
     private void initAssociationViewGraph() {
@@ -571,8 +578,8 @@ public class NsiliDataModel {
         List<Pair<ConceptualAttributeType, String>> conceptualPairs = new ArrayList<>();
         conceptualPairs.add(modificationDatePair);
         conceptualPairs.add(uniqueIdPair);
-
         conceptualAttrMap.put(NsiliConstants.NSIL_ASSOCIATION_VIEW, conceptualPairs);
+        updateMandatoryAttrs(NsiliConstants.NSIL_ASSOCIATION_VIEW, viewNodes);
     }
 
     private void initReportViewGraph() {
@@ -606,8 +613,8 @@ public class NsiliDataModel {
         conceptualPairs.add(modificationDatePair);
         conceptualPairs.add(productTitlePair);
         conceptualPairs.add(uniqueIdPair);
-
         conceptualAttrMap.put(NsiliConstants.NSIL_REPORT_VIEW, conceptualPairs);
+        updateMandatoryAttrs(NsiliConstants.NSIL_REPORT_VIEW, viewNodes);
     }
 
     private void initTdlViewGraph() {
@@ -642,8 +649,8 @@ public class NsiliDataModel {
         conceptualPairs.add(modificationDatePair);
         conceptualPairs.add(productTitlePair);
         conceptualPairs.add(uniqueIdPair);
-
         conceptualAttrMap.put(NsiliConstants.NSIL_TDL_VIEW, conceptualPairs);
+        updateMandatoryAttrs(NsiliConstants.NSIL_TDL_VIEW, viewNodes);
     }
 
     private void initCcirmViewGraph() {
@@ -678,8 +685,8 @@ public class NsiliDataModel {
         conceptualPairs.add(modificationDatePair);
         conceptualPairs.add(productTitlePair);
         conceptualPairs.add(uniqueIdPair);
-
         conceptualAttrMap.put(NsiliConstants.NSIL_CCIRM_VIEW, conceptualPairs);
+        updateMandatoryAttrs(NsiliConstants.NSIL_CCIRM_VIEW, viewNodes);
     }
 
     private void initAliasCategoryMap() {
@@ -937,6 +944,37 @@ public class NsiliDataModel {
 
     public List<Association> getAssociations() {
         return associations;
+    }
+
+    public Map<String, List<String>> getRequiredAttrsForView(String viewName) {
+        return requiredAttrMap.get(viewName);
+    }
+
+    private void updateMandatoryAttrs(String viewName, EntityNode[] viewNodes) {
+        Map<String, List<String>> attrMap = new HashMap<>();
+
+        for (EntityNode entityNode : viewNodes) {
+            List<AttributeInformation> nodeAttrs = getAttributeInformation(entityNode.entity_name);
+            if (nodeAttrs != null) {
+                for (AttributeInformation nodeAttr : nodeAttrs) {
+                    if (nodeAttr.mode == RequirementMode.MANDATORY) {
+                        String attributeName = nodeAttr.attribute_name;
+                        String[] attrNameArr = attributeName.split("\\.");
+                        if (attrNameArr.length == 2) {
+                            String parentNode = attrNameArr[0];
+                            String attrName = attrNameArr[1];
+                            List<String> attrs = attrMap.get(parentNode);
+                            if (attrs == null) {
+                                attrs = new ArrayList<>(4);
+                                attrMap.put(parentNode, attrs);
+                            }
+                            attrs.add(attrName);
+                        }
+                    }
+                }
+            }
+        }
+        requiredAttrMap.put(viewName, attrMap);
     }
 
 }

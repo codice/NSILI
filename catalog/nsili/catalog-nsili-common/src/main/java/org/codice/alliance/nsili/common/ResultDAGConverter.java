@@ -25,6 +25,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 import org.codice.alliance.nsili.common.UCO.AbsTime;
@@ -71,8 +74,11 @@ public class ResultDAGConverter {
 
     private static final String ENCODING = StandardCharsets.UTF_8.name();
 
-    public static DAG convertResult(Result result, ORB orb, POA poa,
-            List<String> resultAttributes) {
+    private static final Pattern ATTRIBUTE_PATTERN = Pattern.compile(
+            "([a-zA-Z0-9_:]+):([a-zA-Z0-9_]+).([a-zA-Z0-9]+)");
+
+    public static DAG convertResult(Result result, ORB orb, POA poa, List<String> resultAttributes,
+            Map<String, List<String>> mandatoryAttributes) throws DagParsingException {
         Double distanceInMeters = result.getDistanceInMeters();
         Double resultScore = result.getRelevanceScore();
         Metacard metacard = result.getMetacard();
@@ -110,39 +116,62 @@ public class ResultDAGConverter {
 
         graph.addVertex(productNode);
 
-        addCardNodeWithAttributes(graph,
+        List<String> addedAttributes = new ArrayList<>();
+        addedAttributes.addAll(addCardNodeWithAttributes(graph,
                 productNode,
                 metacard,
                 orb,
                 attributeName + ":",
-                resultAttributes);
-        addFileNodeWithAttributes(graph,
+                resultAttributes));
+        addedAttributes.addAll(addFileNodeWithAttributes(graph,
                 productNode,
                 metacard,
                 orb,
                 attributeName + ":",
-                resultAttributes);
-        addSecurityNodeWithAttributes(graph,
+                resultAttributes));
+        addedAttributes.addAll(addSecurityNodeWithAttributes(graph,
                 productNode,
                 metacard,
                 orb,
                 attributeName + ":",
-                resultAttributes);
-        addMetadataSecurityNodeWithAttributes(graph,
+                resultAttributes));
+        addedAttributes.addAll(addMetadataSecurityNodeWithAttributes(graph,
                 productNode,
                 metacard,
                 orb,
                 attributeName + ":",
-                resultAttributes);
-        addParts(graph, productNode, metacard, orb, attributeName + ":", resultAttributes);
+                resultAttributes));
+        addedAttributes.addAll(addParts(graph,
+                productNode,
+                metacard,
+                orb,
+                attributeName + ":",
+                resultAttributes));
 
         if (metacard.getThumbnail() != null && metacard.getThumbnail().length > 0) {
-            addThumbnailRelatedFile(graph,
+            addedAttributes.addAll(addThumbnailRelatedFile(graph,
                     productNode,
                     metacard,
                     orb,
                     attributeName + ":",
-                    resultAttributes);
+                    resultAttributes));
+        }
+
+        if (mandatoryAttributes != null && !mandatoryAttributes.isEmpty()) {
+            final ThreadLocal<Boolean> dataIsValid = new ThreadLocal<>();
+            dataIsValid.set(true);
+            Map<String, List<String>> addedAttrMap = getAttrMap(addedAttributes);
+            addedAttrMap.entrySet()
+                    .stream()
+                    .forEach(entry -> dataIsValid.set(
+                            dataIsValid.get() && processEntry(entry.getKey(),
+                                    mandatoryAttributes.get(entry.getKey()),
+                                    entry.getValue())));
+
+            if (!dataIsValid.get()) {
+                throw new DagParsingException(
+                        "One or more mandatory attributes is missing on outgoing data");
+            }
         }
 
         graph.addVertex(productNode);
@@ -155,9 +184,10 @@ public class ResultDAGConverter {
         return dag;
     }
 
-    public static void addCardNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
+    public static List<String> addCardNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
             Node productNode, Metacard metacard, ORB orb, String parentAttrName,
             List<String> resultAttributes) {
+        List<String> addedAttributes = new ArrayList<>();
         Any any = orb.create_any();
         Node cardNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_CARD, any);
         graph.addVertex(cardNode);
@@ -168,6 +198,7 @@ public class ResultDAGConverter {
         if (shouldAdd(buildAttr(attribute, NsiliConstants.IDENTIFIER), resultAttributes)
                 && metacard.getId() != null) {
             addStringAttribute(graph, cardNode, NsiliConstants.IDENTIFIER, metacard.getId(), orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.IDENTIFIER));
         }
 
         if (metacard.getCreatedDate() != null) {
@@ -178,6 +209,7 @@ public class ResultDAGConverter {
                         NsiliConstants.SOURCE_DATE_TIME_MODIFIED,
                         metacard.getCreatedDate(),
                         orb);
+                addedAttributes.add(buildAttr(attribute, NsiliConstants.SOURCE_DATE_TIME_MODIFIED));
             }
 
             if (shouldAdd(buildAttr(attribute, NsiliConstants.DATE_TIME_MODIFIED),
@@ -187,6 +219,7 @@ public class ResultDAGConverter {
                         NsiliConstants.DATE_TIME_MODIFIED,
                         metacard.getCreatedDate(),
                         orb);
+                addedAttributes.add(buildAttr(attribute, NsiliConstants.DATE_TIME_MODIFIED));
             }
         }
 
@@ -204,20 +237,25 @@ public class ResultDAGConverter {
                         NsiliConstants.UNKNOWN,
                         orb);
             }
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.SOURCE_LIBRARY));
         }
 
-        if (shouldAdd(buildAttr(attribute, NsiliConstants.DATE_TIME_MODIFIED), resultAttributes)) {
+        if (shouldAdd(buildAttr(attribute, NsiliConstants.STATUS), resultAttributes)) {
             addStringAttribute(graph,
                     cardNode,
                     NsiliConstants.STATUS,
                     NsiliCardStatus.CHANGED.name(),
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.STATUS));
         }
+
+        return addedAttributes;
     }
 
-    public static void addFileNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
+    public static List<String> addFileNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
             Node productNode, Metacard metacard, ORB orb, String parentAttrName,
             List<String> resultAttributes) {
+        List<String> addedAttributes = new ArrayList<>();
         Any any = orb.create_any();
         Node fileNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_FILE, any);
         graph.addVertex(fileNode);
@@ -227,6 +265,7 @@ public class ResultDAGConverter {
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.ARCHIVED), resultAttributes)) {
             addBooleanAttribute(graph, fileNode, NsiliConstants.ARCHIVED, false, orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.ARCHIVED));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.CREATOR), resultAttributes)) {
@@ -249,6 +288,7 @@ public class ResultDAGConverter {
                         SystemInfo.getSiteName(),
                         orb);
             }
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.CREATOR));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.EXTENT), resultAttributes)) {
@@ -258,6 +298,7 @@ public class ResultDAGConverter {
                     Double resSizeMB = convertToMegabytes(resSize);
                     if (resSizeMB != null) {
                         addDoubleAttribute(graph, fileNode, NsiliConstants.EXTENT, resSizeMB, orb);
+                        addedAttributes.add(buildAttr(attribute, NsiliConstants.EXTENT));
                     }
                 } catch (NumberFormatException nfe) {
                     LOGGER.warn("Couldn't convert the resource size to double: {}",
@@ -273,6 +314,7 @@ public class ResultDAGConverter {
                     NsiliConstants.FORMAT,
                     metacard.getContentTypeName(),
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.FORMAT));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.FORMAT_VERSION), resultAttributes)
@@ -282,6 +324,7 @@ public class ResultDAGConverter {
                     NsiliConstants.FORMAT_VERSION,
                     metacard.getContentTypeVersion(),
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.FORMAT_VERSION));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.PRODUCT_URL), resultAttributes)) {
@@ -295,6 +338,7 @@ public class ResultDAGConverter {
                             NsiliConstants.PRODUCT_URL,
                             downloadUrl,
                             orb);
+                    addedAttributes.add(buildAttr(attribute, NsiliConstants.PRODUCT_URL));
                 }
             }
         }
@@ -302,6 +346,7 @@ public class ResultDAGConverter {
         if (shouldAdd(buildAttr(attribute, NsiliConstants.TITLE), resultAttributes)
                 && metacard.getTitle() != null) {
             addStringAttribute(graph, fileNode, NsiliConstants.TITLE, metacard.getTitle(), orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.TITLE));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.IS_PRODUCT_LOCAL), resultAttributes)) {
@@ -316,6 +361,7 @@ public class ResultDAGConverter {
                     NsiliConstants.IS_PRODUCT_LOCAL,
                     productLocal,
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.IS_PRODUCT_LOCAL));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.DATE_TIME_DECLARED), resultAttributes)) {
@@ -332,12 +378,15 @@ public class ResultDAGConverter {
                         new Date(),
                         orb);
             }
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.DATE_TIME_DECLARED));
         }
+        return addedAttributes;
     }
 
-    public static void addSecurityNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
+    public static List<String> addSecurityNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
             Node productNode, Metacard metacard, ORB orb, String parentAttrName,
             List<String> resultAttributes) {
+        List<String> addedAttributes = new ArrayList<>();
         Any any = orb.create_any();
         Node securityNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_SECURITY, any);
         graph.addVertex(securityNode);
@@ -352,20 +401,25 @@ public class ResultDAGConverter {
                     NsiliConstants.CLASSIFICATION,
                     NsiliClassification.UNCLASSIFIED.getSpecName(),
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.CLASSIFICATION));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.POLICY), resultAttributes)) {
             addStringAttribute(graph, securityNode, NsiliConstants.POLICY, "NATO", orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.POLICY));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.RELEASABILITY), resultAttributes)) {
             addStringAttribute(graph, securityNode, NsiliConstants.RELEASABILITY, "NATO", orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.RELEASABILITY));
         }
+        return addedAttributes;
     }
 
-    public static void addMetadataSecurityNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
-            Node productNode, Metacard metacard, ORB orb, String parentAttrName,
-            List<String> resultAttributes) {
+    public static List<String> addMetadataSecurityNodeWithAttributes(
+            DirectedAcyclicGraph<Node, Edge> graph, Node productNode, Metacard metacard, ORB orb,
+            String parentAttrName, List<String> resultAttributes) {
+        List<String> addedAttributes = new ArrayList<>();
         Any any = orb.create_any();
         Node metadataSecurityNode = new Node(0,
                 NodeType.ENTITY_NODE,
@@ -383,10 +437,12 @@ public class ResultDAGConverter {
                     NsiliConstants.CLASSIFICATION,
                     NsiliClassification.UNCLASSIFIED.getSpecName(),
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.CLASSIFICATION));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.POLICY), resultAttributes)) {
             addStringAttribute(graph, metadataSecurityNode, NsiliConstants.POLICY, "NATO", orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.POLICY));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.RELEASABILITY), resultAttributes)) {
@@ -395,11 +451,14 @@ public class ResultDAGConverter {
                     NsiliConstants.RELEASABILITY,
                     "NATO",
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.RELEASABILITY));
         }
+        return addedAttributes;
     }
 
-    public static void addParts(DirectedAcyclicGraph<Node, Edge> graph, Node productNode,
+    public static List<String> addParts(DirectedAcyclicGraph<Node, Edge> graph, Node productNode,
             Metacard metacard, ORB orb, String parentAttrName, List<String> resultAttributes) {
+        List<String> addedAttributes = new ArrayList<>();
         Any any = orb.create_any();
         Node partNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_PART, any);
         graph.addVertex(partNode);
@@ -418,32 +477,33 @@ public class ResultDAGConverter {
                     NsiliConstants.PART_IDENTIFIER,
                     partIdentifier,
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.PART_IDENTIFIER));
         }
 
-        addSecurityNodeWithAttributes(graph,
+        addedAttributes.addAll(addSecurityNodeWithAttributes(graph,
                 partNode,
                 metacard,
                 orb,
                 attribute + ":",
-                resultAttributes);
-        addCoverageNodeWithAttributes(graph,
+                resultAttributes));
+        addedAttributes.addAll(addCoverageNodeWithAttributes(graph,
                 partNode,
                 metacard,
                 orb,
                 attribute + ":",
-                resultAttributes);
+                resultAttributes));
 
         if (metacardContainsImageryData(metacard)) {
             type = NsiliProductType.IMAGERY.getSpecName();
 
-            addImageryPart(graph,
+            addedAttributes.addAll(addImageryPart(graph,
                     partNode,
                     metacard,
                     type,
                     orb,
                     partIdentifier,
                     attribute + ":",
-                    resultAttributes);
+                    resultAttributes));
         }
 
         if (metacardContainsGmtiData(metacard)) {
@@ -491,18 +551,21 @@ public class ResultDAGConverter {
             }
         }
 
-        addCommonNodeWithAttributes(graph,
+        addedAttributes.addAll(addCommonNodeWithAttributes(graph,
                 partNode,
                 metacard,
                 type,
                 orb,
                 attribute + ":",
-                resultAttributes);
+                resultAttributes));
+
+        return addedAttributes;
     }
 
-    public static void addImageryPart(DirectedAcyclicGraph<Node, Edge> graph, Node partNode,
+    public static List<String> addImageryPart(DirectedAcyclicGraph<Node, Edge> graph, Node partNode,
             Metacard metacard, String type, ORB orb, String partIdentifier, String parentAttrName,
             List<String> resultAttributes) {
+        List<String> addedAttributes = new ArrayList<>();
         Any imageryAny = orb.create_any();
         Node imageryNode = new Node(0,
                 NodeType.ENTITY_NODE,
@@ -520,6 +583,7 @@ public class ResultDAGConverter {
                     NsiliConstants.CATEGORY,
                     NsiliImageryType.VIS.name(),
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.CATEGORY));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.DECOMPRESSION_TECHNIQUE),
@@ -529,20 +593,26 @@ public class ResultDAGConverter {
                     NsiliConstants.DECOMPRESSION_TECHNIQUE,
                     NsiliImageryDecompressionTech.NC.name(),
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.DECOMPRESSION_TECHNIQUE));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.IDENTIFIER), resultAttributes)) {
             addStringAttribute(graph, imageryNode, NsiliConstants.IDENTIFIER, partIdentifier, orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.IDENTIFIER));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.NUMBER_OF_BANDS), resultAttributes)) {
             addIntegerAttribute(graph, imageryNode, NsiliConstants.NUMBER_OF_BANDS, 1, orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.NUMBER_OF_BANDS));
         }
+
+        return addedAttributes;
     }
 
-    public static void addCommonNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
+    public static List<String> addCommonNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
             Node partNode, Metacard metacard, String type, ORB orb, String parentAttrName,
             List<String> resultAttributes) {
+        List<String> addedAttributes = new ArrayList<>();
         Any any = orb.create_any();
         Node commonNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_COMMON, any);
         graph.addVertex(commonNode);
@@ -561,6 +631,7 @@ public class ResultDAGConverter {
                             NsiliConstants.DESCRIPTION_ABSTRACT,
                             descString,
                             orb);
+                    addedAttributes.add(buildAttr(attribute, NsiliConstants.DESCRIPTION_ABSTRACT));
                 }
             }
         }
@@ -573,18 +644,23 @@ public class ResultDAGConverter {
                         NsiliConstants.IDENTIFIER_UUID,
                         uuid.toString(),
                         orb);
+                addedAttributes.add(buildAttr(attribute, NsiliConstants.IDENTIFIER_UUID));
             }
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.TYPE), resultAttributes)
                 && type != null) {
             addStringAttribute(graph, commonNode, NsiliConstants.TYPE, type, orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.TYPE));
         }
+
+        return addedAttributes;
     }
 
-    public static void addCoverageNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
+    public static List<String> addCoverageNodeWithAttributes(DirectedAcyclicGraph<Node, Edge> graph,
             Node partNode, Metacard metacard, ORB orb, String parentAttrName,
             List<String> resultAttributes) {
+        List<String> addedAttributes = new ArrayList<>();
         Any any = orb.create_any();
 
         if (metacardContainsGeoInfo(metacard)) {
@@ -610,17 +686,21 @@ public class ResultDAGConverter {
                                 NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX,
                                 rect,
                                 orb);
+                        addedAttributes.add(buildAttr(attribute,
+                                NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX));
                     } catch (ParseException pe) {
                         LOGGER.warn("Unable to parse WKT for bounding box: {}", wktGeo, pe);
                     }
                 }
             }
         }
+        return addedAttributes;
     }
 
-    public static void addThumbnailRelatedFile(DirectedAcyclicGraph<Node, Edge> graph,
+    public static List<String> addThumbnailRelatedFile(DirectedAcyclicGraph<Node, Edge> graph,
             Node productNode, Metacard metacard, ORB orb, String parentAttrName,
             List<String> resultAttributes) {
+        List<String> addedAttributes = new ArrayList<>();
         Any any = orb.create_any();
         Node relatedFileNode = new Node(0,
                 NodeType.ENTITY_NODE,
@@ -655,6 +735,7 @@ public class ResultDAGConverter {
                         SystemInfo.getSiteName(),
                         orb);
             }
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.CREATOR));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.DATE_TIME_DECLARED), resultAttributes)) {
@@ -671,6 +752,7 @@ public class ResultDAGConverter {
                         new Date(),
                         orb);
             }
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.DATE_TIME_DECLARED));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.EXTENT), resultAttributes)) {
@@ -683,6 +765,7 @@ public class ResultDAGConverter {
                             NsiliConstants.EXTENT,
                             resSizeMB,
                             orb);
+                    addedAttributes.add(buildAttr(attribute, NsiliConstants.EXTENT));
                 } catch (NumberFormatException nfe) {
                     LOGGER.warn("Couldn't convert the thumbnail size to double: {}",
                             metacard.getResourceSize());
@@ -696,6 +779,7 @@ public class ResultDAGConverter {
                         CATALOG_SOURCE_PATH + "/" + metacard.getSourceId() + "/" + metacard.getId()
                                 + "?transform=" + THUMBNAIL_TRANSFORMER, true)).toASCIIString();
                 addStringAttribute(graph, relatedFileNode, NsiliConstants.URL, thumbnailURL, orb);
+                addedAttributes.add(buildAttr(attribute, NsiliConstants.URL));
             } catch (URISyntaxException e) {
                 LOGGER.warn("Unable to construct URI: {}", e);
                 LOGGER.debug("", e);
@@ -715,6 +799,7 @@ public class ResultDAGConverter {
                     NsiliConstants.IS_FILE_LOCAL,
                     fileLocal,
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.IS_FILE_LOCAL));
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.FILE_TYPE), resultAttributes)) {
@@ -723,7 +808,10 @@ public class ResultDAGConverter {
                     NsiliConstants.FILE_TYPE,
                     NsiliConstants.THUMBNAIL_TYPE,
                     orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.FILE_TYPE));
         }
+
+        return addedAttributes;
     }
 
     public static Node createRootNode(ORB orb) {
@@ -984,12 +1072,12 @@ public class ResultDAGConverter {
     }
 
     private static boolean shouldAdd(String attributeName, List<String> resultAttributes) {
-        boolean shouldAddAttribute = true;
-        if (!resultAttributes.isEmpty()) {
+        boolean shouldAddAttribute = false;
+        if (resultAttributes != null && !resultAttributes.isEmpty()) {
             if (resultAttributes.contains(attributeName)) {
                 shouldAddAttribute = true;
             } else {
-                int lastDot = attributeName.lastIndexOf(".");
+                int lastDot = attributeName.lastIndexOf("\\.");
                 if (lastDot != -1) {
                     String simpleAttrName = attributeName.substring(lastDot);
                     if (resultAttributes.contains(simpleAttrName)) {
@@ -1001,11 +1089,39 @@ public class ResultDAGConverter {
                     }
                 }
             }
+        } else {
+            shouldAddAttribute = true;
         }
+
         return shouldAddAttribute;
     }
 
     private static String buildAttr(String parentAttr, String attribute) {
         return parentAttr + "." + attribute;
+    }
+
+    private static Map<String, List<String>> getAttrMap(List<String> attributes) {
+        return attributes.stream()
+                .map(ATTRIBUTE_PATTERN::matcher)
+                .filter(Matcher::matches)
+                .collect(Collectors.groupingBy(m -> m.group(2),
+                        Collectors.mapping(m -> m.group(3), Collectors.toList())));
+    }
+
+    private static boolean processEntry(String entryName, List<String> requiredAttrs,
+            List<String> parsedAttrs) {
+        final ThreadLocal<Boolean> dataIsValid = new ThreadLocal<>();
+        dataIsValid.set(true);
+
+        if (requiredAttrs != null) {
+            requiredAttrs.stream()
+                    .filter(requiredAttr -> !parsedAttrs.contains(requiredAttr))
+                    .forEach(missingAttr -> {
+                        dataIsValid.set(false);
+                        LOGGER.warn("Node: {} is missing attribute: {}", entryName, missingAttr);
+                    });
+        }
+
+        return dataIsValid.get();
     }
 }

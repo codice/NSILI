@@ -81,6 +81,8 @@ public class NsiliEndpoint implements CorbaServiceListener {
 
     private org.omg.CORBA.Object libraryRef = null;
 
+    private boolean outgoingValidationEnabled = false;
+
     private List<String> querySources = new ArrayList<>();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NsiliEndpoint.class);
@@ -186,6 +188,13 @@ public class NsiliEndpoint implements CorbaServiceListener {
         this.orb = orb;
     }
 
+    public void setOutgoingValidationEnabled(boolean outgoingValidationEnabled) {
+        this.outgoingValidationEnabled = outgoingValidationEnabled;
+        if (library != null) {
+            library.setOutgoingValidationEnabled(outgoingValidationEnabled);
+        }
+    }
+
     public void destroy() {
         LOGGER.debug("Destroying NSILI Endpoint");
         if (corbaOrb != null) {
@@ -258,6 +267,7 @@ public class NsiliEndpoint implements CorbaServiceListener {
         library.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencySec * 1000);
         library.setMaxPendingResults(maxPendingResults);
         library.setQuerySources(querySources);
+        library.setOutgoingValidationEnabled(outgoingValidationEnabled);
 
         libraryRef = rootPOA.servant_to_reference(library);
 

@@ -384,7 +384,8 @@ public class TestSubmitStandingQueryRequestImpl extends TestNsiliCommon {
                 filterBuilder,
                 defaultUpdateFrequencyMsec,
                 null,
-                maxPendingResults);
+                maxPendingResults,
+                false);
         standingQueryRequest.register_callback(mockCallback2);
 
         String managerId = UUID.randomUUID().toString();

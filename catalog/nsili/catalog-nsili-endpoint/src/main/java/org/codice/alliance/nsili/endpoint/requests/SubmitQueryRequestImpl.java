@@ -20,17 +20,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
 import org.apache.shiro.subject.ExecutionException;
 import org.codice.alliance.nsili.common.BqsConverter;
 import org.codice.alliance.nsili.common.CB.Callback;
+import org.codice.alliance.nsili.common.DagParsingException;
 import org.codice.alliance.nsili.common.GIAS.DelayEstimate;
 import org.codice.alliance.nsili.common.GIAS.Query;
 import org.codice.alliance.nsili.common.GIAS.RequestManager;
 import org.codice.alliance.nsili.common.GIAS.SubmitQueryRequestPOA;
 import org.codice.alliance.nsili.common.GIAS._RequestManagerStub;
 import org.codice.alliance.nsili.common.NsilCorbaExceptionUtil;
+import org.codice.alliance.nsili.common.NsiliConstants;
 import org.codice.alliance.nsili.common.ResultDAGConverter;
 import org.codice.alliance.nsili.common.UCO.DAG;
 import org.codice.alliance.nsili.common.UCO.DAGListHolder;
@@ -41,6 +42,7 @@ import org.codice.alliance.nsili.common.UCO.State;
 import org.codice.alliance.nsili.common.UCO.Status;
 import org.codice.alliance.nsili.common.UCO.StringDAGListHolder;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
+import org.codice.alliance.nsili.common.datamodel.NsiliDataModel;
 import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.opengis.filter.Filter;
@@ -78,6 +80,8 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
 
     private List<String> resultAttributes = new ArrayList<>();
 
+    private boolean outgoingValidationEnabled;
+
     public SubmitQueryRequestImpl(Query query, BqsConverter bqsConverter,
             CatalogFramework catalogFramework, Subject guestSubject, List<String> querySources) {
         this.query = query;
@@ -113,6 +117,10 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
         }
     }
 
+    public void setOutgoingValidationEnabled(boolean outgoingValidationEnabled) {
+        this.outgoingValidationEnabled = outgoingValidationEnabled;
+    }
+
     @Override
     public State complete_DAG_results(DAGListHolder results) throws ProcessingFault, SystemFault {
         DAG[] noResults = new DAG[0];
@@ -124,12 +132,26 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
 
         LOGGER.debug("Query: {} return NSILI results: {}", query.bqs_query, queryResults.size());
 
+        Map<String, List<String>> mandatoryAttributes = new HashMap<>();
+        if (outgoingValidationEnabled) {
+            NsiliDataModel nsiliDataModel = new NsiliDataModel();
+            mandatoryAttributes = nsiliDataModel.getRequiredAttrsForView(NsiliConstants.NSIL_ALL_VIEW);
+        }
         for (Result result : queryResults) {
-            DAG dag = ResultDAGConverter.convertResult(result, _orb(), _poa(), resultAttributes);
-            if (dag != null) {
-                dags.add(dag);
-                totalHits++;
-                totalHitsReturned++;
+            try {
+                DAG dag = ResultDAGConverter.convertResult(result,
+                        _orb(),
+                        _poa(),
+                        resultAttributes,
+                        mandatoryAttributes);
+                if (dag != null) {
+                    dags.add(dag);
+                    totalHits++;
+                    totalHitsReturned++;
+                }
+            } catch (DagParsingException dpe) {
+                LOGGER.error("DAG could not be parsed and will not be returned to caller: {}", dpe);
+                LOGGER.debug("DAG Parsing Details", dpe);
             }
 
             if (totalHits >= maxNumReturnedHits) {

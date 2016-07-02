@@ -19,12 +19,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,10 +44,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.NO_IMPLEMENT;
-import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
 import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
@@ -56,7 +53,6 @@ import org.omg.PortableServer.POAPackage.WrongPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Result;
 import ddf.catalog.data.impl.MetacardImpl;
 import ddf.catalog.data.impl.ResultImpl;
@@ -64,14 +60,15 @@ import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryResponseImpl;
-import ddf.security.Subject;
 import ddf.security.service.SecurityServiceException;
 
 public class TestOrderMgrImpl extends TestNsiliCommon {
 
     private OrderMgrImpl orderMgr;
 
-    private String testMetacardId = UUID.randomUUID().toString().replaceAll("-", "");
+    private String testMetacardId = UUID.randomUUID()
+            .toString()
+            .replaceAll("-", "");
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TestOrderMgrImpl.class);
 
@@ -91,7 +88,8 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
             LOGGER.error("Unable to setup guest security credentials", e);
         }
 
-        String managerId = UUID.randomUUID().toString();
+        String managerId = UUID.randomUUID()
+                .toString();
         orderMgr = new OrderMgrImpl();
         orderMgr.setFilterBuilder(new GeotoolsFilterBuilder());
         orderMgr.setSubject(mockSubject);
@@ -108,7 +106,7 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
         }
 
         rootPOA.create_reference_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
-                        ProductMgrHelper.id());
+                ProductMgrHelper.id());
     }
 
     @Test
@@ -118,7 +116,11 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
         testMetacard.setTitle("JUnit Test Card");
         Result testResult = new ResultImpl(testMetacard);
 
-        DAG dag = ResultDAGConverter.convertResult(testResult, orb, rootPOA, new ArrayList<>());
+        DAG dag = ResultDAGConverter.convertResult(testResult,
+                orb,
+                rootPOA,
+                new ArrayList<>(),
+                new HashMap<>());
         Product product = ProductHelper.extract(dag.nodes[0].value);
         boolean avail = orderMgr.is_available(product, null);
         assertThat(avail, is(false));
@@ -126,7 +128,6 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
         avail = orderMgr.is_available(null, null);
         assertThat(avail, is(false));
     }
-
 
     @Test
     public void testOrder() throws Exception {
@@ -147,7 +148,7 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
     }
 
     @Test
-    public void testGetTimeout() throws Exception{
+    public void testGetTimeout() throws Exception {
         int timeout = orderMgr.get_timeout(null);
         assertThat(timeout, is(AccessManagerImpl.DEFAULT_TIMEOUT));
     }
@@ -186,7 +187,7 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
 
     @Test
     public void testSetAvailability() throws Exception {
-        SetAvailabilityRequest request = orderMgr.set_availability(null, null, null, (short)1);
+        SetAvailabilityRequest request = orderMgr.set_availability(null, null, null, (short) 1);
         assertThat(request, notNullValue());
     }
 
@@ -196,12 +197,12 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
         assertThat(properties.length, is(2));
     }
 
-    @Test (expected = NO_IMPLEMENT.class)
+    @Test(expected = NO_IMPLEMENT.class)
     public void testGetPropertyValues() throws Exception {
         orderMgr.get_property_values(null);
     }
 
-    @Test (expected = NO_IMPLEMENT.class)
+    @Test(expected = NO_IMPLEMENT.class)
     public void testGetLibraries() throws Exception {
         orderMgr.get_libraries();
     }

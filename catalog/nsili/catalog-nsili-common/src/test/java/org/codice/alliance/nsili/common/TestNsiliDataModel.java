@@ -15,8 +15,10 @@ package org.codice.alliance.nsili.common;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
@@ -103,5 +105,13 @@ public class TestNsiliDataModel {
         for (Association association : associations) {
             assertThat(association.attribute_info.length, is(12));
         }
+    }
+
+    @Test
+    public void testNsiliMandatoryAttrs() {
+        Map<String, List<String>> mandatoryAttrs = nsiliDataModel.getRequiredAttrsForView(NsiliConstants.NSIL_ALL_VIEW);
+        List<String> commonAttrs = mandatoryAttrs.get(NsiliConstants.NSIL_COMMON);
+        assertThat(commonAttrs, notNullValue());
+        assertThat(commonAttrs.size(), is(2));
     }
 }

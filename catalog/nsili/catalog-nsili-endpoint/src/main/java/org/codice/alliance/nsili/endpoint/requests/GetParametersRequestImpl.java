@@ -15,17 +15,21 @@ package org.codice.alliance.nsili.endpoint.requests;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import org.apache.shiro.subject.ExecutionException;
 import org.codice.alliance.nsili.common.CB.Callback;
+import org.codice.alliance.nsili.common.DagParsingException;
 import org.codice.alliance.nsili.common.GIAS.DelayEstimate;
 import org.codice.alliance.nsili.common.GIAS.GetParametersRequestPOA;
 import org.codice.alliance.nsili.common.GIAS.RequestManager;
 import org.codice.alliance.nsili.common.GIAS._RequestManagerStub;
 import org.codice.alliance.nsili.common.NsilCorbaExceptionUtil;
+import org.codice.alliance.nsili.common.NsiliConstants;
 import org.codice.alliance.nsili.common.ResultDAGConverter;
 import org.codice.alliance.nsili.common.UCO.DAGHolder;
 import org.codice.alliance.nsili.common.UCO.InvalidInputParameter;
@@ -35,6 +39,7 @@ import org.codice.alliance.nsili.common.UCO.State;
 import org.codice.alliance.nsili.common.UCO.Status;
 import org.codice.alliance.nsili.common.UCO.StringDAGHolder;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
+import org.codice.alliance.nsili.common.datamodel.NsiliDataModel;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.opengis.filter.Filter;
 import org.slf4j.LoggerFactory;
@@ -67,15 +72,18 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
 
     private List<String> querySources;
 
+    private boolean outgoingValidationEnabled;
+
     public GetParametersRequestImpl(String productIdStr, String[] desiredParameters,
             CatalogFramework catalogFramework, FilterBuilder filterBuilder, Subject guestSubject,
-            List<String> querySources) {
+            List<String> querySources, boolean outgoingValidationEnabled) {
         this.productIdStr = productIdStr;
         this.desiredParameters = desiredParameters;
         this.catalogFramework = catalogFramework;
         this.filterBuilder = filterBuilder;
         this.guestSubject = guestSubject;
         this.querySources = querySources;
+        this.outgoingValidationEnabled = outgoingValidationEnabled;
     }
 
     @Override
@@ -88,29 +96,43 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
         Result result = getResult(query);
 
         if (result != null) {
-            if (desiredParameters != null) {
-                if (isParamContained(desiredParameters, "ALL")) {
-                    parameters.value = ResultDAGConverter.convertResult(result,
-                            _orb(),
-                            _poa(),
-                            new ArrayList<>());
-                } else if (isParamContained(desiredParameters, "CORE")) {
-                    throw new NO_IMPLEMENT("CORE desired_parameter not supported");
-                } else if (isParamContained(desiredParameters, "ORDER")) {
-                    throw new NO_IMPLEMENT("ORDER desired_parameter not supported");
+            Map<String, List<String>> mandatoryAttributes = new HashMap<>();
+
+            if (outgoingValidationEnabled) {
+                NsiliDataModel nsiliDataModel = new NsiliDataModel();
+                mandatoryAttributes = nsiliDataModel.getRequiredAttrsForView(NsiliConstants.NSIL_ALL_VIEW);
+            }
+            try {
+                if (desiredParameters != null) {
+                    if (isParamContained(desiredParameters, "ALL")) {
+                        parameters.value = ResultDAGConverter.convertResult(result,
+                                _orb(),
+                                _poa(),
+                                new ArrayList<>(),
+                                mandatoryAttributes);
+                    } else if (isParamContained(desiredParameters, "CORE")) {
+                        throw new NO_IMPLEMENT("CORE desired_parameter not supported");
+                    } else if (isParamContained(desiredParameters, "ORDER")) {
+                        throw new NO_IMPLEMENT("ORDER desired_parameter not supported");
+                    } else {
+                        parameters.value = ResultDAGConverter.convertResult(result,
+                                _orb(),
+                                _poa(),
+                                Arrays.asList(desiredParameters),
+                                mandatoryAttributes);
+                    }
                 } else {
-                    parameters.value = ResultDAGConverter.convertResult(result,
-                            _orb(),
-                            _poa(),
-                            Arrays.asList(desiredParameters));
+                    if (result != null) {
+                        parameters.value = ResultDAGConverter.convertResult(result,
+                                _orb(),
+                                _poa(),
+                                new ArrayList<>(),
+                                mandatoryAttributes);
+                    }
                 }
-            } else {
-                if (result != null) {
-                    parameters.value = ResultDAGConverter.convertResult(result,
-                            _orb(),
-                            _poa(),
-                            new ArrayList<>());
-                }
+            } catch (DagParsingException dpe) {
+                LOGGER.error("DAG could not be parsed and will not be returned to caller: {}", dpe);
+                LOGGER.debug("DAG Parsing Details", dpe);
             }
         }
 

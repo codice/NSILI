@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import org.apache.shiro.subject.ExecutionException;
 import org.codice.alliance.nsili.common.BqsConverter;
 import org.codice.alliance.nsili.common.CB.Callback;
+import org.codice.alliance.nsili.common.DagParsingException;
 import org.codice.alliance.nsili.common.GIAS.DayEvent;
 import org.codice.alliance.nsili.common.GIAS.DayEventTime;
 import org.codice.alliance.nsili.common.GIAS.DelayEstimate;
@@ -56,6 +57,7 @@ import org.codice.alliance.nsili.common.UCO.Status;
 import org.codice.alliance.nsili.common.UCO.StringDAGListHolder;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
 import org.codice.alliance.nsili.common.UCO.Time;
+import org.codice.alliance.nsili.common.datamodel.NsiliDataModel;
 import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
 import org.codice.alliance.nsili.endpoint.managers.RequestManagerImpl;
 import org.codice.alliance.nsili.transformer.DAGConverter;
@@ -135,13 +137,16 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
 
     private List<String> querySources;
 
+    private boolean outgoingValidationEnabled;
+
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(
             SubmitStandingQueryRequestImpl.class);
 
     public SubmitStandingQueryRequestImpl(Query aQuery, String[] result_attributes,
             SortAttribute[] sort_attributes, QueryLifeSpan lifespan, NameValue[] properties,
             CatalogFramework catalogFramework, Subject subject, FilterBuilder filterBuilder,
-            long defaultUpdateFrequencyMsec, List<String> querySources, int maxPendingResults) {
+            long defaultUpdateFrequencyMsec, List<String> querySources, int maxPendingResults,
+            boolean outgoingValidationEnabled) {
         id = UUID.randomUUID()
                 .toString();
         if (result_attributes != null) {
@@ -158,6 +163,7 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
         this.query = aQuery;
         this.querySources = querySources;
         this.bqsFilter = bqsConverter.convertBQSToDDF(aQuery);
+        this.outgoingValidationEnabled = outgoingValidationEnabled;
 
         parseLifeSpan(lifespan);
         if (LOGGER.isTraceEnabled()) {
@@ -488,7 +494,7 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
             }
 
             QueryRequestImpl catalogQueryRequest;
-            if(querySources == null || querySources.isEmpty()) {
+            if (querySources == null || querySources.isEmpty()) {
                 LOGGER.trace("Query request will be local, no sources specified");
                 catalogQueryRequest = new QueryRequestImpl(catalogQuery);
             } else {
@@ -530,9 +536,23 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
 
             List<DAG> dags = new ArrayList<>();
 
+            Map<String, List<String>> mandatoryAttributes = new HashMap<>();
+            if (outgoingValidationEnabled) {
+                NsiliDataModel nsiliDataModel = new NsiliDataModel();
+                mandatoryAttributes = nsiliDataModel.getRequiredAttrsForView(NsiliConstants.NSIL_ALL_VIEW);
+            }
             for (Result catalogResult : catalogResults) {
-                DAG dag = ResultDAGConverter.convertResult(catalogResult, _orb(), _poa(), resultAttributes);
-                dags.add(dag);
+                try {
+                    DAG dag = ResultDAGConverter.convertResult(catalogResult,
+                            _orb(),
+                            _poa(),
+                            resultAttributes,
+                            mandatoryAttributes);
+                    dags.add(dag);
+                } catch (DagParsingException dpe) {
+                    LOGGER.error("DAG could not be parsed and will not be returned to caller: {}", dpe);
+                    LOGGER.debug("DAG Parsing Details", dpe);
+                }
             }
 
             if (!dags.isEmpty()) {
