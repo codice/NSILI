@@ -1,10 +1,10 @@
 /**
  * Copyright (c) Codice Foundation
- * <p>
+ * <p/>
  * This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser
  * General Public License as published by the Free Software Foundation, either version 3 of the
  * License, or any later version.
- * <p>
+ * <p/>
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
  * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Lesser General Public License for more details. A copy of the GNU Lesser General Public License
@@ -77,6 +77,9 @@ import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.converters.basic.NullConverter;
+import com.thoughtworks.xstream.converters.collections.ArrayConverter;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -111,6 +114,8 @@ public class DAGConverter {
 
     private String relatedFileUrl;
 
+    private XStream xstream;
+
     public DAGConverter(ResourceReader resourceReader) {
         this.resourceReader = resourceReader;
     }
@@ -118,6 +123,7 @@ public class DAGConverter {
     public MetacardImpl convertDAG(DAG dag, boolean swapCoordinates, String logSourceId) {
         MetacardImpl metacard = null;
         sourceId = logSourceId;
+        String metadata;
 
         //Need to have at least 2 nodes and an edge for anything useful
         if (dag.nodes != null && dag.edges != null) {
@@ -139,6 +145,9 @@ public class DAGConverter {
 
             metacard = parseGraph(graph, swapCoordinates);
             metacard.setSourceId(sourceId);
+
+            metadata = dagToXML(dag);
+            metacard.setMetadata(metadata);
         }
 
         return metacard;
@@ -1361,5 +1370,27 @@ public class DAGConverter {
         }
 
         return value;
+    }
+
+    private String dagToXML(DAG dag) {
+        final String cleanupStr = " class=\"com.sun.corba.se.impl.corba.AnyImpl\"";
+
+        xstream = new XStream();
+
+        xstream.alias("dag", DAG.class);
+        xstream.alias("node", Node.class);
+
+        xstream.registerConverter(new NullConverter());
+        xstream.registerConverter(new ArrayConverter(xstream.getMapper()));
+        xstream.registerConverter(new AnyConverter());
+
+        xstream.omitField(DAG.class, "edges");
+        xstream.omitField(Node.class, "id");
+        xstream.omitField(Node.class, "node_type");
+
+        String xmlDAG = xstream.toXML(dag);
+        xmlDAG = xmlDAG.replaceAll(cleanupStr, "");
+
+        return xmlDAG;
     }
 }
