@@ -78,18 +78,16 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
 
     private String mockResName = "testresource.jpg";
 
-    private Subject subject = mock(Subject.class);
-
     @Before
     public void setUp() throws Exception {
-        super.setupCommonMocks();
+        setupCommonMocks();
         setupMocks();
     }
 
     private void setupMocks() throws Exception {
         doReturn(getTestMetacard()).when(accessManager)
                 .getMetacard(any(Product.class));
-        doReturn(mockResourceResponse).when(subject)
+        doReturn(mockResourceResponse).when(mockSubject)
                 .execute(any(Callable.class));
         doReturn(mockResource).when(mockResourceResponse)
                 .getResource();
@@ -114,8 +112,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -138,8 +135,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -162,8 +158,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -186,8 +181,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -210,8 +204,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -234,8 +227,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -258,8 +250,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -282,8 +273,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -305,8 +295,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -329,8 +318,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -353,8 +341,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -377,8 +364,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -401,8 +387,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -425,8 +410,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -449,8 +433,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -473,8 +456,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -500,8 +482,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -522,8 +503,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -549,8 +529,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -573,8 +552,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -595,8 +573,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject) {
+                mockCatalogFramework) {
 
             @Override
             protected void writeFile(FileLocation destination, InputStream fileData, long size,
@@ -618,8 +595,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject);
+                mockCatalogFramework);
 
         RequestDescription requestDescription = orderRequest.get_request_description();
         assertThat(requestDescription, notNullValue());
@@ -633,8 +609,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject);
+                mockCatalogFramework);
 
         orderRequest.set_user_info("test user");
     }
@@ -647,8 +622,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject);
+                mockCatalogFramework);
 
         Status status = orderRequest.get_status();
         assertThat(status, notNullValue());
@@ -662,8 +636,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject);
+                mockCatalogFramework);
 
         DelayEstimate delayEstimate = orderRequest.get_remaining_delay();
         assertThat(delayEstimate, notNullValue());
@@ -677,8 +650,7 @@ public class TestOrderRequestImpl extends TestNsiliCommon {
                 PROTOCOL,
                 PORT,
                 accessManager,
-                mockCatalogFramework,
-                subject);
+                mockCatalogFramework);
 
         orderRequest.cancel();
     }

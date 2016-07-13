@@ -50,7 +50,6 @@ import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
-import ddf.security.Subject;
 
 public class CatalogMgrImpl extends CatalogMgrPOA {
 
@@ -64,9 +63,9 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
 
     private long defaultTimeout = AccessManagerImpl.DEFAULT_TIMEOUT;
 
-    private Subject guestSubject;
-
     private FilterBuilder filterBuilder;
+
+    private boolean removeSourceLibrary = true;
 
     private List<String> querySources = new ArrayList<>();
 
@@ -88,8 +87,8 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
         this.maxNumResults = maxNumResults;
     }
 
-    public void setGuestSubject(Subject guestSubject) {
-        this.guestSubject = guestSubject;
+    public void setRemoveSourceLibrary(boolean removeSourceLibrary) {
+        this.removeSourceLibrary = removeSourceLibrary;
     }
 
     public void setOutgoingValidationEnabled(boolean outgoingValidationEnabled) {
@@ -134,11 +133,10 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
     public SubmitQueryRequest submit_query(Query aQuery, String[] result_attributes,
             SortAttribute[] sort_attributes, NameValue[] properties)
             throws ProcessingFault, InvalidInputParameter, SystemFault {
-        BqsConverter bqsConverter = new BqsConverter(filterBuilder);
+        BqsConverter bqsConverter = new BqsConverter(filterBuilder, removeSourceLibrary);
         SubmitQueryRequestImpl submitQueryRequest = new SubmitQueryRequestImpl(aQuery,
                 bqsConverter,
                 catalogFramework,
-                guestSubject,
                 querySources);
         submitQueryRequest.set_number_of_hits(maxNumResults);
         submitQueryRequest.setTimeout(defaultTimeout);
@@ -208,7 +206,7 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
     protected long getResultCount(Query aQuery) {
         long resultCount = 0;
 
-        BqsConverter bqsConverter = new BqsConverter(filterBuilder);
+        BqsConverter bqsConverter = new BqsConverter(filterBuilder, removeSourceLibrary);
         Filter parsedFilter = bqsConverter.convertBQSToDDF(aQuery);
 
         QueryImpl catalogQuery = new QueryImpl(parsedFilter);
@@ -228,8 +226,7 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
 
         try {
             QueryCountCallable queryCallable = new QueryCountCallable(catalogQueryRequest);
-            resultCount = guestSubject.execute(queryCallable);
-
+            resultCount = NsiliEndpoint.getGuestSubject().execute(queryCallable);
         } catch (Exception e) {
             LOGGER.warn("Unable to query catalog", e);
         }

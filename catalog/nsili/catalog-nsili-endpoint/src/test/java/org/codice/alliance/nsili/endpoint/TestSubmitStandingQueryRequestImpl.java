@@ -344,7 +344,7 @@ public class TestSubmitStandingQueryRequestImpl extends TestNsiliCommon {
 
     private void setupMocks() throws Exception {
         List<Result> results = getTestResults();
-        BqsConverter bqsConverter = new BqsConverter(filterBuilder);
+        BqsConverter bqsConverter = new BqsConverter(filterBuilder, true);
         Filter filter = bqsConverter.convertBQSToDDF(getQuery());
         ddf.catalog.operation.Query query = new QueryImpl(filter);
         QueryResponse testResult = new QueryResponseImpl(new QueryRequestImpl(query), results, results.size());
@@ -380,11 +380,11 @@ public class TestSubmitStandingQueryRequestImpl extends TestNsiliCommon {
                 lifespan,
                 properties,
                 mockFramework,
-                mockSubject,
                 filterBuilder,
                 defaultUpdateFrequencyMsec,
                 null,
                 maxPendingResults,
+                true,
                 false);
         standingQueryRequest.register_callback(mockCallback2);
 

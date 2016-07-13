@@ -53,11 +53,9 @@ import org.codice.alliance.nsili.endpoint.managers.DataModelMgrImpl;
 
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.filter.FilterBuilder;
-import ddf.security.Subject;
+import ddf.security.service.SecurityManager;
 
 public class LibraryImpl extends LibraryPOA {
-
-    private static final String LIBRARY_VERSION = "NSILI|1.0";
 
     private List<String> managers = Arrays.asList(
             NsiliManagerType.ORDER_MGR.getSpecName(),
@@ -74,8 +72,6 @@ public class LibraryImpl extends LibraryPOA {
 
     private CatalogFramework catalogFramework;
 
-    private Subject guestSubject;
-
     private FilterBuilder filterBuilder;
 
     private int maxNumResults = NsiliEndpoint.DEFAULT_MAX_NUM_RESULTS;
@@ -87,6 +83,12 @@ public class LibraryImpl extends LibraryPOA {
     private boolean outgoingValidationEnabled;
 
     private List<String> querySources = new ArrayList<>();
+
+    private String libraryVersion = "NSILI|3.2";
+
+    private boolean removeSourceLibrary = true;
+
+    private SecurityManager securityManager;
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(LibraryImpl.class);
 
@@ -100,10 +102,6 @@ public class LibraryImpl extends LibraryPOA {
 
     public void setMaxNumResults(int maxNumResults) {
         this.maxNumResults = maxNumResults;
-    }
-
-    public void setGuestSubject(Subject guestSubject) {
-        this.guestSubject = guestSubject;
     }
 
     public void setFilterBuilder(FilterBuilder filterBuilder) {
@@ -123,6 +121,18 @@ public class LibraryImpl extends LibraryPOA {
         if (querySources != null) {
             this.querySources.addAll(querySources);
         }
+    }
+
+    public void setRemoveSourceLibrary(boolean removeSourceLibrary) {
+        this.removeSourceLibrary = removeSourceLibrary;
+    }
+
+    public void setLibraryVersion(String libraryVersion) {
+        this.libraryVersion = libraryVersion;
+    }
+
+    public void setSecurityManager(SecurityManager securityManager) {
+        this.securityManager = securityManager;
     }
 
     public void setOutgoingValidationEnabled(boolean outgoingValidationEnabled) {
@@ -146,8 +156,8 @@ public class LibraryImpl extends LibraryPOA {
         if (manager_type.equals(NsiliManagerType.CATALOG_MGR.getSpecName())) {
             CatalogMgrImpl catalogMgr = new CatalogMgrImpl(poa, filterBuilder, querySources);
             catalogMgr.setCatalogFramework(catalogFramework);
-            catalogMgr.setGuestSubject(guestSubject);
             catalogMgr.setOutgoingValidationEnabled(outgoingValidationEnabled);
+            catalogMgr.setRemoveSourceLibrary(removeSourceLibrary);
             if (!CorbaUtils.isIdActive(poa,
                     managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
                 try {
@@ -165,7 +175,6 @@ public class LibraryImpl extends LibraryPOA {
             OrderMgrImpl orderMgr = new OrderMgrImpl();
             orderMgr.setCatalogFramework(catalogFramework);
             orderMgr.setFilterBuilder(filterBuilder);
-            orderMgr.setSubject(guestSubject);
             if (!CorbaUtils.isIdActive(poa,
                     managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
                 try {
@@ -183,7 +192,6 @@ public class LibraryImpl extends LibraryPOA {
             ProductMgrImpl productMgr = new ProductMgrImpl(querySources);
             productMgr.setCatalogFramework(catalogFramework);
             productMgr.setFilterBuilder(filterBuilder);
-            productMgr.setSubject(guestSubject);
             productMgr.setOutgoingValidationEnabled(outgoingValidationEnabled);
             if (!CorbaUtils.isIdActive(poa,
                     managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
@@ -232,9 +240,9 @@ public class LibraryImpl extends LibraryPOA {
             StandingQueryMgrImpl standingQueryMgr = new StandingQueryMgrImpl(querySources);
             standingQueryMgr.setCatalogFramework(catalogFramework);
             standingQueryMgr.setFilterBuilder(filterBuilder);
-            standingQueryMgr.setSubject(guestSubject);
             standingQueryMgr.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencyMsec);
             standingQueryMgr.setMaxPendingResults(maxPendingResults);
+            standingQueryMgr.setRemoveSourceLibrary(removeSourceLibrary);
             standingQueryMgr.setOutgoingValidationEnabled(outgoingValidationEnabled);
             if (!CorbaUtils.isIdActive(poa,
                     managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
@@ -271,7 +279,7 @@ public class LibraryImpl extends LibraryPOA {
         String country = System.getProperty("user.country");
         String organization = System.getProperty("org.codice.ddf.system.organization");
         String libraryDescr = country + "|" + organization;
-        return new LibraryDescription(host, libraryDescr, LIBRARY_VERSION);
+        return new LibraryDescription(host, libraryDescr, libraryVersion);
     }
 
     @Override

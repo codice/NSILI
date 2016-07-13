@@ -59,8 +59,6 @@ public class OrderMgrImpl extends OrderMgrPOA {
 
     private FilterBuilder filterBuilder;
 
-    private Subject subject;
-
     private List<String> querySources = new ArrayList<>();
 
     public void setCatalogFramework(CatalogFramework catalogFramework) {
@@ -69,10 +67,6 @@ public class OrderMgrImpl extends OrderMgrPOA {
 
     public void setFilterBuilder(FilterBuilder filterBuilder) {
         this.filterBuilder = filterBuilder;
-    }
-
-    public void setSubject(Subject subject) {
-        this.subject = subject;
     }
 
     public void setQuerySources(List<String> querySources) {
@@ -119,8 +113,7 @@ public class OrderMgrImpl extends OrderMgrPOA {
                 protocol,
                 port,
                 getAccessManager(),
-                catalogFramework,
-                subject);
+                catalogFramework);
 
         String id = UUID.randomUUID()
                 .toString();
@@ -227,7 +220,6 @@ public class OrderMgrImpl extends OrderMgrPOA {
             accessManager = new AccessManagerImpl();
             accessManager.setCatalogFramework(catalogFramework);
             accessManager.setFilterBuilder(filterBuilder);
-            accessManager.setSubject(subject);
             accessManager.setQuerySources(querySources);
 
             String managerId = UUID.randomUUID()

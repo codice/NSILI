@@ -1073,24 +1073,35 @@ public class ResultDAGConverter {
 
     private static boolean shouldAdd(String attributeName, List<String> resultAttributes) {
         boolean shouldAddAttribute = false;
+
         if (resultAttributes != null && !resultAttributes.isEmpty()) {
             if (resultAttributes.contains(attributeName)) {
                 shouldAddAttribute = true;
             } else {
-                int lastDot = attributeName.lastIndexOf("\\.");
-                if (lastDot != -1) {
-                    String simpleAttrName = attributeName.substring(lastDot);
-                    if (resultAttributes.contains(simpleAttrName)) {
+                if (attributeName.lastIndexOf(':') != -1) {
+                    String nonScopeAttr = attributeName.substring(
+                            attributeName.lastIndexOf(':') + 1);
+                    if (resultAttributes.contains(nonScopeAttr)) {
                         shouldAddAttribute = true;
-                    } else {
-                        shouldAddAttribute = false;
-                        LOGGER.trace("Attribute is not supported in destination data model: {}",
-                                attributeName);
+                    }
+                }
+
+                if (!shouldAddAttribute) {
+                    int lastDot = attributeName.lastIndexOf(".");
+                    if (lastDot != -1) {
+                        String simpleAttrName = attributeName.substring(lastDot + 1);
+                        if (resultAttributes.contains(simpleAttrName)) {
+                            shouldAddAttribute = true;
+                        }
                     }
                 }
             }
         } else {
             shouldAddAttribute = true;
+        }
+
+        if (!shouldAddAttribute) {
+            LOGGER.trace("Attribute is not supported in destination data model: {}", attributeName);
         }
 
         return shouldAddAttribute;

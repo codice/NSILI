@@ -111,6 +111,7 @@ public class TestNsiliLibraryImpl extends TestNsiliCommon {
         nsiliEndpoint = new NsiliEndpoint();
         nsiliEndpoint.setSecurityManager(securityManager);
         nsiliEndpoint.setCorbaOrb(mockCorbaOrb);
+        nsiliEndpoint.setLibraryVersion("NSILI|3.2");
         nsiliEndpoint.init();
     }
 }

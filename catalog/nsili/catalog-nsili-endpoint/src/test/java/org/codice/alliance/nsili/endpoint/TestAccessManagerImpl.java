@@ -99,7 +99,6 @@ public class TestAccessManagerImpl extends TestNsiliCommon {
                 .toString();
         accessManager = new AccessManagerImpl();
         accessManager.setFilterBuilder(new GeotoolsFilterBuilder());
-        accessManager.setSubject(mockSubject);
         accessManager.setCatalogFramework(mockCatalogFramework);
 
         if (!CorbaUtils.isIdActive(rootPOA,

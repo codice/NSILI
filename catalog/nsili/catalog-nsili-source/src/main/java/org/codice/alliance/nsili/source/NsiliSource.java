@@ -64,7 +64,6 @@ import org.codice.alliance.nsili.common.GIAS.RequirementMode;
 import org.codice.alliance.nsili.common.GIAS.SortAttribute;
 import org.codice.alliance.nsili.common.GIAS.SubmitQueryRequest;
 import org.codice.alliance.nsili.common.GIAS.View;
-import org.codice.alliance.nsili.common.IOR;
 import org.codice.alliance.nsili.common.NsilCorbaExceptionUtil;
 import org.codice.alliance.nsili.common.Nsili;
 import org.codice.alliance.nsili.common.NsiliConstants;
@@ -464,17 +463,6 @@ public class NsiliSource extends MaskableImpl
      */
     private void initLibrary() {
         if (iorString != null) {
-
-            if (LOGGER.isDebugEnabled()) {
-                try {
-                    //Log the IOR content for debugging purposes
-                    IOR ior = new IOR(iorString.getBytes());
-                    ior.parse();
-                } catch (Exception e) {
-                    LOGGER.debug("Unable to parse IOR file", e);
-                }
-            }
-
             org.omg.CORBA.Object obj = orb.string_to_object(iorString);
 
             library = LibraryHelper.narrow(obj);

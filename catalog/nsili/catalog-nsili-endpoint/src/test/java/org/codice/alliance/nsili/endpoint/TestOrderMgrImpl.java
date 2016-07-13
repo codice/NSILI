@@ -92,7 +92,6 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
                 .toString();
         orderMgr = new OrderMgrImpl();
         orderMgr.setFilterBuilder(new GeotoolsFilterBuilder());
-        orderMgr.setSubject(mockSubject);
         orderMgr.setCatalogFramework(mockCatalogFramework);
 
         if (!CorbaUtils.isIdActive(rootPOA,

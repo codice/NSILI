@@ -59,6 +59,7 @@ import org.codice.alliance.nsili.common.UCO.RequestDescription;
 import org.codice.alliance.nsili.common.UCO.State;
 import org.codice.alliance.nsili.common.UCO.Status;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
+import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
 import org.codice.alliance.nsili.endpoint.managers.AccessManagerImpl;
 import org.codice.ddf.platform.util.TemporaryFileBackedOutputStream;
 import org.kamranzafar.jtar.TarEntry;
@@ -81,6 +82,7 @@ import ddf.catalog.resource.Resource;
 import ddf.catalog.resource.ResourceNotFoundException;
 import ddf.catalog.resource.ResourceNotSupportedException;
 import ddf.security.Subject;
+import ddf.security.service.SecurityServiceException;
 
 public class OrderRequestImpl extends OrderRequestPOA {
 
@@ -100,20 +102,17 @@ public class OrderRequestImpl extends OrderRequestPOA {
 
     private CatalogFramework catalogFramework;
 
-    private Subject subject;
-
     private String protocol;
 
     private int port;
 
     public OrderRequestImpl(OrderContents order, String protocol, int port,
-            AccessManagerImpl accessManager, CatalogFramework catalogFramework, Subject subject) {
+            AccessManagerImpl accessManager, CatalogFramework catalogFramework) {
         this.order = order;
         this.protocol = protocol;
         this.port = port;
         this.accessManager = accessManager;
         this.catalogFramework = catalogFramework;
-        this.subject = subject;
     }
 
     @Override
@@ -140,7 +139,7 @@ public class OrderRequestImpl extends OrderRequestPOA {
                             ResourceRequestCallable resourceRequestCallable =
                                     new ResourceRequestCallable(resourceRequest,
                                             metacard.getSourceId());
-                            resourceResponse = subject.execute(resourceRequestCallable);
+                            resourceResponse = NsiliEndpoint.getGuestSubject().execute(resourceRequestCallable);
 
                             if (resourceResponse != null
                                     && resourceResponse.getResource() != null) {
@@ -198,7 +197,7 @@ public class OrderRequestImpl extends OrderRequestPOA {
             } catch (UnsupportedEncodingException | WrongAdapter | WrongPolicy e) {
                 LOGGER.error("Unable to get Metacard for product: {}", e);
                 LOGGER.debug("Metacard retrieval error details", e);
-            } catch (IOException | ExecutionException e) {
+            } catch (IOException | ExecutionException | SecurityServiceException e) {
                 LOGGER.error("Unable to retrieve resource: {}", e);
                 LOGGER.debug("Retrieve resource error details", e);
             }

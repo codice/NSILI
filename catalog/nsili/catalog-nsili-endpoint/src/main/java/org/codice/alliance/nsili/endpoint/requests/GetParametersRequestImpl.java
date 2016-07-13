@@ -39,6 +39,7 @@ import org.codice.alliance.nsili.common.UCO.State;
 import org.codice.alliance.nsili.common.UCO.Status;
 import org.codice.alliance.nsili.common.UCO.StringDAGHolder;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
+import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
 import org.codice.alliance.nsili.common.datamodel.NsiliDataModel;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.opengis.filter.Filter;
@@ -53,7 +54,7 @@ import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
-import ddf.security.Subject;
+import ddf.security.service.SecurityServiceException;
 
 public class GetParametersRequestImpl extends GetParametersRequestPOA {
 
@@ -68,20 +69,17 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
 
     private FilterBuilder filterBuilder;
 
-    private Subject guestSubject;
-
     private List<String> querySources;
 
     private boolean outgoingValidationEnabled;
 
     public GetParametersRequestImpl(String productIdStr, String[] desiredParameters,
-            CatalogFramework catalogFramework, FilterBuilder filterBuilder, Subject guestSubject,
+            CatalogFramework catalogFramework, FilterBuilder filterBuilder,
             List<String> querySources, boolean outgoingValidationEnabled) {
         this.productIdStr = productIdStr;
         this.desiredParameters = desiredParameters;
         this.catalogFramework = catalogFramework;
         this.filterBuilder = filterBuilder;
-        this.guestSubject = guestSubject;
         this.querySources = querySources;
         this.outgoingValidationEnabled = outgoingValidationEnabled;
     }
@@ -203,13 +201,13 @@ public class GetParametersRequestImpl extends GetParametersRequestPOA {
         Result result = null;
         try {
             QueryResultsCallable queryCallable = new QueryResultsCallable(queryRequest);
-            List<Result> results = guestSubject.execute(queryCallable);
+            List<Result> results = NsiliEndpoint.getGuestSubject().execute(queryCallable);
             if (results != null && !results.isEmpty()) {
                 result = results.iterator()
                         .next();
             }
 
-        } catch (ExecutionException e) {
+        } catch (ExecutionException | SecurityServiceException e) {
             LOGGER.warn("Unable to query catalog {}",
                     NsilCorbaExceptionUtil.getExceptionDetails(e));
             LOGGER.debug("Catalog Query details", e);

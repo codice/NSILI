@@ -99,7 +99,6 @@ public class TestProductMgrImpl extends TestNsiliCommon {
                 .toString();
         productMgr = new ProductMgrImpl(null);
         productMgr.setFilterBuilder(new GeotoolsFilterBuilder());
-        productMgr.setSubject(mockSubject);
         productMgr.setCatalogFramework(mockCatalogFramework);
         productMgr.setOutgoingValidationEnabled(false);
 

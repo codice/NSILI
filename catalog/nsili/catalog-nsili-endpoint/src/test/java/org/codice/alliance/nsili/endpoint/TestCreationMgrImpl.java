@@ -77,7 +77,6 @@ public class TestCreationMgrImpl extends TestNsiliCommon {
         String managerId = UUID.randomUUID().toString();
         creationMgr = new CreationMgrImpl();
         creationMgr.setFilterBuilder(new GeotoolsFilterBuilder());
-        creationMgr.setSubject(mockSubject);
         creationMgr.setCatalogFramework(mockCatalogFramework);
 
         if (!CorbaUtils.isIdActive(rootPOA,

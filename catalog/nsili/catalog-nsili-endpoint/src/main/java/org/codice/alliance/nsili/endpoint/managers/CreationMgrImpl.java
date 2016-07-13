@@ -55,18 +55,12 @@ public class CreationMgrImpl extends CreationMgrPOA {
 
     private FilterBuilder filterBuilder;
 
-    private Subject subject;
-
     public void setCatalogFramework(CatalogFramework catalogFramework) {
         this.catalogFramework = catalogFramework;
     }
 
     public void setFilterBuilder(FilterBuilder filterBuilder) {
         this.filterBuilder = filterBuilder;
-    }
-
-    public void setSubject(Subject subject) {
-        this.subject = subject;
     }
 
     @Override
@@ -146,7 +140,6 @@ public class CreationMgrImpl extends CreationMgrPOA {
             accessManager = new AccessManagerImpl();
             accessManager.setCatalogFramework(catalogFramework);
             accessManager.setFilterBuilder(filterBuilder);
-            accessManager.setSubject(subject);
 
             String managerId = UUID.randomUUID()
                     .toString();

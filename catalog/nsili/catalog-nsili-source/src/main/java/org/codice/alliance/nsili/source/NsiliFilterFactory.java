@@ -248,7 +248,7 @@ public class NsiliFilterFactory {
         List<String> propertyList = mapToNsilQuery(property);
         List<String> filters = new ArrayList<>();
         for (String ddfProperty : propertyList) {
-            String filter = LP + ddfProperty + BTW + lowerBound + COMMA + upperBound + RP;
+            String filter = LP + ddfProperty + GTE + lowerBound + AND + ddfProperty + LTE + upperBound + RP;
             filters.add(filter);
         }
         return buildOrFilter(filters);
@@ -390,6 +390,11 @@ public class NsiliFilterFactory {
         if (nsiliProperties == null) {
             nsiliProperties = new ArrayList<>();
         }
+
+        if (nsiliProperties.isEmpty()) {
+            LOGGER.warn("Couldn't map query attribute ({}) to NSIL", attribute);
+        }
+
         return nsiliProperties;
     }
 

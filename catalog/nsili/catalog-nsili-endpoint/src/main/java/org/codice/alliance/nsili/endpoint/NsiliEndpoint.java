@@ -23,6 +23,7 @@ import java.util.List;
 import org.codice.alliance.nsili.common.NsilCorbaExceptionUtil;
 import org.codice.alliance.nsili.orb.api.CorbaOrb;
 import org.codice.alliance.nsili.orb.api.CorbaServiceListener;
+import org.codice.ddf.security.common.Security;
 import org.codice.ddf.security.handler.api.AuthenticationHandler;
 import org.codice.ddf.security.handler.api.BaseAuthenticationToken;
 import org.codice.ddf.security.handler.api.GuestAuthenticationToken;
@@ -67,7 +68,7 @@ public class NsiliEndpoint implements CorbaServiceListener {
 
     private AuthenticationHandler securityHandler;
 
-    private SecurityManager securityManager;
+    private static SecurityManager securityManager;
 
     private FilterBuilder filterBuilder;
 
@@ -84,6 +85,12 @@ public class NsiliEndpoint implements CorbaServiceListener {
     private boolean outgoingValidationEnabled = false;
 
     private List<String> querySources = new ArrayList<>();
+
+    private String libraryVersion;
+
+    private boolean removeSourceLibrary = true;
+
+    private static Subject guestSubject = null;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NsiliEndpoint.class);
 
@@ -135,13 +142,7 @@ public class NsiliEndpoint implements CorbaServiceListener {
     public void setSecurityManager(SecurityManager securityManager) {
         this.securityManager = securityManager;
         if (library != null) {
-            Subject guestSubject = null;
-            try {
-                guestSubject = getGuestSubject();
-                library.setGuestSubject(guestSubject);
-            } catch (SecurityServiceException e) {
-                LOGGER.error("Unable to update subject on NSILI Library");
-            }
+            library.setSecurityManager(securityManager);
         }
     }
 
@@ -182,6 +183,20 @@ public class NsiliEndpoint implements CorbaServiceListener {
         this.corbaOrb = corbaOrb;
         this.orb = corbaOrb.getOrb();
         corbaOrb.addCorbaServiceListener(this);
+    }
+
+    public void setLibraryVersion(String libraryVersion) {
+        this.libraryVersion = libraryVersion;
+        if (library != null) {
+            library.setLibraryVersion(libraryVersion);
+        }
+    }
+
+    public void setRemoveSourceLibrary(boolean removeSourceLibrary) {
+        this.removeSourceLibrary = removeSourceLibrary;
+        if (library != null) {
+            library.setRemoveSourceLibrary(removeSourceLibrary);
+        }
     }
 
     public void setOrb(ORB orb) {
@@ -259,14 +274,12 @@ public class NsiliEndpoint implements CorbaServiceListener {
 
         library = new LibraryImpl(rootPOA);
         library.setCatalogFramework(framework);
-        if (securityManager != null) {
-            Subject guestSubject = getGuestSubject();
-            library.setGuestSubject(guestSubject);
-        }
         library.setFilterBuilder(filterBuilder);
         library.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencySec * 1000);
         library.setMaxPendingResults(maxPendingResults);
         library.setQuerySources(querySources);
+        library.setLibraryVersion(libraryVersion);
+        library.setRemoveSourceLibrary(removeSourceLibrary);
         library.setOutgoingValidationEnabled(outgoingValidationEnabled);
 
         libraryRef = rootPOA.servant_to_reference(library);
@@ -276,20 +289,28 @@ public class NsiliEndpoint implements CorbaServiceListener {
         LOGGER.debug("Initialized NSILI Endpoint with IOR: {}", iorString);
     }
 
-    private Subject getGuestSubject() throws SecurityServiceException {
-        String ip = DEFAULT_IP_ADDRESS;
-        try {
-            ip = InetAddress.getLocalHost()
-                    .getHostAddress();
-        } catch (UnknownHostException e) {
-            LOGGER.warn("Could not get IP address for localhost", e);
+    public static synchronized Subject getGuestSubject() throws SecurityServiceException {
+        if (guestSubject == null || Security.getInstance().tokenAboutToExpire(guestSubject)) {
+
+            String ip = DEFAULT_IP_ADDRESS;
+            try {
+                ip = InetAddress.getLocalHost()
+                        .getHostAddress();
+                LOGGER.debug("Guest token ip: {}", ip);
+            } catch (UnknownHostException e) {
+                LOGGER.warn("Could not get IP address for localhost", e);
+            }
+
+            String guestTokenId = ip;
+            GuestAuthenticationToken guestToken =
+                    new GuestAuthenticationToken(BaseAuthenticationToken.ALL_REALM, guestTokenId);
+            guestSubject = securityManager.getSubject(guestToken);
         }
 
-        LOGGER.debug("Guest token ip: {}", ip);
+        return guestSubject;
+    }
 
-        String guestTokenId = ip;
-        GuestAuthenticationToken guestToken =
-                new GuestAuthenticationToken(BaseAuthenticationToken.ALL_REALM, guestTokenId);
-        return securityManager.getSubject(guestToken);
+    public static void setGuestSubject(Subject subject) {
+        guestSubject = subject;
     }
 }

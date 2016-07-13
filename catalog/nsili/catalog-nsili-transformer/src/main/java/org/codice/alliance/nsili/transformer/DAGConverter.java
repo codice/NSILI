@@ -421,8 +421,11 @@ public class DAGConverter {
 
         switch (node.attribute_name) {
         case NsiliConstants.STATUS:
-            metacard.setAttribute(new AttributeImpl(NsiliCxpMetacardType.STATUS,
-                    convertCxpStatus(node.value)));
+            NsiliCxpStatusType cxpStatusType = convertCxpStatus(node.value);
+            if (cxpStatusType != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliCxpMetacardType.STATUS,
+                        cxpStatusType));
+            }
             break;
         default:
             break;
@@ -448,8 +451,11 @@ public class DAGConverter {
                     node.value.extract_boolean()));
             break;
         case NsiliConstants.SUBJ_QUALITY_CODE:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.EXPLOITATION_SUBJ_QUAL_CODE,
-                    convertExplSubQualCd(node.value)));
+            NsiliExploitationSubQualCode exploitationSubQualCode = convertExplSubQualCd(node.value);
+            if (exploitationSubQualCode != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliMetacardType.EXPLOITATION_SUBJ_QUAL_CODE,
+                        exploitationSubQualCode));
+            }
             break;
         default:
             break;
@@ -523,8 +529,11 @@ public class DAGConverter {
 
         switch (node.attribute_name) {
         case NsiliConstants.CATEGORY:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.IMAGERY_CATEGORY,
-                    convertImageCategory(node.value)));
+            NsiliImageryType imageryCategory = convertImageCategory(node.value);
+            if (imageryCategory != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.IMAGERY_CATEGORY,
+                        imageryCategory));
+            }
             break;
         case NsiliConstants.CLOUD_COVER_PCT:
             metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.CLOUD_COVER_PCT,
@@ -535,8 +544,12 @@ public class DAGConverter {
                     getString(node.value)));
             break;
         case NsiliConstants.DECOMPRESSION_TECHNIQUE:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.DECOMPRESSION_TECHNIQUE,
-                    convertDecompressionTechnique(node.value)));
+            NsiliImageryDecompressionTech decompressionTech =
+                    convertDecompressionTechnique(node.value);
+            if (decompressionTech != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.DECOMPRESSION_TECHNIQUE,
+                        decompressionTech));
+            }
             break;
         case NsiliConstants.IDENTIFIER:
             metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.IMAGE_ID,
@@ -601,12 +614,17 @@ public class DAGConverter {
                     getString(node.value)));
             break;
         case NsiliConstants.PRIORITY:
-            metacard.setAttribute(new AttributeImpl(NsiliReportMetacardType.PRIORITY,
-                    convertReportPriority(node.value)));
+            NsiliReportPriority reportPriority = convertReportPriority(node.value);
+            if (reportPriority != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliReportMetacardType.PRIORITY,
+                        reportPriority));
+            }
             break;
         case NsiliConstants.TYPE:
-            metacard.setAttribute(new AttributeImpl(NsiliReportMetacardType.TYPE,
-                    convertReportType(node.value)));
+            NsiliReportType reportType = convertReportType(node.value);
+            if (reportType != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliReportMetacardType.TYPE, reportType));
+            }
             break;
         default:
             break;
@@ -631,12 +649,17 @@ public class DAGConverter {
                     getString(node.value)));
             break;
         case NsiliConstants.STATUS:
-            metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.STATUS,
-                    convertRfiStatus(node.value)));
+            NsiliRfiStatus rfiStatus = convertRfiStatus(node.value);
+            if (rfiStatus != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.STATUS, rfiStatus));
+            }
             break;
         case NsiliConstants.WORKFLOW_STATUS:
-            metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.WORKFLOW_STATUS,
-                    convertRfiWorkflowStatus(node.value)));
+            NsiliRfiWorkflowStatus workflowStatus = convertRfiWorkflowStatus(node.value);
+            if (workflowStatus != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.WORKFLOW_STATUS,
+                        workflowStatus));
+            }
             break;
         default:
             break;
@@ -648,8 +671,11 @@ public class DAGConverter {
 
         switch (node.attribute_name) {
         case NsiliConstants.OPERATIONAL_STATUS:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SDS_OPERATIONAL_STATUS,
-                    convertSdsOpStatus(node.value)));
+            NsiliSdsOpStatus sdsOpStatus = convertSdsOpStatus(node.value);
+            if (sdsOpStatus != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SDS_OPERATIONAL_STATUS,
+                        sdsOpStatus));
+            }
             break;
         default:
             break;
@@ -727,8 +753,10 @@ public class DAGConverter {
                     getString(node.value)));
             break;
         case NsiliConstants.STATUS:
-            metacard.setAttribute(new AttributeImpl(NsiliTaskMetacardType.STATUS,
-                    convertTaskStatus(node.value)));
+            NsiliTaskStatus taskStatus = convertTaskStatus(node.value);
+            if (taskStatus != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliTaskMetacardType.STATUS, taskStatus));
+            }
             break;
         default:
             break;
@@ -772,12 +800,18 @@ public class DAGConverter {
                     node.value.extract_double()));
             break;
         case NsiliConstants.CATEGORY:
-            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.CATEGORY,
-                    convertVideoCategory(node.value)));
+            NsiliVideoCategoryType videoCategoryType = convertVideoCategory(node.value);
+            if (videoCategoryType != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.CATEGORY,
+                        videoCategoryType));
+            }
             break;
         case NsiliConstants.ENCODING_SCHEME:
-            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.ENCODING_SCHEME,
-                    convertVideoEncodingScheme(node.value)));
+            NsiliVideoEncodingScheme videoEncodingScheme = convertVideoEncodingScheme(node.value);
+            if (videoEncodingScheme != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.ENCODING_SCHEME,
+                        videoEncodingScheme));
+            }
             break;
         case NsiliConstants.FRAME_RATE:
             metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.FRAME_RATE,
@@ -792,8 +826,12 @@ public class DAGConverter {
                     getLong(node.value)));
             break;
         case NsiliConstants.METADATA_ENC_SCHEME:
-            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.METADATA_ENCODING_SCHEME,
-                    convertMetadataEncScheme(node.value)));
+            NsiliMetadataEncodingScheme metadataEncodingScheme =
+                    convertMetadataEncScheme(node.value);
+            if (metadataEncodingScheme != null) {
+                metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.METADATA_ENCODING_SCHEME,
+                        metadataEncodingScheme));
+            }
             break;
         case NsiliConstants.MISM_LEVEL:
             metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.MISM_LEVEL,
@@ -1011,72 +1049,153 @@ public class DAGConverter {
 
     private NsiliImageryType convertImageCategory(Any any) {
         String imageryTypeStr = getString(any);
-        return NsiliImageryType.valueOf(imageryTypeStr);
+        NsiliImageryType imageryType = null;
+        try {
+            imageryType = NsiliImageryType.valueOf(imageryTypeStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized imagery type: {}", imageryTypeStr);
+        }
+        return imageryType;
     }
 
     private NsiliImageryDecompressionTech convertDecompressionTechnique(Any any) {
         String decompressionTechStr = getString(any);
-        return NsiliImageryDecompressionTech.valueOf(decompressionTechStr);
+        NsiliImageryDecompressionTech decompressionTech = null;
+        try {
+            decompressionTech = NsiliImageryDecompressionTech.valueOf(decompressionTechStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized decompression technique: {}", decompressionTechStr);
+        }
+        return decompressionTech;
     }
 
     private NsiliVideoCategoryType convertVideoCategory(Any any) {
         String videoCategoryType = getString(any);
-        return NsiliVideoCategoryType.valueOf(videoCategoryType);
+        NsiliVideoCategoryType videoCategory = null;
+        try {
+            videoCategory = NsiliVideoCategoryType.valueOf(videoCategoryType);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized video category: {}", videoCategoryType);
+        }
+        return videoCategory;
     }
 
     private NsiliVideoEncodingScheme convertVideoEncodingScheme(Any any) {
         String videoEncSchemeStr = getString(any);
-        return NsiliVideoEncodingScheme.fromSpecName(videoEncSchemeStr);
+        NsiliVideoEncodingScheme encodingScheme = null;
+        try {
+            encodingScheme = NsiliVideoEncodingScheme.fromSpecName(videoEncSchemeStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized video encoding scheme: {}", videoEncSchemeStr);
+        }
+        return encodingScheme;
     }
 
     private NsiliMetadataEncodingScheme convertMetadataEncScheme(Any any) {
         String metadataEncSchemeStr = getString(any);
-        return NsiliMetadataEncodingScheme.valueOf(metadataEncSchemeStr);
+        NsiliMetadataEncodingScheme metadataEncodingScheme = null;
+        try {
+            metadataEncodingScheme = NsiliMetadataEncodingScheme.valueOf(metadataEncSchemeStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized metadata encoding scheme: {}", metadataEncSchemeStr);
+        }
+        return metadataEncodingScheme;
     }
 
     private NsiliCxpStatusType convertCxpStatus(Any any) {
         String cxpStatusStr = getString(any);
-        return NsiliCxpStatusType.valueOf(cxpStatusStr);
+        NsiliCxpStatusType cxpStatusType = null;
+        try {
+            cxpStatusType = NsiliCxpStatusType.valueOf(cxpStatusStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized CXP Status type: {}", cxpStatusStr);
+        }
+        return cxpStatusType;
     }
 
     private NsiliRfiStatus convertRfiStatus(Any any) {
         String rfiStatusStr = getString(any);
-        return NsiliRfiStatus.valueOf(rfiStatusStr);
+        NsiliRfiStatus rfiStatus = null;
+        try {
+            rfiStatus = NsiliRfiStatus.valueOf(rfiStatusStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized RFI status: {}", rfiStatusStr);
+        }
+        return rfiStatus;
     }
 
     private NsiliRfiWorkflowStatus convertRfiWorkflowStatus(Any any) {
         String rfiWorkflowStatusStr = getString(any);
-        return NsiliRfiWorkflowStatus.valueOf(rfiWorkflowStatusStr);
+        NsiliRfiWorkflowStatus rfiWorkflowStatus = null;
+        try {
+            rfiWorkflowStatus = NsiliRfiWorkflowStatus.valueOf(rfiWorkflowStatusStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized RFI Workflow status: {}", rfiWorkflowStatus);
+        }
+        return rfiWorkflowStatus;
     }
 
     private NsiliTaskStatus convertTaskStatus(Any any) {
         String taskStatusStr = getString(any);
-        return NsiliTaskStatus.valueOf(taskStatusStr);
+        NsiliTaskStatus taskStatus = null;
+        try {
+            taskStatus = NsiliTaskStatus.valueOf(taskStatusStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized Task Status: {}", taskStatusStr);
+        }
+        return taskStatus;
     }
 
     private NsiliExploitationSubQualCode convertExplSubQualCd(Any any) {
         String explSubQualCodeStr = getString(any);
-        return NsiliExploitationSubQualCode.valueOf(explSubQualCodeStr);
+        NsiliExploitationSubQualCode exploitationSubQualCode = null;
+        try {
+            exploitationSubQualCode = NsiliExploitationSubQualCode.valueOf(explSubQualCodeStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized Exploitation Subjective Quality code: {}",
+                    explSubQualCodeStr);
+        }
+        return exploitationSubQualCode;
     }
 
     private NsiliSdsOpStatus convertSdsOpStatus(Any any) {
         String sdsOpStatusStr = getString(any);
-        return NsiliSdsOpStatus.fromSpecName(sdsOpStatusStr);
+        NsiliSdsOpStatus sdsOpStatus = NsiliSdsOpStatus.fromSpecName(sdsOpStatusStr);
+        if (sdsOpStatus == null) {
+            LOGGER.info("Unrecognized SDS Op status: {}", sdsOpStatusStr);
+        }
+        return sdsOpStatus;
     }
 
     private NsiliApprovalStatus convertApprovalStatus(Any any) {
         String approvalStr = getString(any);
-        return NsiliApprovalStatus.fromSpecName(approvalStr);
+        NsiliApprovalStatus approvalStatus = NsiliApprovalStatus.fromSpecName(approvalStr);
+        if (approvalStatus == null) {
+            LOGGER.info("Unrecognized Approval status: {}", approvalStr);
+        }
+        return approvalStatus;
     }
 
     private NsiliReportPriority convertReportPriority(Any any) {
         String reportPriorityStr = getString(any);
-        return NsiliReportPriority.valueOf(reportPriorityStr);
+        NsiliReportPriority reportPriority = null;
+        try {
+            reportPriority = NsiliReportPriority.valueOf(reportPriorityStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized Report Priority: {}", reportPriorityStr);
+        }
+        return reportPriority;
     }
 
     private NsiliReportType convertReportType(Any any) {
         String reportTypeStr = getString(any);
-        return NsiliReportType.valueOf(reportTypeStr);
+        NsiliReportType reportType = null;
+        try {
+            reportType = NsiliReportType.valueOf(reportTypeStr);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Unrecognized Report Type: {}", reportTypeStr);
+        }
+        return reportType;
     }
 
     public static String getString(Any any) {

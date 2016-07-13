@@ -156,6 +156,8 @@ public class TestDAGConverter {
 
     private static final String IMAGERY_CATEGORY = NsiliImageryType.VIS.toString();
 
+    private static final String BAD_ENUM_VALUE = "Not Valid";
+
     private static final Short IMAGERY_CLOUD_COVER_PCT = 35;
 
     private static final String IMAGERY_COMMENTS = "Imagery Comments";
@@ -1801,6 +1803,42 @@ public class TestDAGConverter {
                         .toString()));
     }
 
+    @Test
+    public void testBadEnumValues() {
+        DAG dag = new DAG();
+        DirectedAcyclicGraph<Node, Edge> graph = new DirectedAcyclicGraph<>(Edge.class);
+
+        Node productNode = createRootNode();
+        graph.addVertex(productNode);
+
+        addCardNode(graph, productNode);
+        addFileNode(graph, productNode);
+        addStreamNode(graph, productNode);
+        addMetadataSecurity(graph, productNode);
+        addSecurityNode(graph, productNode);
+        addBadImageryNode(graph, productNode);
+        addBadVideoPart(graph, productNode);
+        addBadCxpNode(graph, productNode);
+        addBadRFINode(graph, productNode);
+        addBadTaskNode(graph, productNode);
+        addBadExpoloitationInfoNode(graph, productNode);
+        addBadSdsNode(graph, productNode);
+        addBadApprovalNode(graph, productNode);
+        addBadReportNode(graph, productNode);
+
+        graph.addVertex(productNode);
+
+        NsiliCommonUtils.setUCOEdgeIds(graph);
+        NsiliCommonUtils.setUCOEdges(productNode, graph);
+        dag.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
+        dag.nodes = NsiliCommonUtils.getNodeArrayFromGraph(graph);
+
+        MetacardImpl metacard = dagConverter.convertDAG(dag, false, SOURCE_ID);
+
+        //Check top-level meta-card attributes
+        assertThat(CARD_ID, is(metacard.getId()));
+    }
+
     private Node createRootNode() {
         return new Node(0, NodeType.ROOT_NODE, NsiliConstants.NSIL_PRODUCT, orb.create_any());
     }
@@ -2077,6 +2115,22 @@ public class TestDAGConverter {
                 orb);
     }
 
+    private void addBadApprovalNode(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
+        Any approvalAny = orb.create_any();
+        Node approvalNode = new Node(0,
+                NodeType.ENTITY_NODE,
+                NsiliConstants.NSIL_APPROVAL,
+                approvalAny);
+        graph.addVertex(approvalNode);
+        graph.addEdge(productNode, approvalNode);
+
+        ResultDAGConverter.addStringAttribute(graph,
+                approvalNode,
+                NsiliConstants.STATUS,
+                BAD_ENUM_VALUE,
+                orb);
+    }
+
     private void addSdsNode(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
         Any sdsAny = orb.create_any();
         Node sdsNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_SDS, sdsAny);
@@ -2087,6 +2141,19 @@ public class TestDAGConverter {
                 sdsNode,
                 NsiliConstants.OPERATIONAL_STATUS,
                 SDS_OP_STATUS.getSpecName(),
+                orb);
+    }
+
+    private void addBadSdsNode(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
+        Any sdsAny = orb.create_any();
+        Node sdsNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_SDS, sdsAny);
+        graph.addVertex(sdsNode);
+        graph.addEdge(productNode, sdsNode);
+
+        ResultDAGConverter.addStringAttribute(graph,
+                sdsNode,
+                NsiliConstants.OPERATIONAL_STATUS,
+                BAD_ENUM_VALUE,
                 orb);
     }
 
@@ -2164,6 +2231,23 @@ public class TestDAGConverter {
         addSecurityNode(graph, partNode3);
         addCommonNode(graph, partNode3);
         addVideoNode(graph, partNode3);
+    }
+
+    private void addBadVideoPart(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
+        Node partNode1 = addPartNode(graph, productNode);
+        addSecurityNode(graph, partNode1);
+        addBadCommonNode(graph, partNode1);
+        addCoverageNode(graph, partNode1);
+
+        Node partNode2 = addPartNode(graph, productNode);
+        addSecurityNode(graph, partNode2);
+        addCommonNode(graph, partNode2);
+        addExpoloitationInfoNode(graph, partNode2);
+
+        Node partNode3 = addPartNode(graph, productNode);
+        addSecurityNode(graph, partNode3);
+        addCommonNode(graph, partNode3);
+        addBadVideoNode(graph, partNode3);
     }
 
     private void addReportPart(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
@@ -2321,6 +2405,19 @@ public class TestDAGConverter {
                 orb);
     }
 
+    private void addBadCommonNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
+        Any commonAny = orb.create_any();
+        Node commonNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_COMMON, commonAny);
+        graph.addVertex(commonNode);
+        graph.addEdge(parentNode, commonNode);
+
+        ResultDAGConverter.addStringAttribute(graph,
+                commonNode,
+                NsiliConstants.TYPE,
+                BAD_ENUM_VALUE,
+                orb);
+    }
+
     private void addImageryNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
         Any imageryAny = orb.create_any();
         Node imageryNode = new Node(0,
@@ -2379,6 +2476,27 @@ public class TestDAGConverter {
                 imageryNode,
                 NsiliConstants.TITLE,
                 IMAGERY_TITLE,
+                orb);
+    }
+
+    private void addBadImageryNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
+        Any imageryAny = orb.create_any();
+        Node imageryNode = new Node(0,
+                NodeType.ENTITY_NODE,
+                NsiliConstants.NSIL_IMAGERY,
+                imageryAny);
+        graph.addVertex(imageryNode);
+        graph.addEdge(parentNode, imageryNode);
+
+        ResultDAGConverter.addStringAttribute(graph,
+                imageryNode,
+                NsiliConstants.CATEGORY,
+                BAD_ENUM_VALUE,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                imageryNode,
+                NsiliConstants.DECOMPRESSION_TECHNIQUE,
+                BAD_ENUM_VALUE,
                 orb);
     }
 
@@ -2484,6 +2602,34 @@ public class TestDAGConverter {
                 orb);
     }
 
+    private void addBadVideoNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
+        Any videoAny = orb.create_any();
+        Node videoNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_VIDEO, videoAny);
+        graph.addVertex(videoNode);
+        graph.addEdge(parentNode, videoNode);
+
+        ResultDAGConverter.addStringAttribute(graph,
+                videoNode,
+                NsiliConstants.CATEGORY,
+                BAD_ENUM_VALUE,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                videoNode,
+                NsiliConstants.ENCODING_SCHEME,
+                BAD_ENUM_VALUE,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                videoNode,
+                NsiliConstants.METADATA_ENC_SCHEME,
+                BAD_ENUM_VALUE,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                videoNode,
+                NsiliConstants.SCANNING_MODE,
+                BAD_ENUM_VALUE,
+                orb);
+    }
+
     private void addReportNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
         Any reportAny = orb.create_any();
         Node reportNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_REPORT, reportAny);
@@ -2504,6 +2650,24 @@ public class TestDAGConverter {
                 reportNode,
                 NsiliConstants.TYPE,
                 REPORT_TYPE,
+                orb);
+    }
+
+    private void addBadReportNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
+        Any reportAny = orb.create_any();
+        Node reportNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_REPORT, reportAny);
+        graph.addVertex(reportNode);
+        graph.addEdge(parentNode, reportNode);
+
+        ResultDAGConverter.addStringAttribute(graph,
+                reportNode,
+                NsiliConstants.PRIORITY,
+                BAD_ENUM_VALUE,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                reportNode,
+                NsiliConstants.TYPE,
+                BAD_ENUM_VALUE,
                 orb);
     }
 
@@ -2548,6 +2712,19 @@ public class TestDAGConverter {
                 orb);
     }
 
+    private void addBadCxpNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
+        Any cxpAny = orb.create_any();
+        Node cxpNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_CXP, cxpAny);
+        graph.addVertex(cxpNode);
+        graph.addEdge(parentNode, cxpNode);
+
+        ResultDAGConverter.addStringAttribute(graph,
+                cxpNode,
+                NsiliConstants.STATUS,
+                BAD_ENUM_VALUE,
+                orb);
+    }
+
     private void addIRNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
         Any irAny = orb.create_any();
         Node irNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_IR, irAny);
@@ -2588,6 +2765,24 @@ public class TestDAGConverter {
                 orb);
     }
 
+    private void addBadRFINode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
+        Any rfiAny = orb.create_any();
+        Node rfiNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_RFI, rfiAny);
+        graph.addVertex(rfiNode);
+        graph.addEdge(parentNode, rfiNode);
+
+        ResultDAGConverter.addStringAttribute(graph,
+                rfiNode,
+                NsiliConstants.STATUS,
+                BAD_ENUM_VALUE,
+                orb);
+        ResultDAGConverter.addStringAttribute(graph,
+                rfiNode,
+                NsiliConstants.WORKFLOW_STATUS,
+                BAD_ENUM_VALUE,
+                orb);
+    }
+
     private void addTaskNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
         Any taskAny = orb.create_any();
         Node taskNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_TASK, taskAny);
@@ -2603,6 +2798,19 @@ public class TestDAGConverter {
                 taskNode,
                 NsiliConstants.STATUS,
                 TASK_STATUS,
+                orb);
+    }
+
+    private void addBadTaskNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
+        Any taskAny = orb.create_any();
+        Node taskNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_TASK, taskAny);
+        graph.addVertex(taskNode);
+        graph.addEdge(parentNode, taskNode);
+
+        ResultDAGConverter.addStringAttribute(graph,
+                taskNode,
+                NsiliConstants.STATUS,
+                BAD_ENUM_VALUE,
                 orb);
     }
 
@@ -2668,6 +2876,22 @@ public class TestDAGConverter {
                 exploitationNode,
                 NsiliConstants.SUBJ_QUALITY_CODE,
                 EXPLOITATION_SUBJ_QUAL_CODE,
+                orb);
+    }
+
+    private void addBadExpoloitationInfoNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
+        Any exploitationAny = orb.create_any();
+        Node exploitationNode = new Node(0,
+                NodeType.ENTITY_NODE,
+                NsiliConstants.NSIL_EXPLOITATION_INFO,
+                exploitationAny);
+        graph.addVertex(exploitationNode);
+        graph.addEdge(parentNode, exploitationNode);
+
+        ResultDAGConverter.addStringAttribute(graph,
+                exploitationNode,
+                NsiliConstants.SUBJ_QUALITY_CODE,
+                BAD_ENUM_VALUE,
                 orb);
     }
 

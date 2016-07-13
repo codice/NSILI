@@ -22,11 +22,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.apache.shiro.subject.ExecutionException;
-import org.omg.PortableServer.POAPackage.WrongAdapter;
-import org.omg.PortableServer.POAPackage.WrongPolicy;
-import org.opengis.filter.Filter;
-import org.slf4j.LoggerFactory;
-
 import org.codice.alliance.nsili.common.GIAS.AccessManagerPOA;
 import org.codice.alliance.nsili.common.GIAS.AvailabilityRequirement;
 import org.codice.alliance.nsili.common.GIAS.Request;
@@ -37,6 +32,10 @@ import org.codice.alliance.nsili.common.UCO.ProcessingFault;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
 import org.codice.alliance.nsili.common.UID.Product;
 import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
+import org.omg.PortableServer.POAPackage.WrongAdapter;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.opengis.filter.Filter;
+import org.slf4j.LoggerFactory;
 
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Attribute;
@@ -46,7 +45,7 @@ import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
-import ddf.security.Subject;
+import ddf.security.service.SecurityServiceException;
 
 public class AccessManagerImpl extends AccessManagerPOA {
 
@@ -64,8 +63,6 @@ public class AccessManagerImpl extends AccessManagerPOA {
 
     private FilterBuilder filterBuilder;
 
-    private Subject subject;
-
     private List<String> querySources = new ArrayList<>();
 
     private int defaultTimeout = DEFAULT_TIMEOUT;
@@ -80,10 +77,6 @@ public class AccessManagerImpl extends AccessManagerPOA {
 
     public void setFilterBuilder(FilterBuilder filterBuilder) {
         this.filterBuilder = filterBuilder;
-    }
-
-    public void setSubject(Subject subject) {
-        this.subject = subject;
     }
 
     public void setQuerySources(List<String> querySources) {
@@ -210,9 +203,9 @@ public class AccessManagerImpl extends AccessManagerPOA {
         try {
             QueryResultsCallable
                     queryCallable = new QueryResultsCallable(catalogQueryRequest);
-            results.addAll(subject.execute(queryCallable));
+            results.addAll(NsiliEndpoint.getGuestSubject().execute(queryCallable));
 
-        } catch (ExecutionException e) {
+        } catch (ExecutionException | SecurityServiceException e) {
             LOGGER.warn("Unable to query catalog {}", e);
             LOGGER.debug("Catalog query exception details", e);
         }

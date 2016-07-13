@@ -14,6 +14,7 @@
 package org.codice.alliance.nsili.common;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,9 +38,7 @@ public class NsiliAttributeMap {
         nsiliToDdfMap.put(NsiliConstants.NSIL_CARD + "." + NsiliConstants.IDENTIFIER, Metacard.ID);
         nsiliToDdfMap.put(NsiliConstants.NSIL_CARD + "." + NsiliConstants.PUBLISHER, "publisher");
         nsiliToDdfMap.put(NsiliConstants.NSIL_CARD + "." + NsiliConstants.SOURCE_LIBRARY,
-                "sourceLibrary");
-        nsiliToDdfMap.put(NsiliConstants.NSIL_CARD + "." + NsiliConstants.SOURCE_DATE_TIME_MODIFIED,
-                Metacard.CREATED);
+                "sourceId");
         nsiliToDdfMap.put(NsiliConstants.NSIL_CARD + "." + NsiliConstants.SOURCE_DATE_TIME_MODIFIED,
                 Metacard.EFFECTIVE);
         nsiliToDdfMap.put(NsiliConstants.NSIL_CARD + "." + NsiliConstants.DATE_TIME_MODIFIED,
@@ -198,16 +197,25 @@ public class NsiliAttributeMap {
             }
             nsiliList.add(nsiliFieldEntry.getKey());
         }
+        //Manual Mappings for NSIL attribute mapping to more than one DDF Attr
+        ddfToNsiliMap.put(Metacard.CREATED,
+                Arrays.asList(
+                        NsiliConstants.NSIL_CARD + "." + NsiliConstants.SOURCE_DATE_TIME_MODIFIED));
     }
 
-    public static String getDdfAttributeForNsili(String nsiliAttribute) {
+    public static String getDdfAttributeForNsili(String nsiliAttribute,
+            boolean removeSourceLibrary) {
         String attribute = nsiliAttribute;
         if (attribute.contains(".")) {
             attribute = attribute.substring(attribute.lastIndexOf(":") + 1);
         }
         String attributeName = nsiliToDdfMap.get(attribute);
-        if (attributeName != null && attributeName.equalsIgnoreCase("sourceLibrary")) {
-            attributeName = null;
+
+        if (removeSourceLibrary) {
+            if (nsiliAttribute != null && nsiliAttribute.equalsIgnoreCase(
+                    NsiliConstants.NSIL_CARD + "." + NsiliConstants.SOURCE_LIBRARY)) {
+                attributeName = null;
+            }
         }
 
         return attributeName;

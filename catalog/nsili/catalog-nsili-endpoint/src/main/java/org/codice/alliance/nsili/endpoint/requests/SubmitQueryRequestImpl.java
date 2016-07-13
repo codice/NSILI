@@ -54,7 +54,7 @@ import ddf.catalog.data.Result;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
-import ddf.security.Subject;
+import ddf.security.service.SecurityServiceException;
 
 public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
 
@@ -70,8 +70,6 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
 
     private CatalogFramework catalogFramework;
 
-    private Subject guestSubject;
-
     private int totalHitsReturned = 0;
 
     private List<String> querySources = new ArrayList<>();
@@ -83,11 +81,10 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
     private boolean outgoingValidationEnabled;
 
     public SubmitQueryRequestImpl(Query query, BqsConverter bqsConverter,
-            CatalogFramework catalogFramework, Subject guestSubject, List<String> querySources) {
+            CatalogFramework catalogFramework, List<String> querySources) {
         this.query = query;
         this.bqsConverter = bqsConverter;
         this.catalogFramework = catalogFramework;
-        this.guestSubject = guestSubject;
 
         if (querySources != null) {
             this.querySources.addAll(querySources);
@@ -271,9 +268,9 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
 
         try {
             QueryResultsCallable queryCallable = new QueryResultsCallable(catalogQueryRequest);
-            results.addAll(guestSubject.execute(queryCallable));
+            results.addAll(NsiliEndpoint.getGuestSubject().execute(queryCallable));
 
-        } catch (ExecutionException e) {
+        } catch (ExecutionException | SecurityServiceException e) {
             LOGGER.warn("Unable to query catalog {}", e);
             LOGGER.debug("Catalog query exception details", e);
         }

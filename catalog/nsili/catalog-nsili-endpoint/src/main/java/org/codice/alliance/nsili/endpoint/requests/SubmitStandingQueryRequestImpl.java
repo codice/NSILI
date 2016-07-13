@@ -61,6 +61,7 @@ import org.codice.alliance.nsili.common.datamodel.NsiliDataModel;
 import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
 import org.codice.alliance.nsili.endpoint.managers.RequestManagerImpl;
 import org.codice.alliance.nsili.transformer.DAGConverter;
+import org.codice.ddf.security.common.Security;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.omg.CORBA.NO_IMPLEMENT;
@@ -80,6 +81,8 @@ import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.security.Subject;
+import ddf.security.service.SecurityManager;
+import ddf.security.service.SecurityServiceException;
 
 public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPOA {
 
@@ -113,8 +116,6 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
 
     private CatalogFramework catalogFramework;
 
-    private Subject subject;
-
     private FilterBuilder filterBuilder;
 
     private int maxPendingResults;
@@ -144,9 +145,9 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
 
     public SubmitStandingQueryRequestImpl(Query aQuery, String[] result_attributes,
             SortAttribute[] sort_attributes, QueryLifeSpan lifespan, NameValue[] properties,
-            CatalogFramework catalogFramework, Subject subject, FilterBuilder filterBuilder,
+            CatalogFramework catalogFramework, FilterBuilder filterBuilder,
             long defaultUpdateFrequencyMsec, List<String> querySources, int maxPendingResults,
-            boolean outgoingValidationEnabled) {
+            boolean removeSourceLibrary, boolean outgoingValidationEnabled) {
         id = UUID.randomUUID()
                 .toString();
         if (result_attributes != null) {
@@ -156,10 +157,9 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
         this.lifespan = lifespan;
         this.properties = properties;
         this.catalogFramework = catalogFramework;
-        this.subject = subject;
         this.filterBuilder = filterBuilder;
         this.maxPendingResults = maxPendingResults;
-        this.bqsConverter = new BqsConverter(filterBuilder);
+        this.bqsConverter = new BqsConverter(filterBuilder, removeSourceLibrary);
         this.query = aQuery;
         this.querySources = querySources;
         this.bqsFilter = bqsConverter.convertBQSToDDF(aQuery);
@@ -509,26 +509,33 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
 
             try {
                 QueryResultsCallable queryCallable = new QueryResultsCallable(catalogQueryRequest);
-                QueryResponse queryResponse = subject.execute(queryCallable);
-                int numHits = (int) queryResponse.getHits();
-                List<Result> results = queryResponse.getResults();
-                catalogResults.addAll(results);
-                int accumResults = results.size() + (startIndex - 1);
 
-                LOGGER.trace("Processing Result {} of {}", accumResults, numHits);
+                try {
+                    QueryResponse queryResponse = NsiliEndpoint.getGuestSubject().execute(queryCallable);
+                    int numHits = (int) queryResponse.getHits();
+                    List<Result> results = queryResponse.getResults();
+                    catalogResults.addAll(results);
+                    int accumResults = results.size() + (startIndex - 1);
 
-                if (results.isEmpty()) {
-                    moreResultsAvailOnLastQuery = false;
-                    startIndex = 1;
-                } else {
-                    if (accumResults < numHits) {
-                        moreResultsAvailOnLastQuery = true;
-                        startIndex = accumResults + 1;
-                    } else {
+                    LOGGER.trace("Processing Result {} of {}", accumResults, numHits);
+
+                    if (results.isEmpty()) {
                         moreResultsAvailOnLastQuery = false;
                         startIndex = 1;
+                    } else {
+                        if (accumResults < numHits) {
+                            moreResultsAvailOnLastQuery = true;
+                            startIndex = accumResults + 1;
+                        } else {
+                            moreResultsAvailOnLastQuery = false;
+                            startIndex = 1;
+                        }
                     }
+                } catch (SecurityServiceException e) {
+                    LOGGER.error("Unable to update subject on NSILI Library, {}", e);
+                    LOGGER.debug("Unable to update subject on NSILI Library details", e);
                 }
+
             } catch (ExecutionException e) {
                 LOGGER.warn("Unable to query catalog {}", e);
                 LOGGER.debug("Catalog query exception details", e);

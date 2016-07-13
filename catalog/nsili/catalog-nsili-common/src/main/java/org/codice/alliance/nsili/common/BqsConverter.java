@@ -70,9 +70,16 @@ public class BqsConverter {
 
     private FilterBuilder filterBuilder;
 
+    private boolean removeSourceLibrary;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(BqsConverter.class);
 
-    public BqsConverter(FilterBuilder filterBuilder) {
+    public BqsConverter(FilterBuilder filterBuilder, boolean removeSourceLibrary) {
+        if (filterBuilder == null) {
+            throw new IllegalArgumentException("FilterBuilder must be set");
+        }
+
+        this.removeSourceLibrary = removeSourceLibrary;
         this.filterBuilder = filterBuilder;
     }
 
@@ -88,23 +95,23 @@ public class BqsConverter {
 
         ANTLRInputStream inputStream = new ANTLRInputStream(query);
         BqsLexer lex = new BqsLexer(inputStream); // transforms characters into tokens
+
         CommonTokenStream tokens = new CommonTokenStream(lex); // a token stream
         BqsParser parser = new BqsParser(tokens); // transforms tokens into parse trees
         BqsTreeWalkerListener bqsListener = new BqsTreeWalkerListener(filterBuilder);
-
         ParseTree tree = parser.query();
         ParseTreeWalker.DEFAULT.walk(bqsListener, tree);
 
         Filter filter = bqsListener.getFilter();
-        if (filter != null) {
-            if (StringUtils.isNotBlank(filter.toString())) {
-                LOGGER.debug("Parsed Query: {}", filter);
-            } else {
-                filter = filterBuilder.attribute(Metacard.ID).is().text("*");
-                LOGGER.warn("After parsing filter, didn't have any query parameters. Defaulting to everything search: {}", filter);
-            }
+        if (filter!= null && StringUtils.isNotBlank(filter.toString())) {
+            LOGGER.debug("Parsed Query: {}", filter);
         } else {
-            LOGGER.debug("Unable to parse the query");
+            filter = filterBuilder.attribute(Metacard.ANY_TEXT)
+                    .is()
+                    .text("*");
+            LOGGER.warn(
+                    "After parsing filter, didn't have any query parameters. Defaulting to everything search: {}",
+                    filter);
         }
 
         return filter;
@@ -169,9 +176,7 @@ public class BqsConverter {
                 bqsOperatorStack.push(BqsOperator.OR);
                 print("OR: ");
 
-                String currOperHash = hashFunction.hashBytes(ctx.getText()
-                        .getBytes())
-                        .toString();
+                String currOperHash = getHash(ctx.getText());
                 nestedOperatorStack.push(currOperHash);
                 filterBy.put(currOperHash, new ArrayList<>());
             }
@@ -186,10 +191,10 @@ public class BqsConverter {
                 String operHash = nestedOperatorStack.pop();
                 List<Filter> filters = filterBy.get(operHash);
 
-                if (currFilter == null) {
-                    currFilter = filterBuilder.anyOf(filters);
-                } else {
-                    filters.add(currFilter);
+                if (filters != null && !filters.isEmpty()) {
+                    if (currFilter != null) {
+                        filters.add(currFilter);
+                    }
                     currFilter = filterBuilder.anyOf(filters);
                 }
             }
@@ -202,9 +207,7 @@ public class BqsConverter {
                 bqsOperatorStack.push(BqsOperator.AND);
                 print("AND");
 
-                String currOperHash = hashFunction.hashBytes(ctx.getText()
-                        .getBytes())
-                        .toString();
+                String currOperHash = getHash(ctx.getText());
                 nestedOperatorStack.push(currOperHash);
                 filterBy.put(currOperHash, new ArrayList<>());
             }
@@ -218,10 +221,10 @@ public class BqsConverter {
 
                 String operHash = nestedOperatorStack.pop();
                 List<Filter> filters = filterBy.get(operHash);
-                if (currFilter == null) {
-                    currFilter = filterBuilder.allOf(filters);
-                } else {
-                    filters.add(currFilter);
+                if (filters != null || !filters.isEmpty()) {
+                    if (currFilter != null) {
+                        filters.add(currFilter);
+                    }
                     currFilter = filterBuilder.allOf(filters);
                 }
             }
@@ -233,9 +236,7 @@ public class BqsConverter {
                 print("NOT");
                 bqsOperatorStack.push(BqsOperator.NOT);
 
-                String currOperHash = hashFunction.hashBytes(ctx.getText()
-                        .getBytes())
-                        .toString();
+                String currOperHash = getHash(ctx.getText());
                 nestedOperatorStack.push(currOperHash);
                 filterBy.put(currOperHash, new ArrayList<>());
             }
@@ -245,23 +246,26 @@ public class BqsConverter {
         public void exitFactor(BqsParser.FactorContext ctx) {
             if (ctx.NOT() != null) {
                 bqsOperatorStack.pop();
-
                 String operHash = nestedOperatorStack.pop();
                 List<Filter> filters = filterBy.get(operHash);
+
+                Filter notFilter;
+                if (filters.size() > 1) {
+                    notFilter = filterBuilder.not(filterBuilder.anyOf(filters));
+                } else {
+                    notFilter = filterBuilder.not(filters.iterator()
+                            .next());
+                }
+
                 if (currFilter == null) {
-                    if (filters.size() > 1) {
-                        currFilter = filterBuilder.not(filterBuilder.anyOf(filters));
-                    } else {
-                        currFilter = filterBuilder.not(filters.iterator()
-                                .next());
-                    }
+                    currFilter = notFilter;
                 } else {
                     filters.add(currFilter);
-                    if (filters.size() > 1) {
-                        currFilter = filterBuilder.not(filterBuilder.anyOf(filters));
+                    if (!nestedOperatorStack.isEmpty()) {
+                        List<Filter> parentFilters = filterBy.get(nestedOperatorStack.peek());
+                        parentFilters.add(notFilter);
                     } else {
-                        currFilter = filterBuilder.not(filters.iterator()
-                                .next());
+                        LOGGER.warn("Unable to find parent filter for: {}", notFilter);
                     }
                 }
             }
@@ -290,16 +294,19 @@ public class BqsConverter {
             } else if (ctx.OF() != null) {
                 bqsOperatorStack.pop();
             }
+
         }
 
         @Override
         public void enterAttribute_name(BqsParser.Attribute_nameContext ctx) {
             print(ctx.getText());
+            attribute = NsiliAttributeMap.getDdfAttributeForNsili(ctx.getText(),
+                    removeSourceLibrary);
         }
 
         @Override
         public void exitAttribute_name(BqsParser.Attribute_nameContext ctx) {
-            attribute = NsiliAttributeMap.getDdfAttributeForNsili(ctx.getText());
+
         }
 
         @Override
@@ -308,7 +315,7 @@ public class BqsConverter {
             if (ctx.EQUAL() != null) {
                 bqsOperatorStack.push(BqsOperator.EQUAL);
             } else if (ctx.NOTEQ() != null) {
-                bqsOperatorStack.push(BqsOperator.NOT);
+                bqsOperatorStack.push(BqsOperator.NOTEQ);
             } else if (ctx.GT() != null) {
                 bqsOperatorStack.push(BqsOperator.GT);
             } else if (ctx.GTE() != null) {
@@ -384,9 +391,11 @@ public class BqsConverter {
                                     .date(date);
                         }
 
-                        if (filter != null) {
+                        if (filter != null && !nestedOperatorStack.isEmpty()) {
                             List<Filter> filters = filterBy.get(nestedOperatorStack.peek());
                             filters.add(filter);
+                        } else {
+                            currFilter = filter;
                         }
                     }
                 } catch (DateTimeParseException e) {
@@ -414,7 +423,7 @@ public class BqsConverter {
                                 filter = filterBuilder.anyOf(filterBuilder.attribute(attribute)
                                         .lessThanOrEqualTo()
                                         .number((short) number));
-                            } else if (bqsOperator == BqsOperator.NOT) {
+                            } else if (bqsOperator == BqsOperator.NOTEQ) {
                                 filter = filterBuilder.not(filterBuilder.attribute(attribute)
                                         .equalTo()
                                         .number((short) number));
@@ -440,7 +449,7 @@ public class BqsConverter {
                                 filter = filterBuilder.anyOf(filterBuilder.attribute(attribute)
                                         .lessThanOrEqualTo()
                                         .number((long) number));
-                            } else if (bqsOperator == BqsOperator.NOT) {
+                            } else if (bqsOperator == BqsOperator.NOTEQ) {
                                 filter = filterBuilder.not(filterBuilder.attribute(attribute)
                                         .equalTo()
                                         .number((long) number));
@@ -466,7 +475,7 @@ public class BqsConverter {
                                 filter = filterBuilder.anyOf(filterBuilder.attribute(attribute)
                                         .lessThanOrEqualTo()
                                         .number((int) number));
-                            } else if (bqsOperator == BqsOperator.NOT) {
+                            } else if (bqsOperator == BqsOperator.NOTEQ) {
                                 filter = filterBuilder.not(filterBuilder.attribute(attribute)
                                         .equalTo()
                                         .number((int) number));
@@ -492,7 +501,7 @@ public class BqsConverter {
                                 filter = filterBuilder.anyOf(filterBuilder.attribute(attribute)
                                         .lessThanOrEqualTo()
                                         .number((float) number));
-                            } else if (bqsOperator == BqsOperator.NOT) {
+                            } else if (bqsOperator == BqsOperator.NOTEQ) {
                                 filter = filterBuilder.not(filterBuilder.attribute(attribute)
                                         .equalTo()
                                         .number((float) number));
@@ -518,7 +527,7 @@ public class BqsConverter {
                                 filter = filterBuilder.anyOf(filterBuilder.attribute(attribute)
                                         .lessThanOrEqualTo()
                                         .number((double) number));
-                            } else if (bqsOperator == BqsOperator.NOT) {
+                            } else if (bqsOperator == BqsOperator.NOTEQ) {
                                 filter = filterBuilder.not(filterBuilder.attribute(attribute)
                                         .equalTo()
                                         .number((double) number));
@@ -544,7 +553,8 @@ public class BqsConverter {
             } else if (!quotedStr.isEmpty() && StringUtils.isNotBlank(attribute)) {
                 Filter filter = null;
                 quotedStr = normalizeSearchString(quotedStr);
-                if (bqsOperator == BqsOperator.NOT) {
+
+                if (bqsOperator == BqsOperator.NOTEQ) {
                     filter = filterBuilder.not(filterBuilder.attribute(attribute)
                             .equalTo()
                             .text(quotedStr));
@@ -570,71 +580,11 @@ public class BqsConverter {
         @Override
         public void enterDate(BqsParser.DateContext ctx) {
             print(ctx.getText());
-            dateStr = "";
+            dateStr = normalizeSearchString(ctx.getText());
         }
 
         @Override
         public void exitDate(BqsParser.DateContext ctx) {
-            //No-Op
-        }
-
-        @Override
-        public void enterYear(BqsParser.YearContext ctx) {
-            dateStr = dateStr + ctx.getText();
-        }
-
-        @Override
-        public void exitYear(BqsParser.YearContext ctx) {
-            //No-Op
-        }
-
-        @Override
-        public void enterMonth(BqsParser.MonthContext ctx) {
-            dateStr = dateStr + "/" + ctx.getText();
-        }
-
-        @Override
-        public void exitMonth(BqsParser.MonthContext ctx) {
-            //No-Op
-        }
-
-        @Override
-        public void enterDay(BqsParser.DayContext ctx) {
-            dateStr = dateStr + "/" + ctx.getText();
-        }
-
-        @Override
-        public void exitDay(BqsParser.DayContext ctx) {
-            //No-Op
-        }
-
-        @Override
-        public void enterHour(BqsParser.HourContext ctx) {
-            dateStr = dateStr + " " + ctx.getText();
-        }
-
-        @Override
-        public void exitHour(BqsParser.HourContext ctx) {
-            //No-Op
-        }
-
-        @Override
-        public void enterMinute(BqsParser.MinuteContext ctx) {
-            dateStr = dateStr + ":" + ctx.getText();
-        }
-
-        @Override
-        public void exitMinute(BqsParser.MinuteContext ctx) {
-            //No-Op
-        }
-
-        @Override
-        public void enterSecond(BqsParser.SecondContext ctx) {
-            dateStr = dateStr + ":" + ctx.getText();
-        }
-
-        @Override
-        public void exitSecond(BqsParser.SecondContext ctx) {
             //No-Op
         }
 
@@ -829,24 +779,32 @@ public class BqsConverter {
             BqsOperator bqsOperator = bqsOperatorStack.peek();
 
             String stringValue = normalizeSearchString(ctx.getText());
+
+            Filter filter = null;
             if (StringUtils.isNotBlank(attribute)) {
                 if (bqsOperator == BqsOperator.LIKE || bqsOperator == BqsOperator.EQUAL) {
-                    Filter filter = filterBuilder.attribute(attribute)
+                    filter = filterBuilder.attribute(attribute)
                             .like()
                             .text(stringValue);
+                } else if (bqsOperator == BqsOperator.NOTEQ) {
+                    filter = filterBuilder.not(filterBuilder.attribute(attribute)
+                            .equalTo()
+                            .text(stringValue));
+                }
+            }
 
-                    if (!nestedOperatorStack.isEmpty() && filter != null) {
-                        List<Filter> filters = filterBy.get(nestedOperatorStack.peek());
-                        filters.add(filter);
-                    } else {
-                        currFilter = filter;
-                    }
-
-                    print("FILTER: " + filter);
+            if (filter != null) {
+                print ("FILTER: " + filter);
+                if (!nestedOperatorStack.isEmpty() && filter != null) {
+                    List<Filter> filters = filterBy.get(nestedOperatorStack.peek());
+                    filters.add(filter);
+                } else {
+                    currFilter = filter;
                 }
             }
 
             attribute = "";
+
         }
 
         @Override
@@ -1169,6 +1127,11 @@ public class BqsConverter {
         private String normalizeSearchString(String searchString) {
             return searchString.replaceAll("%", "*")
                     .replaceAll("'", "");
+        }
+
+        private String getHash(String str) {
+            return hashFunction.hashBytes(str.getBytes())
+                    .toString();
         }
     }
 }

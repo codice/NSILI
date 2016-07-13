@@ -41,6 +41,8 @@
         <property name="defaultUpdateFrequencySec" value="60" />
         <property name="maxPendingResults" value="10000" />
         <property name="outgoingValidationEnabled" value="false" />
+        <property name="libraryVersion" value="NSILI|3.2" />
+        <property name="removeSourceLibrary" value="true" />
         <property name="querySources">
             <array/>
         </property>

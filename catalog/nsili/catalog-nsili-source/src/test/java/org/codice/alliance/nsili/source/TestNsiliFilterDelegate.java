@@ -472,45 +472,42 @@ public class TestNsiliFilterDelegate {
     public void testPropertyBetweenStringLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, ATTRIBUTE, ATTRIBUTE);
         assertThat(filter,
-                is(getPrimary(NsiliFilterFactory.BTW,
-                        NsiliFilterDelegate.SQ + ATTRIBUTE + NsiliFilterDelegate.SQ
-                                + NsiliFilterFactory.COMMA + NsiliFilterDelegate.SQ + ATTRIBUTE
-                                + NsiliFilterDelegate.SQ)));
+                is(getPrimaryBetween(PROPERTY, "'" + ATTRIBUTE + "'", "'" + ATTRIBUTE + "'")));
     }
 
     @Test
     public void testPropertyBetweenIntLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, INT, INT);
         assertThat(filter,
-                is(getPrimary(NsiliFilterFactory.BTW, INT + NsiliFilterFactory.COMMA + INT)));
+                is(getPrimaryBetween(PROPERTY, String.valueOf(INT), String.valueOf(INT))));
     }
 
     @Test
     public void testPropertyBetweenShortLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, (short) INT, (short) INT);
         assertThat(filter,
-                is(getPrimary(NsiliFilterFactory.BTW, INT + NsiliFilterFactory.COMMA + INT)));
+                is(getPrimaryBetween(PROPERTY, String.valueOf(INT), String.valueOf(INT))));
     }
 
     @Test
     public void testPropertyBetweenLongLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, (long) INT, (long) INT);
         assertThat(filter,
-                is(getPrimary(NsiliFilterFactory.BTW, INT + NsiliFilterFactory.COMMA + INT)));
+                is(getPrimaryBetween(PROPERTY, String.valueOf(INT), String.valueOf(INT))));
     }
 
     @Test
     public void testPropertyBetweenFloatLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, FLOAT, FLOAT);
         assertThat(filter,
-                is(getPrimary(NsiliFilterFactory.BTW, FLOAT + NsiliFilterFactory.COMMA + FLOAT)));
+                is(getPrimaryBetween(PROPERTY, String.valueOf(FLOAT), String.valueOf(FLOAT))));
     }
 
     @Test
     public void testPropertyBetweenDoubleLiterals() {
         String filter = filterDelegate.propertyIsBetween(PROPERTY, (double) FLOAT, (double) FLOAT);
         assertThat(filter,
-                is(getPrimary(NsiliFilterFactory.BTW, FLOAT + NsiliFilterFactory.COMMA + FLOAT)));
+                is(getPrimaryBetween(PROPERTY, String.valueOf(FLOAT), String.valueOf(FLOAT))));
     }
 
     @Test
@@ -578,7 +575,7 @@ public class TestNsiliFilterDelegate {
         filterList.add(filterDelegate.propertyIsBetween(PROPERTY, INT, INT));
         String filter = filterDelegate.and(filterList);
         assertThat(filter,
-                is(getPrimary(NsiliFilterFactory.BTW, INT + NsiliFilterFactory.COMMA + INT)));
+                is(getPrimaryBetween(PROPERTY, String.valueOf(INT), String.valueOf(INT))));
     }
 
     @Test
@@ -608,7 +605,7 @@ public class TestNsiliFilterDelegate {
         filterList.add(filterDelegate.propertyIsBetween(PROPERTY, INT, INT));
         String filter = filterDelegate.or(filterList);
         assertThat(filter,
-                is(getPrimary(NsiliFilterFactory.BTW, INT + NsiliFilterFactory.COMMA + INT)));
+                is(getPrimaryBetween(PROPERTY, String.valueOf(INT), String.valueOf(INT))));
     }
 
     @Test(expected = UnsupportedOperationException.class)
@@ -837,6 +834,12 @@ public class TestNsiliFilterDelegate {
 
     private String getPrimary(String property, String operator, Object attribute) {
         return NsiliFilterFactory.LP + property + operator + attribute + NsiliFilterFactory.RP;
+    }
+
+    private String getPrimaryBetween(String property, String lower, String upper) {
+        return NsiliFilterFactory.LP + NsiliConstants.NSIL_CARD + "." + property
+                + NsiliFilterFactory.GTE + lower + NsiliFilterFactory.AND + NsiliConstants.NSIL_CARD
+                + "." + property + NsiliFilterFactory.LTE + upper + NsiliFilterFactory.RP;
     }
 
     private static Date getDate() {

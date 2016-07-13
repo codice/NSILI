@@ -25,9 +25,12 @@ public enum BqsOperator {
     GT,
     LT,
     NOT,
+    NOTEQ,
     INTERSECT,
     OUTSIDE,
     INSIDE,
     WITHIN,
-    BEYOND
+    BEYOND,
+    LPAREN,
+    RPAREN
 }

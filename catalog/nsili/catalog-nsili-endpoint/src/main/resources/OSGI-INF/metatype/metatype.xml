@@ -32,6 +32,16 @@
                 default="10000"
         />
         <AD
+                description="Should the source library portion of the query be removed before execution. This is necessary since source library maps to sourceId and sourceId is not an attribute of the metacard and will never match on any queries."
+                name="Remove Source Library" id="removeSourceLibrary" required="true" type="Boolean"
+                default="true"
+        />
+        <AD
+                description="Library version returned when queried by external clients - indicates the version supported by this endpoint."
+                name="Library Version" id="libraryVersion" required="true" type="String"
+                default="NSILI|3.2"
+        />
+        <AD
                 description="Enabled or disabled outgoing DAG validation against mandatory attributes"
                 name="Enabled Outgoing Validation" id="outgoingValidationEnabled" required="true" type="Boolean"
                 default="10000"

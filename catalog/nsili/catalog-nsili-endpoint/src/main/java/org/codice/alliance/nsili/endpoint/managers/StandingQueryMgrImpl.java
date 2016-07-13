@@ -54,8 +54,6 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
 
     private CatalogFramework catalogFramework;
 
-    private Subject subject;
-
     private FilterBuilder filterBuilder;
 
     private long defaultUpdateFrequencyMsec;
@@ -63,6 +61,8 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
     private int maxPendingResults;
 
     private List<String> querySources = new ArrayList<>();
+
+    private boolean removeSourceLibrary;
 
     private boolean outgoingValidationEnabled;
 
@@ -83,16 +83,16 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
         this.filterBuilder = filterBuilder;
     }
 
-    public void setSubject(Subject subject) {
-        this.subject = subject;
-    }
-
     public void setDefaultUpdateFrequencyMsec(long defaultUpdateFrequencyMsec) {
         this.defaultUpdateFrequencyMsec = defaultUpdateFrequencyMsec;
     }
 
     public void setMaxPendingResults(int maxPendingResults) {
         this.maxPendingResults = maxPendingResults;
+    }
+
+    public void setRemoveSourceLibrary(boolean removeSourceLibrary) {
+        this.removeSourceLibrary = removeSourceLibrary;
     }
 
     public void setOutgoingValidationEnabled(boolean outgoingValidationEnabled) {
@@ -138,11 +138,11 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
                 lifespan,
                 properties,
                 catalogFramework,
-                subject,
                 filterBuilder,
                 defaultUpdateFrequencyMsec,
                 querySources,
                 maxPendingResults,
+                removeSourceLibrary,
                 outgoingValidationEnabled);
 
         String id = UUID.randomUUID()

@@ -159,6 +159,11 @@
             <artifactId>catalog-nsili-orb-api</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>ddf.security.sts</groupId>
+            <artifactId>security-sts-server</artifactId>
+            <version>${ddf.version}</version>
+        </dependency>
     </dependencies>
     <build>
         <resources>

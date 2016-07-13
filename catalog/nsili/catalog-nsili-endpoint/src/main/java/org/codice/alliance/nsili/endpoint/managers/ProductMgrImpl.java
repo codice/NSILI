@@ -70,8 +70,6 @@ public class ProductMgrImpl extends ProductMgrPOA {
 
     private FilterBuilder filterBuilder;
 
-    private Subject subject;
-
     private List<String> querySources;
 
     private AccessManagerImpl accessManager;
@@ -88,10 +86,6 @@ public class ProductMgrImpl extends ProductMgrPOA {
 
     public void setFilterBuilder(FilterBuilder filterBuilder) {
         this.filterBuilder = filterBuilder;
-    }
-
-    public void setSubject(Subject subject) {
-        this.subject = subject;
     }
 
     public void setOutgoingValidationEnabled(boolean outgoingValidationEnabled) {
@@ -115,7 +109,6 @@ public class ProductMgrImpl extends ProductMgrPOA {
                     desired_parameters,
                     catalogFramework,
                     filterBuilder,
-                    subject,
                     querySources,
                     outgoingValidationEnabled);
             _poa().activate_object_with_id(id.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
@@ -279,7 +272,6 @@ public class ProductMgrImpl extends ProductMgrPOA {
             accessManager = new AccessManagerImpl();
             accessManager.setCatalogFramework(catalogFramework);
             accessManager.setFilterBuilder(filterBuilder);
-            accessManager.setSubject(subject);
             accessManager.setQuerySources(querySources);
 
             String managerId = UUID.randomUUID()

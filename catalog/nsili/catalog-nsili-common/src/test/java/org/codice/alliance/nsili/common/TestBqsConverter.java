@@ -15,15 +15,10 @@ package org.codice.alliance.nsili.common;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-import java.math.BigInteger;
-import java.util.UUID;
-
-import javax.xml.bind.DatatypeConverter;
-
-import org.apache.commons.codec.binary.Hex;
 import org.junit.Before;
 import org.junit.Test;
 import org.opengis.filter.Filter;
@@ -87,7 +82,65 @@ public class TestBqsConverter {
     private static final String TEST_BQS_NON_REQ_FIELD =
             "NSIL_CARD.identifier like '%' AND (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')";
 
-    private BqsConverter bqsConverter = new BqsConverter(new GeotoolsFilterBuilder());
+    private static final String TEST_BQS_SIMPLE_PAREN =
+            "(NSIL_CARD.identifier like '%') or (NSIL_CARD.status = '%')";
+
+    private static final String TEST_BQS_SIMPLE_PAREN2 =
+            "(NSIL_CARD.identifier like '%' or NSIL_CARD.identifier like 'blah' and NSIL_CARD.identifier like 'two') and (NSIL_CARD.status = '%')";
+
+    private static final String TEST_BQS_QUOTE_STR =
+            "NSIL_CARD.identifier LIKE 'TEST_LAB_DDF_$_X'";
+
+    private static final String TEST_BQS_MASSIVE =
+            "((NSIL_CARD.identifier like '%') or (NSIL_CARD.status = '%') or (NSIL_CARD.publisher like '%') "
+                    + "or (NSIL_CARD.sourceLibrary like '%') or (NSIL_COMMON.descriptionAbstract like '%') "
+                    + "or (NSIL_COMMON.identifierMission like '%') or (NSIL_COMMON.identifierUUID like '%') "
+                    + "or (NSIL_COMMON.language like '%') or (NSIL_COMMON.source like '%') "
+                    + "or (NSIL_COMMON.subjectCategoryTarget like '%') or (NSIL_COMMON.targetNumber like '%') "
+                    + "or (NSIL_COMMON.type = '%') or (NSIL_COVERAGE.spatialCountryCode like '%') "
+                    + "or (NSIL_FILE.archiveInformation like '%') or (NSIL_FILE.creator like '%') "
+                    + "or (NSIL_FILE.format like '%') or (NSIL_FILE.formatVersion like '%') "
+                    + "or (NSIL_FILE.productURL like '%') or (NSIL_FILE.title like '%') "
+                    + "or (NSIL_IMAGERY.category = '%') or (NSIL_IMAGERY.comments like '%') "
+                    + "or (NSIL_IMAGERY.decompressionTechnique = '%') "
+                    + "or (NSIL_IMAGERY.identifier like '%') or (NSIL_IMAGERY.title like '%') "
+                    + "or (NSIL_MESSAGE.recipient like '%') or (NSIL_MESSAGE.subject like '%') "
+                    + "or (NSIL_MESSAGE.messageBody like '%') or (NSIL_MESSAGE.messageType = '%') "
+                    + "or (NSIL_METADATASECURITY.classification = '%') "
+                    + "or (NSIL_METADATASECURITY.policy like '%') "
+                    + "or (NSIL_METADATASECURITY.releasability like '%') "
+                    + "or (NSIL_PART.partIdentifier like '%') or (NSIL_RELATED_FILE.creator like '%') "
+                    + "or (NSIL_RELATED_FILE.fileType like '%') or (NSIL_RELATED_FILE.URL like '%') "
+                    + "or (NSIL_RELATION.amplification like '%') or (NSIL_RELATION.contributor like '%') "
+                    + "or (NSIL_RELATION.description like '%') or (NSIL_RELATION.relationship = '%') "
+                    + "or (NSIL_SECURITY.classification = '%') or (NSIL_SECURITY.policy like '%') "
+                    + "or (NSIL_SECURITY.releasability like '%') or (NSIL_STREAM.archiveInformation like '%') "
+                    + "or (NSIL_STREAM.creator like '%') or (NSIL_STREAM.standard = '%') "
+                    + "or (NSIL_STREAM.standardVersion like '%') or (NSIL_STREAM.sourceURL like '%') "
+                    + "or (NSIL_VIDEO.category = '%') or (NSIL_VIDEO.encodingScheme = '%') "
+                    + "or (NSIL_VIDEO.metadataEncodingScheme = '%') or (NSIL_VIDEO.scanningMode = '%') "
+                    + "or (NSIL_APPROVAL.approvedBy like '%') or (NSIL_APPROVAL.status = '%') "
+                    + "or (EXPLOITATION_INFO.description like '%') or (EXPLOITATION_INFO.subjectiveQualityCode = '%') "
+                    + "or (NSIL_SDS.operationalStatus = '%') or (NSIL_TDL.messageNumber = '%') "
+                    + "or (NSIL_TDL.trackNumber like '%') or (NSIL_RFI.forAction like '%') "
+                    + "or (NSIL_RFI.forInformation like '%') or (NSIL_RFI.serialNumber like '%') "
+                    + "or (NSIL_RFI.status = '%') or (NSIL_RFI.workflowStatus = '%') or (NSIL_CXP.status = '%') "
+                    + "or (NSIL_REPORT.originatorsRequestSerialNumber like '%') or (NSIL_REPORT.priority = '%') "
+                    + "or (NSIL_REPORT.type = '%') or (NSIL_TASK.comments like '%') or (NSIL_TASK.status = '%')) "
+                    + "and (not NSIL_PRODUCT:NSIL_CARD.status = 'OBSOLETE')";
+
+    private static final String BQS_SOURCE_LIBRARY =
+            "(NSIL_CARD.sourceLibrary like '%') or (NSIL_CARD.status = '%')";
+
+    private static final String BQS_AND_SOURCE_LIBRARY =
+            "(NSIL_CARD.sourceLibrary LIKE 'TEST LAB DDF Space' OR"
+                    + " NSIL_CARD.sourceLibrary LIKE 'TEST_LAB_DDF_2_9') AND"
+                    + " (NSIL_CARD.dateTimeModified > '1970/01/01 00:00:00') AND"
+                    + " (NSIL_CARD.sourceLibrary <> 'TEST-REMOTE')";
+
+    private static final String BQS_ONLY_SOURCE_LIBRARY = "NSIL_CARD.sourceLibrary LIKE 'TEST LAB DDF Space'";
+
+    private BqsConverter bqsConverter = new BqsConverter(new GeotoolsFilterBuilder(), true);
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(TestBqsConverter.class);
 
@@ -115,8 +168,7 @@ public class TestBqsConverter {
         Filter filter = bqsConverter.convertBQSToDDF(BASIC_BQS_AND_QUERY);
         assertThat(filter, notNullValue());
         assertThat(filter.toString(),
-                containsString(
-                        "[[ id is like Test ] OR [ targetNumber is like Test ]"));
+                containsString("[[ id is like Test ] OR [ targetNumber is like Test ]"));
     }
 
     @Test
@@ -124,8 +176,7 @@ public class TestBqsConverter {
         Filter filter = bqsConverter.convertBQSToDDF(BASIC_BQS_AND_QUERY_WITH_PAREN);
         assertThat(filter, notNullValue());
         assertThat(filter.toString(),
-                containsString(
-                        "[[ id is like Test ] OR [ targetNumber is like Test ]]"));
+                containsString("[[ id is like Test ] OR [ targetNumber is like Test ]]"));
     }
 
     @Test
@@ -133,8 +184,7 @@ public class TestBqsConverter {
         Filter filter = bqsConverter.convertBQSToDDF(BASIC_BQS_PAREN_TEST2);
         assertThat(filter, notNullValue());
         assertThat(filter.toString(),
-                containsString(
-                        "AND [[ id is like Test ] OR [ targetNumber is like Test ]]"));
+                containsString("AND [[ id is like Test ] OR [ targetNumber is like Test ]]"));
     }
 
     @Test
@@ -220,10 +270,99 @@ public class TestBqsConverter {
     }
 
     @Test
-    public void setTestBqsNonReqField() {
+    public void testBqsNonReqField() {
         Filter filter = bqsConverter.convertBQSToDDF(TEST_BQS_NON_REQ_FIELD);
         assertThat(filter, notNullValue());
         assertThat(filter.toString(),
                 is("[[ id is like * ] AND [ NOT [ status is like OBSOLETE ] ]]"));
+    }
+
+    @Test
+    public void testBqsSimpleParen() {
+        Filter filter = bqsConverter.convertBQSToDDF(TEST_BQS_SIMPLE_PAREN);
+
+        assertThat(filter, notNullValue());
+        assertThat(filter.toString(),
+                is("[[ id is like * ] OR [ status is like * ]]"));
+    }
+
+    @Test
+    public void testBqsSimpleParen2() {
+        Filter filter = bqsConverter.convertBQSToDDF(TEST_BQS_SIMPLE_PAREN2);
+
+        assertThat(filter, notNullValue());
+        assertThat(filter.toString(),
+                is("[[ status is like * ] AND [[ id is like * ] OR [[ id is like blah ] AND [ id is like two ]]]]"));
+    }
+
+    @Test
+    public void testBqsMassive() {
+        Filter filter = bqsConverter.convertBQSToDDF(TEST_BQS_MASSIVE);
+
+        assertThat(filter, notNullValue());
+        assertThat(filter.toString(),
+                containsString("[ NOT [ status is like OBSOLETE ] ]"));
+    }
+
+    @Test
+    public void testQuotes() {
+        Filter filter = bqsConverter.convertBQSToDDF(TEST_BQS_QUOTE_STR);
+
+        assertThat(filter, notNullValue());
+        assertThat(filter.toString(),
+                is("[ id is like TEST_LAB_DDF_$_X ]"));
+    }
+
+    @Test
+    public void testNoSourceLibrary() {
+        Filter filter = bqsConverter.convertBQSToDDF(BQS_SOURCE_LIBRARY);
+
+        assertThat(filter, notNullValue());
+        assertThat(filter.toString(),
+                is("[[ status is like * ]]"));
+    }
+
+    @Test
+    public void testSourceLibrary() {
+        BqsConverter bqsConverter = new BqsConverter(new GeotoolsFilterBuilder(), false);
+        Filter filter = bqsConverter.convertBQSToDDF(BQS_SOURCE_LIBRARY);
+
+        assertThat(filter, notNullValue());
+        assertThat(filter.toString(),
+                is("[[ sourceId is like * ] OR [ status is like * ]]"));
+    }
+
+    @Test
+    public void testSourceLibraryAnd() {
+        Filter filter = bqsConverter.convertBQSToDDF(BQS_AND_SOURCE_LIBRARY);
+
+        assertThat(filter, notNullValue());
+        assertThat(filter.toString(),
+                not(containsString("AND")));
+    }
+
+    @Test
+    public void testSourceLibraryAndInclude() {
+        BqsConverter bqsConverter = new BqsConverter(new GeotoolsFilterBuilder(), false);
+        Filter filter = bqsConverter.convertBQSToDDF(BQS_AND_SOURCE_LIBRARY);
+
+        assertThat(filter, notNullValue());
+        assertThat(filter.toString(),
+                containsString("AND [ NOT [ sourceId = TEST-REMOTE ] ] AND [[ sourceId is like TEST LAB DDF Space ] OR [ sourceId is like TEST_LAB_DDF_2_9 ]]"));
+    }
+
+    @Test
+    public void testMinimalReturnFilter() {
+        BqsConverter bqsConverter = new BqsConverter(new GeotoolsFilterBuilder(), true);
+        Filter filter = bqsConverter.convertBQSToDDF(BQS_ONLY_SOURCE_LIBRARY);
+
+        assertThat(filter, notNullValue());
+        assertThat(filter.toString(),
+                containsString("anyText = *"));
+    }
+
+    @Test (expected = IllegalArgumentException.class)
+    public void testNoFilterBuilder() {
+        new BqsConverter(null, false);
     }
 }
