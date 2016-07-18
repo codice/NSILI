@@ -13,6 +13,7 @@
  */
 package org.codice.alliance.nsili.source;
 
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -31,6 +32,7 @@ import org.codice.alliance.nsili.common.GIAS.AttributeInformation;
 import org.codice.alliance.nsili.common.GIAS.AttributeType;
 import org.codice.alliance.nsili.common.GIAS.DateRange;
 import org.codice.alliance.nsili.common.GIAS.Domain;
+import org.codice.alliance.nsili.common.GIAS.DomainType;
 import org.codice.alliance.nsili.common.GIAS.IntegerRange;
 import org.codice.alliance.nsili.common.GIAS.RequirementMode;
 import org.codice.alliance.nsili.common.NsiliConstants;
@@ -524,9 +526,10 @@ public class TestNsiliFilterDelegate {
 
         List<AttributeInformation> attributeInformationList = generateAttributeInformation().get(
                 NsiliConstants.NSIL_ALL_VIEW);
-        StringBuilder result = new StringBuilder(NsiliFilterFactory.LP);
+        StringBuilder result = new StringBuilder();
         for (AttributeInformation attributeInformation : attributeInformationList) {
-            if (attributeInformation.attribute_type.equals(AttributeType.TEXT)) {
+            if (attributeInformation.attribute_type.equals(AttributeType.TEXT) &&
+                    attributeInformation.attribute_domain.discriminator() == DomainType.TEXT_VALUE) {
                 result.append(getPrimary(attributeInformation.attribute_name,
                         NsiliFilterFactory.LIKE,
                         NsiliFilterDelegate.SQ + NsiliFilterDelegate.WILDCARD + ATTRIBUTE
@@ -536,8 +539,10 @@ public class TestNsiliFilterDelegate {
 
         }
         String resultString = result.toString();
-        resultString = resultString.substring(0, result.length() - 4) + NsiliFilterFactory.RP;
+        resultString = resultString.substring(0, result.length() - 4);
         assertThat(filter, is(resultString));
+
+        assertThat(filter, not(containsString(NsiliConstants.ADVANCED_GEOSPATIAL)));
     }
 
     @Test

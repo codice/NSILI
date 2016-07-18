@@ -181,7 +181,9 @@ public class NsiliFilterFactory {
     }
 
     public boolean isTextAttributeType(AttributeInformation attributeInformation) {
-        return attributeInformation.attribute_type.equals(AttributeType.TEXT)
+        return  !attributeInformation.attribute_name.contains(NsiliConstants.ADVANCED_GEOSPATIAL)
+                && attributeInformation.attribute_domain.discriminator() == DomainType.TEXT_VALUE
+                && attributeInformation.attribute_type.equals(AttributeType.TEXT)
                 && !attributeInformation.attribute_name.equals(TYPE);
     }
 

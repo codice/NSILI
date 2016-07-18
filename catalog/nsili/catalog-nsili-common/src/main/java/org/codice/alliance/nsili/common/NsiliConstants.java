@@ -191,6 +191,8 @@ public class NsiliConstants {
 
     public static final String SPATIAL_GEOGRAPHIC_REF_BOX = "spatialGeographicReferenceBox";
 
+    public static final String ADVANCED_GEOSPATIAL = "advancedGeoSpatial";
+
     public static final String TEMPORAL_START = "temporalStart";
 
     public static final String TEMPORAL_END = "temporalEnd";

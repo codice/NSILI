@@ -141,7 +141,7 @@ public class TestAccessManagerImpl extends TestNsiliCommon {
         testMetacard.setId(testMetacardId);
         testMetacard.setTitle("JUnit Test Card");
         testMetacard.setAttribute(new AttributeImpl(Metacard.RESOURCE_DOWNLOAD_URL,
-                "http://localhost:20000/not/present"));
+                "http://localhost:20999/not/present"));
         Result testResult = new ResultImpl(testMetacard);
 
         List<Result> results = new ArrayList<>();
