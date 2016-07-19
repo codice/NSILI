@@ -399,7 +399,12 @@ public class DAGConverter {
                     getString(node.value)));
             break;
         case NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX:
-            metacard.setLocation(convertShape(node.value, swapCoordinates));
+            if (metacard.getLocation() == null) {
+                metacard.setLocation(convertShape(node.value, swapCoordinates));
+            }
+            break;
+        case NsiliConstants.ADVANCED_GEOSPATIAL:
+            metacard.setLocation(getString(node.value));
             break;
         case NsiliConstants.TEMPORAL_START:
             metacard.setAttribute(new AttributeImpl(NsiliMetacardType.START_DATETIME,

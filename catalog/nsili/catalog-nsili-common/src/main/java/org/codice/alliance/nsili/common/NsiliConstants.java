@@ -72,6 +72,8 @@ public class NsiliConstants {
 
     public static final String NSIL_TDL_VIEW = "NSIL_TDL_VIEW";
 
+    public static final String NSIL_CBRN_VIEW = "NSIL_CBRN_VIEW";
+
     public static final String NSIL_DESTINATION = "NSIL_DESTINATION";
 
     public static final String NSIL_ASSOCIATION = "NSIL_ASSOCIATION";
@@ -104,6 +106,8 @@ public class NsiliConstants {
 
     public static final String NSIL_CARD = "NSIL_CARD";
 
+    public static final String NSIL_CBRN = "NSIL_CBRN";
+
     public static final String NSIL_APPROVAL = "NSIL_APPROVAL";
 
     public static final String NSIL_COVERAGE = "NSIL_COVERAGE";
@@ -120,6 +124,12 @@ public class NsiliConstants {
 
     public static final String NSIL_SDS = "NSIL_SDS";
 
+    public static final String NSIL_ENTITY = "NSIL_ENTITY";
+
+    public static final String NSIL_INTREP = "NSIL_INTREP";
+
+    public static final String NSIL_INTSUM = "NSIL_INTSUM";
+
     public static final String NSIL_TASK = "NSIL_TASK";
 
     public static final String NSIL_TDL = "NSIL_TDL";
@@ -128,6 +138,8 @@ public class NsiliConstants {
     public static final String IDENTIFIER_UUID = "identifierUUID";
 
     public static final String TYPE = "type";
+
+    public static final String KEYWORDS = "keywords";
 
     public static final String IDENTIFIER_JOB = "identifierJob";
 
@@ -213,6 +225,8 @@ public class NsiliConstants {
 
     public static final String IS_PRODUCT_LOCAL = "isProductLocal";
 
+    public static final String FILENAME = "filename";
+
     public static final String CLOUD_COVER_PCT = "cloudCoverPercentage";
 
     public static final String COMMENTS = "comments";
@@ -240,6 +254,22 @@ public class NsiliConstants {
     public static final String MISM_LEVEL = "MISMLevel";
 
     public static final String SCANNING_MODE = "scanningMode";
+
+    public static final String VMTI_PROCESSED = "vmtiProcessed";
+
+    public static final String NUM_VMTI_TGT_REPORTS = "numberOfVMTITargetReports";
+
+    public static final String OPERATION_NAME = "operationName";
+
+    public static final String INCIDENT_NUM = "incidentNumber";
+
+    public static final String EVENT_TYPE = "eventType";
+
+    public static final String CBRN_CATEGORY = "cbrnCategory";
+
+    public static final String SUBSTANCE = "substance";
+
+    public static final String ALARM_CLASSIFICATION = "alarmClassification";
 
     public static final String STATUS = "status";
 
@@ -273,6 +303,8 @@ public class NsiliConstants {
 
     public static final String APPROVED_BY = "approvedBy";
 
+    public static final String INFORMATION_RATING = "informationRating";
+
     public static final String ORIGINATORS_REQ_SERIAL_NUM = "originatorsRequestSerialNumber";
 
     public static final String PRIORITY = "priority";
@@ -288,6 +320,16 @@ public class NsiliConstants {
     public static final String CONTRIBUTOR = "contributor";
 
     public static final String RELATIONSHIP = "relationship";
+
+    public static final String NAME = "name";
+
+    public static final String ALIAS = "alias";
+
+    public static final String SITUATION_TYPE = "situationType";
+
+    public static final String AREA_ASSESSMENT = "areaAssessment";
+
+    public static final String GENERAL_ASSESSMENT = "generalAssessment";
 
     //Association Constants
     public static final String HAS_PART = "HAS PART";

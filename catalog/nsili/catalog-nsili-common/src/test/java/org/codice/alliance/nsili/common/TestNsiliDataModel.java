@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.codice.alliance.nsili.common.GIAS.AttributeInformation;
 import org.junit.Test;
 
 import org.codice.alliance.nsili.common.GIAS.Association;
@@ -113,5 +114,23 @@ public class TestNsiliDataModel {
         List<String> commonAttrs = mandatoryAttrs.get(NsiliConstants.NSIL_COMMON);
         assertThat(commonAttrs, notNullValue());
         assertThat(commonAttrs.size(), is(2));
+    }
+
+    @Test
+    public void testNsiliAmd2Attributes() {
+        List<AttributeInformation> attributesForView = nsiliDataModel.getAttributesForView(NsiliConstants.NSIL_ALL_VIEW);
+        assertThat(attributesForView, notNullValue());
+
+        boolean advancedGeoSpatialExists = false;
+        int numEntityNodeAttrs = 0;
+        for (AttributeInformation attributeInformation : attributesForView) {
+            if (attributeInformation.attribute_name.contains(NsiliConstants.ADVANCED_GEOSPATIAL)) {
+                advancedGeoSpatialExists = true;
+            } else if (attributeInformation.attribute_name.contains(NsiliConstants.NSIL_ENTITY)) {
+                numEntityNodeAttrs++;
+            }
+        }
+        assertThat(advancedGeoSpatialExists, is(true));
+        assertThat(numEntityNodeAttrs, is(3));
     }
 }

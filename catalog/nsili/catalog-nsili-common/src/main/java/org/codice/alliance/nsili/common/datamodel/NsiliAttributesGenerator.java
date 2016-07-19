@@ -20,9 +20,12 @@ import java.util.stream.Collectors;
 
 import org.codice.alliance.nsili.common.NsiliApprovalStatus;
 import org.codice.alliance.nsili.common.NsiliCardStatus;
+import org.codice.alliance.nsili.common.NsiliCbrnAlarmClassification;
+import org.codice.alliance.nsili.common.NsiliCbrnEvent;
 import org.codice.alliance.nsili.common.NsiliClassification;
 import org.codice.alliance.nsili.common.NsiliConstants;
 import org.codice.alliance.nsili.common.NsiliCxpStatusType;
+import org.codice.alliance.nsili.common.NsiliEntityType;
 import org.codice.alliance.nsili.common.NsiliExploitationSubQualCode;
 import org.codice.alliance.nsili.common.NsiliImageryType;
 import org.codice.alliance.nsili.common.NsiliMetadataEncodingScheme;
@@ -34,6 +37,7 @@ import org.codice.alliance.nsili.common.NsiliRfiStatus;
 import org.codice.alliance.nsili.common.NsiliRfiWorkflowStatus;
 import org.codice.alliance.nsili.common.NsiliScanningMode;
 import org.codice.alliance.nsili.common.NsiliSdsOpStatus;
+import org.codice.alliance.nsili.common.NsiliSituationType;
 import org.codice.alliance.nsili.common.NsiliStreamStandard;
 import org.codice.alliance.nsili.common.NsiliVideoCategoryType;
 import org.codice.alliance.nsili.common.NsiliVideoEncodingScheme;
@@ -284,6 +288,18 @@ public class NsiliAttributesGenerator {
                 false,
                 true));
 
+        domain = new Domain();
+        domain.t(200);
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.KEYWORDS,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.OPTIONAL,
+                "A comma delimited list of keywords providing additional information to enable an operator to query the STANAG 4559 library by keywords.",
+                false,
+                true));
+
         return attributes;
     }
 
@@ -314,6 +330,18 @@ public class NsiliAttributesGenerator {
                 "",
                 RequirementMode.OPTIONAL,
                 "Geographic location of the dataset. Always in WGS-84 reference system, and using decimal degrees. The first coordinate represents the most North-Western corner, the second the most South-Eastern corner. The x-value in a UCOS: Coordinate2D struct represents the longitude, the y-value represents the latitude.",
+                false,
+                true));
+
+        domain = new Domain();
+        domain.t(2048);
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.ADVANCED_GEOSPATIAL,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.OPTIONAL,
+                "Allows storing advanced geometry for display purposes only. The geometry must be encoded using the OGC Well-Known Text (WKT) format [ISO/IEC 13429-3:2011] and validation may be performed by the STANAG 4559 library.",
                 false,
                 true));
 
@@ -473,6 +501,18 @@ public class NsiliAttributesGenerator {
                 "Indicates whether the product file is available locally in the library, or resides in a remote library.",
                 true,
                 false));
+
+        domain = new Domain();
+        domain.t(256);
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.FILENAME,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.OPTIONAL,
+                "A string item providing the original file name of the product.",
+                true,
+                true));
 
         return attributes;
     }
@@ -1176,6 +1216,112 @@ public class NsiliAttributesGenerator {
                 false,
                 true));
 
+        domain = new Domain();
+        domain.bv(false);
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.VMTI_PROCESSED,
+                AttributeType.BOOLEAN_DATA,
+                domain,
+                "",
+                "",
+                RequirementMode.OPTIONAL,
+                "A flag indicating if the video stream or file has been processed by a VMTI processor.",
+                false,
+                true));
+
+        domain = new Domain();
+        domain.ir(new IntegerRange(0, Integer.MAX_VALUE));
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.NUM_VMTI_TGT_REPORTS,
+                AttributeType.INTEGER,
+                domain,
+                "",
+                "",
+                RequirementMode.OPTIONAL,
+                "The maximum number of unique detections in any one (1) second interval. For a video stream the numberOfVMTITargetReports shall not be provided a value.",
+                false,
+                true));
+
+        return attributes;
+    }
+
+    public static List<AttributeInformation> getNsilCbrnAttributes() {
+        String prefix = NsiliConstants.NSIL_CBRN + ".";
+        Domain domain;
+
+        List<AttributeInformation> attributes = new ArrayList<>();
+
+        domain = new Domain();
+        domain.t(56);
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.OPERATION_NAME,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.OPTIONAL,
+                "Exercise Identification or Operation Code Word",
+                true,
+                true));
+
+        domain = new Domain();
+        domain.t(26);
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.INCIDENT_NUM,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.MANDATORY,
+                "Incident Number typically based on the concatenation of ALFA1, ALFA2, ALFA3, and ALFA4.",
+                true,
+                true
+                ));
+
+        domain = new Domain();
+        domain.l(getCbrnEventOptions());
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.EVENT_TYPE,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.MANDATORY,
+                "Type of event enumeration description",
+                true,
+                true));
+
+        domain = new Domain();
+        domain.t(100);
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.CBRN_CATEGORY,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.MANDATORY,
+                "The CBRN report type or plot type",
+                true,
+                true));
+
+        domain = new Domain();
+        domain.t(7);
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.SUBSTANCE,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.OPTIONAL,
+                "Description of substance",
+                true,
+                true));
+
+        domain = new Domain();
+        domain.l(getCbrnAlarmClassificationOptions());
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.ALARM_CLASSIFICATION,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.OPTIONAL,
+                "Classification of CBRN sensor alarm",
+                true,
+                true));
+
         return attributes;
     }
 
@@ -1456,6 +1602,18 @@ public class NsiliAttributesGenerator {
         List<AttributeInformation> attributes = new ArrayList<>();
 
         domain = new Domain();
+        domain.t(200);
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.INFORMATION_RATING,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.OPTIONAL,
+                "Information rating of the data source and the information of the data source upon which the report is generated by assessing the \"Reliability of the Source and Credibility of the Information\" according to STANAG 2511, 2190 and 2191. The rating is specified by the combination of reliability and credibility values, e.g. B2. If the report is generated upon multiple source, multiple ratings are separated by commas (e.g. B2,C3,C6).",
+                false,
+                true));
+
+        domain = new Domain();
         domain.t(10);
         attributes.add(new AttributeInformation(prefix + NsiliConstants.ORIGINATORS_REQ_SERIAL_NUM,
                 AttributeType.TEXT,
@@ -1488,6 +1646,117 @@ public class NsiliAttributesGenerator {
                 "",
                 RequirementMode.OPTIONAL,
                 "The specific type of report.",
+                false,
+                true));
+
+        return attributes;
+    }
+
+    public static List<AttributeInformation> getNsilEntityAttributes() {
+        String prefix = NsiliConstants.NSIL_ENTITY + ".";
+        Domain domain;
+
+        List<AttributeInformation> attributes = new ArrayList<>();
+
+        domain = new Domain();
+        domain.l(getEntityTypeOptions());
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.TYPE,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.MANDATORY,
+                "Information rating of the data source and the information of the data source upon which the report is generated by assessing the Reliability of the Source and Credibility of the Information according to STANAG 2511, 2190 and 2191. The rating is specified by the combination of reliability and credibility values, e.g. B2. If the report is generated upon multiple source, multiple ratings are separated by commas (e.g. B2,C3,C6).",
+                false,
+                true));
+
+        domain = new Domain();
+        domain.t(255);
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.NAME,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.MANDATORY,
+                "The name identifying the entity.",
+                false,
+                true));
+
+        domain = new Domain();
+        domain.t(255);
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.ALIAS,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.OPTIONAL,
+                "The alias of the entity.",
+                false,
+                true));
+
+        return attributes;
+    }
+
+    public static List<AttributeInformation> getNsilIntrepAttributes() {
+        String prefix = NsiliConstants.NSIL_INTREP + ".";
+        Domain domain;
+
+        List<AttributeInformation> attributes = new ArrayList<>();
+
+        domain = new Domain();
+        domain.l(getSituationTypeOptions());
+        attributes.add(new AttributeInformation(prefix + NsiliConstants.SITUATION_TYPE,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.MANDATORY,
+                "Represents the type of situation.",
+                false,
+                true));
+
+        return attributes;
+    }
+
+    public static List<AttributeInformation> getNsilIntsumAttributes() {
+        String prefix = NsiliConstants.NSIL_INTSUM + ".";
+        Domain domain;
+
+        List<AttributeInformation> attributes = new ArrayList<>();
+
+        domain = new Domain();
+        domain.t(2048);
+        attributes.add(new AttributeInformation(NsiliConstants.AREA_ASSESSMENT,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.MANDATORY,
+                "Evaluation of the current situation and/or events within the defined area.",
+                false,
+                true));
+
+        domain = new Domain();
+        domain.t(2048);
+        attributes.add(new AttributeInformation(NsiliConstants.GENERAL_ASSESSMENT,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.MANDATORY,
+                "Assessment of the current situation or events. This will include short and long term forecasts of the intentions and capabilities of the parties involved.",
+                false,
+                true));
+
+        domain = new Domain();
+        domain.t(200);
+        attributes.add(new AttributeInformation(NsiliConstants.SITUATION_TYPE,
+                AttributeType.TEXT,
+                domain,
+                "",
+                "",
+                RequirementMode.OPTIONAL,
+                "Comma separated list of the situation type of the referred reports.",
                 false,
                 true));
 
@@ -1641,6 +1910,34 @@ public class NsiliAttributesGenerator {
     private static String[] getSdsOperationalStatusOptions() {
         return Arrays.stream(NsiliSdsOpStatus.values())
                 .map(NsiliSdsOpStatus::getSpecName)
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
+    }
+
+    private static String[] getCbrnEventOptions() {
+        return Arrays.stream(NsiliCbrnEvent.values())
+                .map(NsiliCbrnEvent::getSpecName)
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
+    }
+
+    public static String[] getCbrnAlarmClassificationOptions() {
+        return Arrays.stream(NsiliCbrnAlarmClassification.values())
+                .map(NsiliCbrnAlarmClassification::getSpecName)
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
+    }
+
+    public static String[] getSituationTypeOptions() {
+        return Arrays.stream(NsiliSituationType.values())
+                .map(NsiliSituationType::getSpecName)
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
+    }
+
+    public static String[] getEntityTypeOptions() {
+        return Arrays.stream(NsiliEntityType.values())
+                .map(Object::toString)
                 .collect(Collectors.toList())
                 .toArray(new String[0]);
     }

@@ -111,7 +111,7 @@ public class CorbaOrbImpl extends MaskableImpl implements CorbaOrb {
 
         System.setProperty("com.sun.CORBA.POA.ORBPersistentServerPort", String.valueOf(corbaPort));
         System.setProperty("com.sun.CORBA.ORBServerPort", String.valueOf(corbaPort));
-        System.setProperty("com.sun.CORBA.transport.ORBTCPRadTimeouts", getCorbaWaitTime());
+        System.setProperty("com.sun.CORBA.transport.ORBTCPReadTimeouts", getCorbaWaitTime());
 
         orb = org.omg.CORBA.ORB.init(new String[0], null);
         if (orb != null) {
@@ -125,7 +125,7 @@ public class CorbaOrbImpl extends MaskableImpl implements CorbaOrb {
 
         System.clearProperty("com.sun.CORBA.POA.ORBPersistentServerPort");
         System.clearProperty("com.sun.CORBA.ORBServerPort");
-        System.clearProperty("com.sun.CORBA.transport.ORBTCPRadTimeouts");
+        System.clearProperty("com.sun.CORBA.transport.ORBTCPReadTimeouts");
 
         for (CorbaServiceListener listener : corbaServiceListeners) {
             listener.corbaInitialized();

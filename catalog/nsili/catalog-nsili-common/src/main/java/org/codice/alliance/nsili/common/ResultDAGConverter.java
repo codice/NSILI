@@ -673,6 +673,20 @@ public class ResultDAGConverter {
 
             String attribute = parentAttrName + NsiliConstants.NSIL_COVERAGE;
 
+            if (shouldAdd(buildAttr(attribute, NsiliConstants.ADVANCED_GEOSPATIAL),
+                    resultAttributes)) {
+                Attribute geoAttr = metacard.getAttribute(Metacard.GEOGRAPHY);
+                if (geoAttr != null) {
+                    String wktGeo = String.valueOf(geoAttr.getValue());
+                    addStringAttribute(graph,
+                            coverageNode,
+                            NsiliConstants.ADVANCED_GEOSPATIAL,
+                            wktGeo,
+                            orb);
+                    addedAttributes.add(buildAttr(attribute, NsiliConstants.ADVANCED_GEOSPATIAL));
+                }
+            }
+
             if (shouldAdd(buildAttr(attribute, NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX),
                     resultAttributes)) {
                 Attribute geoAttr = metacard.getAttribute(Metacard.GEOGRAPHY);

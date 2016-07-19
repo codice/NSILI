@@ -73,6 +73,39 @@ public class TestResultDAGConverter {
         assertThat(checkDagContains(oneAttrDAG, sourceAttr), is(false));
     }
 
+    @Test
+    public void testAdvancedGeospatial() throws Exception {
+        String id = UUID.randomUUID()
+                .toString();
+        MetacardImpl card = new MetacardImpl();
+        card.setId(id);
+        card.setTitle("Test Title");
+        card.setSourceId("Test Source");
+        card.setLocation("POLYGON((1 1,1 2,2 2,2 1,1 1))");
+
+        ResultImpl result = new ResultImpl();
+        result.setMetacard(card);
+
+        ORB orb = ORB.init(new String[0], null);
+        POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+        rootPOA.the_POAManager()
+                .activate();
+
+        String advGeoAttr = NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_PART + ":"
+                + NsiliConstants.NSIL_COVERAGE + "." + NsiliConstants.ADVANCED_GEOSPATIAL;
+
+        String boundingGeoAttr = NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_PART + ":"
+                + NsiliConstants.NSIL_COVERAGE + "." + NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX;
+
+        DAG dag = ResultDAGConverter.convertResult(result,
+                orb,
+                rootPOA,
+                new ArrayList<>(),
+                new HashMap<>());
+        assertThat(checkDagContains(dag, advGeoAttr), is(true));
+        assertThat(checkDagContains(dag, boundingGeoAttr), is(true));
+    }
+
     @Test(expected = DagParsingException.class)
     public void testMandatoryAttributesFail() throws Exception {
         String id = UUID.randomUUID()
