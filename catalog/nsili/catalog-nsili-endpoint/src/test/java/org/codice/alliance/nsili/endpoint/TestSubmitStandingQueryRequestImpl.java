@@ -27,10 +27,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.codice.alliance.nsili.common.BqsConverter;
 import org.codice.alliance.nsili.common.CB.Callback;
-import org.codice.alliance.nsili.common.CorbaUtils;
 import org.codice.alliance.nsili.common.GIAS.CreationMgrHelper;
 import org.codice.alliance.nsili.common.GIAS.DayEvent;
 import org.codice.alliance.nsili.common.GIAS.DayEventTime;
@@ -43,6 +43,7 @@ import org.codice.alliance.nsili.common.GIAS.RequestManager;
 import org.codice.alliance.nsili.common.GIAS.SortAttribute;
 import org.codice.alliance.nsili.common.NsiliConstants;
 import org.codice.alliance.nsili.common.UCO.AbsTime;
+import org.codice.alliance.nsili.common.UCO.DAG;
 import org.codice.alliance.nsili.common.UCO.DAGListHolder;
 import org.codice.alliance.nsili.common.UCO.InvalidInputParameter;
 import org.codice.alliance.nsili.common.UCO.NameValue;
@@ -65,6 +66,7 @@ import org.opengis.filter.Filter;
 
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Result;
+import ddf.catalog.federation.FederationException;
 import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.catalog.operation.QueryRequest;
@@ -72,6 +74,8 @@ import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
 import ddf.catalog.operation.impl.QueryResponseImpl;
+import ddf.catalog.source.SourceUnavailableException;
+import ddf.catalog.source.UnsupportedQueryException;
 
 public class TestSubmitStandingQueryRequestImpl extends TestNsiliCommon {
 
@@ -161,10 +165,14 @@ public class TestSubmitStandingQueryRequestImpl extends TestNsiliCommon {
     }
 
     @Test
-    public void testComplete() throws SystemFault, ProcessingFault {
+    public void testComplete() throws SystemFault, ProcessingFault, UnsupportedQueryException,
+            SourceUnavailableException, FederationException {
         DAGListHolder results = new DAGListHolder();
         standingQueryRequest.complete_DAG_results(results);
         assertThat(results, notNullValue());
+
+        DAG[] dagResults = results.value;
+        assertThat(dagResults.length, is(2));
     }
 
     @Test
@@ -396,6 +404,6 @@ public class TestSubmitStandingQueryRequestImpl extends TestNsiliCommon {
     }
 
     private List<Result> getTestResults() {
-        return new ArrayList<>();
+        return getHistoryTestResults();
     }
 }

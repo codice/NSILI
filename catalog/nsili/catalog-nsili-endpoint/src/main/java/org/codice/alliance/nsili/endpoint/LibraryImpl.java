@@ -16,20 +16,10 @@ package org.codice.alliance.nsili.endpoint;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-
-import org.codice.alliance.nsili.endpoint.managers.CatalogMgrImpl;
-import org.codice.alliance.nsili.endpoint.managers.CreationMgrImpl;
-import org.codice.alliance.nsili.endpoint.managers.OrderMgrImpl;
-import org.codice.alliance.nsili.endpoint.managers.ProductMgrImpl;
-import org.codice.alliance.nsili.endpoint.managers.StandingQueryMgrImpl;
-import org.omg.CORBA.NO_IMPLEMENT;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
-import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
-import org.omg.PortableServer.POAPackage.WrongPolicy;
-import org.slf4j.LoggerFactory;
 
 import org.codice.alliance.nsili.common.CorbaUtils;
 import org.codice.alliance.nsili.common.GIAS.AccessCriteria;
@@ -43,22 +33,36 @@ import org.codice.alliance.nsili.common.GIAS.LibraryPOA;
 import org.codice.alliance.nsili.common.GIAS.OrderMgrHelper;
 import org.codice.alliance.nsili.common.GIAS.ProductMgrHelper;
 import org.codice.alliance.nsili.common.GIAS.StandingQueryMgrHelper;
+import org.codice.alliance.nsili.common.NsiliConstants;
 import org.codice.alliance.nsili.common.NsiliManagerType;
+import org.codice.alliance.nsili.common.ResultDAGConverter;
 import org.codice.alliance.nsili.common.UCO.InvalidInputParameter;
 import org.codice.alliance.nsili.common.UCO.ProcessingFault;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
 import org.codice.alliance.nsili.common.UCO.exception_details;
-
+import org.codice.alliance.nsili.endpoint.managers.CatalogMgrImpl;
+import org.codice.alliance.nsili.endpoint.managers.CreationMgrImpl;
 import org.codice.alliance.nsili.endpoint.managers.DataModelMgrImpl;
+import org.codice.alliance.nsili.endpoint.managers.OrderMgrImpl;
+import org.codice.alliance.nsili.endpoint.managers.ProductMgrImpl;
+import org.codice.alliance.nsili.endpoint.managers.StandingQueryMgrImpl;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
+import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.slf4j.LoggerFactory;
 
 import ddf.catalog.CatalogFramework;
+import ddf.catalog.data.Result;
 import ddf.catalog.filter.FilterBuilder;
 import ddf.security.service.SecurityManager;
 
 public class LibraryImpl extends LibraryPOA {
 
-    private List<String> managers = Arrays.asList(
-            NsiliManagerType.ORDER_MGR.getSpecName(),
+    public static final String CARD_STATUS = NsiliConstants.NSIL_CARD + "." + NsiliConstants.STATUS;
+
+    private List<String> managers = Arrays.asList(NsiliManagerType.ORDER_MGR.getSpecName(),
             NsiliManagerType.CATALOG_MGR.getSpecName(),
             NsiliManagerType.CREATION_MGR.getSpecName(),
             NsiliManagerType.PRODUCT_MGR.getSpecName(),
@@ -289,4 +293,38 @@ public class LibraryImpl extends LibraryPOA {
         throw new NO_IMPLEMENT();
     }
 
+    public static List<Result> getLatestResults(List<Result> results) {
+        Map<String, Result> resultMap = new HashMap<>();
+        if (results != null) {
+            for (Result result : results) {
+                String metacardId = ResultDAGConverter.getMetacardId(result.getMetacard());
+                Result mappedRes = resultMap.get(metacardId);
+                if (mappedRes == null) {
+                    resultMap.put(metacardId, result);
+                } else {
+                    if (mappedRes.getMetacard()
+                            .getModifiedDate() != null) {
+                        if (result.getMetacard()
+                                .getModifiedDate() != null) {
+                            if (mappedRes.getMetacard()
+                                    .getModifiedDate()
+                                    .compareTo(result.getMetacard()
+                                            .getModifiedDate()) < 0) {
+                                resultMap.put(metacardId, result);
+                            }
+                        }
+                    } else {
+                        resultMap.put(metacardId, result);
+                    }
+                }
+            }
+        }
+
+        return new ArrayList<>(resultMap.values());
+    }
+
+    public static boolean queryContainsStatus(String bqsQuery) {
+        return bqsQuery.toLowerCase()
+                .contains(LibraryImpl.CARD_STATUS.toLowerCase());
+    }
 }

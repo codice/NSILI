@@ -337,7 +337,7 @@ public class TestBqsConverter {
 
         assertThat(filter, notNullValue());
         assertThat(filter.toString(),
-                containsString("AND [ NOT [ sourceId = TEST-REMOTE ] ] AND [[ sourceId is like TEST LAB DDF Space ] OR [ sourceId is like TEST_LAB_DDF_2_9 ]]"));
+                containsString("AND [ NOT [ sourceId is like TEST-REMOTE ] ] AND [[ sourceId is like TEST LAB DDF Space ] OR [ sourceId is like TEST_LAB_DDF_2_9 ]]"));
     }
 
     @Test

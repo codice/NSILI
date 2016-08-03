@@ -150,7 +150,7 @@ public class TestCatalogMgrImpl extends TestNsiliCommon {
         DAGListHolder dagListHolder = new DAGListHolder();
         submitQueryRequest.complete_DAG_results(dagListHolder);
         assertThat(dagListHolder.value, notNullValue());
-        assertThat(dagListHolder.value.length, greaterThan(0));
+        assertThat(dagListHolder.value.length, is(2));
     }
 
     @Test
@@ -181,14 +181,8 @@ public class TestCatalogMgrImpl extends TestNsiliCommon {
     }
 
     private void setupCatalogMgrMocks() throws Exception {
-        int testTotalHits = 5;
-        List<Result> results = new ArrayList<>(testTotalHits);
-        MetacardImpl testMetacard = new MetacardImpl();
-        testMetacard.setId(UUID.randomUUID()
-                .toString().replaceAll("-", ""));
-        Result testResult = new ResultImpl(testMetacard);
-        results.add(testResult);
-        QueryResponse testResponse = new QueryResponseImpl(null, results, testTotalHits);
+        List<Result> results = getHistoryTestResults();
+        QueryResponse testResponse = new QueryResponseImpl(null, results, results.size());
         when(mockCatalogFramework.query(any(QueryRequest.class))).thenReturn(testResponse);
 
     }

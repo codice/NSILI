@@ -142,6 +142,11 @@
             <artifactId>commons-net</artifactId>
             <version>3.5</version>
         </dependency>
+        <dependency>
+            <groupId>ddf.catalog.core</groupId>
+            <artifactId>versioning-common</artifactId>
+            <version>${ddf.version}</version>
+        </dependency>
 
         <!-- Test Dependencies -->
         <dependency>
@@ -180,6 +185,7 @@
                             catalog-nsili-bqs,
                             catalog-nsili-common,
                             catalog-nsili-transformer,
+                            versioning-common,
                             filter-proxy,
                             platform-util,
                             commons-lang,

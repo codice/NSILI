@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -28,6 +29,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.apache.cxf.ws.security.tokenstore.SecurityToken;
@@ -38,6 +40,7 @@ import org.apache.shiro.authz.Permission;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.ExecutionException;
 import org.apache.shiro.subject.PrincipalCollection;
+import org.codice.alliance.nsili.common.ResultDAGConverter;
 import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -53,6 +56,12 @@ import org.opensaml.saml.saml2.core.AuthnStatement;
 import org.opensaml.saml.saml2.core.AuthzDecisionStatement;
 
 import ddf.catalog.CatalogFramework;
+import ddf.catalog.core.versioning.MetacardVersion;
+import ddf.catalog.data.Metacard;
+import ddf.catalog.data.Result;
+import ddf.catalog.data.impl.AttributeImpl;
+import ddf.catalog.data.impl.MetacardImpl;
+import ddf.catalog.data.impl.ResultImpl;
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.security.Subject;
 import ddf.security.assertion.SecurityAssertion;
@@ -71,6 +80,8 @@ public class TestNsiliCommon {
 
     protected SecurityToken mockSecurityToken = mock(SecurityToken.class);
 
+    protected Principal mockPrincipal = mock(Principal.class);
+
     protected ORB orb = null;
 
     protected LibraryImpl library;
@@ -88,6 +99,9 @@ public class TestNsiliCommon {
         when(mockPrincipalCollection.getPrimaryPrincipal()).thenReturn(USERID);
         when(mockPrincipalCollection.oneByType(Matchers.any())).thenReturn(mockSecurityAssertion);
         when(mockSecurityAssertion.getSecurityToken()).thenReturn(mockSecurityToken);
+        when(mockSecurityAssertion.getPrincipal()).thenReturn(mockPrincipal);
+        when(mockPrincipal.getName()).thenReturn("TestUser");
+        when(mockSecurityAssertion.getPrincipal().getName()).thenReturn("TestUser");
         when(mockSecurityToken.isAboutToExpire(Matchers.any(Long.class))).thenReturn(false);
         when(mockSubject.execute(Matchers.any(Callable.class))).thenAnswer(invocationOnMock -> {
             Callable callable = (Callable)invocationOnMock.getArguments()[0];
@@ -125,5 +139,48 @@ public class TestNsiliCommon {
 
         rootPOA.the_POAManager()
                 .activate();
+    }
+
+    public List<Result> getHistoryTestResults() {
+        String testHistoryCardId = UUID.randomUUID()
+                .toString().replaceAll("-", "");
+        List<Result> results = new ArrayList<>();
+        Set<String> tagSet = new HashSet<>();
+        tagSet.add(MetacardVersion.VERSION_TAG);
+        tagSet.add(Metacard.DEFAULT_TAG);
+
+        MetacardImpl testCard1 = new MetacardImpl();
+        testCard1.setId(testHistoryCardId);
+        testCard1.setTitle("Test Metacard 1");
+
+        Date createDate = new Date(1000);
+        testCard1.setCreatedDate(createDate);
+        testCard1.setModifiedDate(createDate);
+        MetacardVersion testMetacard1Create = new MetacardVersion(testCard1, MetacardVersion.Action.CREATED, mockSubject);
+        Result testHistCreate = new ResultImpl(testMetacard1Create);
+        results.add(testHistCreate);
+
+        testCard1.setTitle("Test Metacard 1 - Changed");
+        testCard1.setModifiedDate(new Date(2000));
+        MetacardVersion testMetacard1Change = new MetacardVersion(testCard1, MetacardVersion.Action.UPDATED, mockSubject);
+        testMetacard1Change.setTitle("Test Metacard 1 - change");
+        Result testHistChange = new ResultImpl(testMetacard1Change);
+        results.add(testHistChange);
+
+        MetacardVersion testMetacard1Delete = new MetacardVersion(testCard1, MetacardVersion.Action.DELETED, mockSubject);
+        Result testHistDelete = new ResultImpl(testMetacard1Delete);
+        results.add(testHistDelete);
+
+        MetacardImpl testMetacard2Create = new MetacardImpl();
+        testMetacard2Create.setId(UUID.randomUUID()
+                .toString().replaceAll("-", ""));
+        testMetacard2Create.setTitle("Test Metacard 2");
+        Date createDate2 = new Date(2500);
+        testMetacard2Create.setCreatedDate(createDate2);
+        testMetacard2Create.setModifiedDate(createDate2);
+        Result testCard2 = new ResultImpl(testMetacard2Create);
+        results.add(testCard2);
+
+        return results;
     }
 }

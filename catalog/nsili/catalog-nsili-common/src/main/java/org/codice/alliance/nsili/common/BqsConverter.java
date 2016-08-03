@@ -52,6 +52,7 @@ import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.io.WKTWriter;
 import com.vividsolutions.jts.util.GeometricShapeFactory;
 
+import ddf.catalog.core.versioning.MetacardVersion;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.FilterBuilder;
 import ddf.measure.Distance;
@@ -103,7 +104,7 @@ public class BqsConverter {
         ParseTreeWalker.DEFAULT.walk(bqsListener, tree);
 
         Filter filter = bqsListener.getFilter();
-        if (filter!= null && StringUtils.isNotBlank(filter.toString())) {
+        if (filter != null && StringUtils.isNotBlank(filter.toString())) {
             LOGGER.debug("Parsed Query: {}", filter);
         } else {
             filter = filterBuilder.attribute(Metacard.ANY_TEXT)
@@ -782,19 +783,69 @@ public class BqsConverter {
 
             Filter filter = null;
             if (StringUtils.isNotBlank(attribute)) {
-                if (bqsOperator == BqsOperator.LIKE || bqsOperator == BqsOperator.EQUAL) {
+                if (attribute.equals(MetacardVersion.ACTION)) {
+                    if (stringValue.equals(NsiliCardStatus.NEW)) {
+                        filter = filterBuilder.allOf(filterBuilder.attribute(Metacard.TAGS)
+                                        .is()
+                                        .like()
+                                        .text(MetacardVersion.VERSION_TAG),
+                                filterBuilder.attribute(MetacardVersion.VERSION_TAGS)
+                                        .is()
+                                        .like()
+                                        .text(Metacard.DEFAULT_TAG),
+                                filterBuilder.anyOf(filterBuilder.attribute(MetacardVersion.ACTION)
+                                                .is()
+                                                .like()
+                                                .text(MetacardVersion.Action.CREATED.getKey()),
+                                        filterBuilder.attribute(MetacardVersion.ACTION)
+                                                .is()
+                                                .like()
+                                                .text(MetacardVersion.Action.CREATED_CONTENT.getKey())));
+                    } else if (stringValue.equals(NsiliCardStatus.CHANGED)) {
+                        filter = filterBuilder.allOf(filterBuilder.attribute(Metacard.TAGS)
+                                        .is()
+                                        .like()
+                                        .text(MetacardVersion.VERSION_TAG),
+                                filterBuilder.attribute(MetacardVersion.VERSION_TAGS)
+                                        .is()
+                                        .like()
+                                        .text(Metacard.DEFAULT_TAG),
+                                filterBuilder.anyOf(filterBuilder.attribute(MetacardVersion.ACTION)
+                                                .is()
+                                                .like()
+                                                .text(MetacardVersion.Action.UPDATED.getKey()),
+                                        filterBuilder.attribute(MetacardVersion.ACTION)
+                                                .is()
+                                                .like()
+                                                .text(MetacardVersion.Action.UPDATED_CONTENT.getKey())));
+                    } else if (stringValue.equals(NsiliCardStatus.OBSOLETE)) {
+                        filter = filterBuilder.allOf(filterBuilder.attribute(Metacard.TAGS)
+                                        .is()
+                                        .like()
+                                        .text(MetacardVersion.VERSION_TAG),
+                                filterBuilder.attribute(MetacardVersion.VERSION_TAGS)
+                                        .is()
+                                        .like()
+                                        .text(Metacard.DEFAULT_TAG),
+                                filterBuilder.attribute(MetacardVersion.ACTION)
+                                        .is()
+                                        .like()
+                                        .text(MetacardVersion.Action.DELETED.getKey()));
+                    }
+                } else {
                     filter = filterBuilder.attribute(attribute)
                             .like()
                             .text(stringValue);
-                } else if (bqsOperator == BqsOperator.NOTEQ) {
-                    filter = filterBuilder.not(filterBuilder.attribute(attribute)
-                            .equalTo()
-                            .text(stringValue));
                 }
+
+                if (bqsOperator == BqsOperator.NOTEQ) {
+                    filter = filterBuilder.not(filter);
+                }
+
             }
 
             if (filter != null) {
-                print ("FILTER: " + filter);
+                print("FILTER: " + filter);
                 if (!nestedOperatorStack.isEmpty() && filter != null) {
                     List<Filter> filters = filterBy.get(nestedOperatorStack.peek());
                     filters.add(filter);
@@ -1134,4 +1185,5 @@ public class BqsConverter {
                     .toString();
         }
     }
-}
+
+ }

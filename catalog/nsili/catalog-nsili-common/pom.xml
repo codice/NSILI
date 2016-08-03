@@ -77,6 +77,11 @@
             <artifactId>geospatial</artifactId>
             <version>${ddf.version}</version>
         </dependency>
+        <dependency>
+            <groupId>ddf.catalog.core</groupId>
+            <artifactId>versioning-common</artifactId>
+            <version>${ddf.version}</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

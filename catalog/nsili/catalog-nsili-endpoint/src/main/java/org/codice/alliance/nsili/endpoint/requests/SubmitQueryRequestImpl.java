@@ -43,6 +43,7 @@ import org.codice.alliance.nsili.common.UCO.Status;
 import org.codice.alliance.nsili.common.UCO.StringDAGListHolder;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
 import org.codice.alliance.nsili.common.datamodel.NsiliDataModel;
+import org.codice.alliance.nsili.endpoint.LibraryImpl;
 import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.opengis.filter.Filter;
@@ -50,7 +51,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ddf.catalog.CatalogFramework;
+import ddf.catalog.core.versioning.MetacardVersion;
+import ddf.catalog.data.Metacard;
 import ddf.catalog.data.Result;
+import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
@@ -66,6 +70,8 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
 
     private BqsConverter bqsConverter;
 
+    private FilterBuilder filterBuilder;
+
     private long timeout = -1;
 
     private CatalogFramework catalogFramework;
@@ -80,9 +86,11 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
 
     private boolean outgoingValidationEnabled;
 
-    public SubmitQueryRequestImpl(Query query, BqsConverter bqsConverter,
-            CatalogFramework catalogFramework, List<String> querySources) {
+    public SubmitQueryRequestImpl(Query query, FilterBuilder filterBuilder,
+            BqsConverter bqsConverter, CatalogFramework catalogFramework,
+            List<String> querySources) {
         this.query = query;
+        this.filterBuilder = filterBuilder;
         this.bqsConverter = bqsConverter;
         this.catalogFramework = catalogFramework;
 
@@ -132,7 +140,8 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
         Map<String, List<String>> mandatoryAttributes = new HashMap<>();
         if (outgoingValidationEnabled) {
             NsiliDataModel nsiliDataModel = new NsiliDataModel();
-            mandatoryAttributes = nsiliDataModel.getRequiredAttrsForView(NsiliConstants.NSIL_ALL_VIEW);
+            mandatoryAttributes =
+                    nsiliDataModel.getRequiredAttrsForView(NsiliConstants.NSIL_ALL_VIEW);
         }
         for (Result result : queryResults) {
             try {
@@ -247,6 +256,30 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
 
         Filter parsedFilter = bqsConverter.convertBQSToDDF(aQuery);
 
+        //Always need to ask for the DEFAULT_TAG or we get non-resource metacards
+        Filter resourceFilter = filterBuilder.allOf(parsedFilter,
+                filterBuilder.attribute(Metacard.TAGS)
+                        .is()
+                        .like()
+                        .text(Metacard.DEFAULT_TAG));
+
+        if (!LibraryImpl.queryContainsStatus(aQuery.bqs_query)) {
+            parsedFilter = filterBuilder.anyOf(resourceFilter,
+                    filterBuilder.allOf(parsedFilter,
+                            filterBuilder.attribute(Metacard.TAGS)
+                                    .is()
+                                    .like()
+                                    .text(MetacardVersion.VERSION_TAG),
+                            filterBuilder.attribute(MetacardVersion.VERSION_TAGS)
+                                    .is()
+                                    .like()
+                                    .text(Metacard.DEFAULT_TAG),
+                            filterBuilder.attribute(MetacardVersion.ACTION)
+                                    .is()
+                                    .like()
+                                    .text(MetacardVersion.Action.DELETED.getKey())));
+        }
+
         QueryImpl catalogQuery = new QueryImpl(parsedFilter);
         catalogQuery.setRequestsTotalResultsCount(false);
         catalogQuery.setPageSize(maxNumReturnedHits);
@@ -268,7 +301,9 @@ public class SubmitQueryRequestImpl extends SubmitQueryRequestPOA {
 
         try {
             QueryResultsCallable queryCallable = new QueryResultsCallable(catalogQueryRequest);
-            results.addAll(NsiliEndpoint.getGuestSubject().execute(queryCallable));
+            List<Result> queryResults = LibraryImpl.getLatestResults(NsiliEndpoint.getGuestSubject()
+                    .execute(queryCallable));
+            results.addAll(queryResults);
 
         } catch (ExecutionException | SecurityServiceException e) {
             LOGGER.warn("Unable to query catalog {}", e);

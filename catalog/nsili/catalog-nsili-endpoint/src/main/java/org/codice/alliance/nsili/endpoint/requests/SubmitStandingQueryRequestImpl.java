@@ -58,10 +58,10 @@ import org.codice.alliance.nsili.common.UCO.StringDAGListHolder;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
 import org.codice.alliance.nsili.common.UCO.Time;
 import org.codice.alliance.nsili.common.datamodel.NsiliDataModel;
+import org.codice.alliance.nsili.endpoint.LibraryImpl;
 import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
 import org.codice.alliance.nsili.endpoint.managers.RequestManagerImpl;
 import org.codice.alliance.nsili.transformer.DAGConverter;
-import org.codice.ddf.security.common.Security;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.omg.CORBA.NO_IMPLEMENT;
@@ -73,6 +73,7 @@ import org.opengis.filter.Filter;
 import org.slf4j.LoggerFactory;
 
 import ddf.catalog.CatalogFramework;
+import ddf.catalog.core.versioning.MetacardVersion;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.Result;
 import ddf.catalog.filter.FilterBuilder;
@@ -80,8 +81,6 @@ import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
 import ddf.catalog.operation.impl.QueryRequestImpl;
-import ddf.security.Subject;
-import ddf.security.service.SecurityManager;
 import ddf.security.service.SecurityServiceException;
 
 public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPOA {
@@ -484,6 +483,55 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
                                 .is()
                                 .after()
                                 .date(new Date(queryTime)));
+
+                //Always need to ask for the DEFAULT_TAG or we get non-resource metacards
+                Filter resourceFilter = filterBuilder.allOf(parsedFilter, filterBuilder.attribute(
+                        Metacard.TAGS)
+                        .is()
+                        .like()
+                        .text(Metacard.DEFAULT_TAG));
+
+                //Default for NSILI is to include OBSOLETE (deleted) items
+                if (!LibraryImpl.queryContainsStatus(query.bqs_query)) {
+                    parsedFilter = filterBuilder.anyOf(resourceFilter,
+                            filterBuilder.allOf(parsedFilter,
+                                    filterBuilder.attribute(Metacard.TAGS)
+                                            .is()
+                                            .like()
+                                            .text(MetacardVersion.VERSION_TAG),
+                                    filterBuilder.attribute(MetacardVersion.VERSION_TAGS)
+                                            .is()
+                                            .like()
+                                            .text(Metacard.DEFAULT_TAG),
+                                    filterBuilder.attribute(MetacardVersion.ACTION)
+                                            .is()
+                                            .like()
+                                            .text(MetacardVersion.Action.DELETED.getKey())));
+                }
+            } else {
+                //Always need to ask for the DEFAULT_TAG or we get non-resource metacards
+                Filter resourceFilter = filterBuilder.allOf(bqsFilter, filterBuilder.attribute(
+                        Metacard.TAGS)
+                        .is()
+                        .like()
+                        .text(Metacard.DEFAULT_TAG));
+
+                if (!LibraryImpl.queryContainsStatus(query.bqs_query)) {
+                    parsedFilter = filterBuilder.anyOf(resourceFilter,
+                            filterBuilder.allOf(bqsFilter,
+                                    filterBuilder.attribute(Metacard.TAGS)
+                                            .is()
+                                            .like()
+                                            .text(MetacardVersion.VERSION_TAG),
+                                    filterBuilder.attribute(MetacardVersion.VERSION_TAGS)
+                                            .is()
+                                            .like()
+                                            .text(Metacard.DEFAULT_TAG),
+                                    filterBuilder.attribute(MetacardVersion.ACTION)
+                                            .is()
+                                            .like()
+                                            .text(MetacardVersion.Action.DELETED.getKey())));
+                }
             }
 
             catalogQuery = new QueryImpl(parsedFilter);
@@ -511,11 +559,14 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
                 QueryResultsCallable queryCallable = new QueryResultsCallable(catalogQueryRequest);
 
                 try {
-                    QueryResponse queryResponse = NsiliEndpoint.getGuestSubject().execute(queryCallable);
+                    QueryResponse queryResponse = NsiliEndpoint.getGuestSubject()
+                            .execute(queryCallable);
                     int numHits = (int) queryResponse.getHits();
                     List<Result> results = queryResponse.getResults();
+                    int origResultSize = results.size();
+                    results = LibraryImpl.getLatestResults(results);
                     catalogResults.addAll(results);
-                    int accumResults = results.size() + (startIndex - 1);
+                    int accumResults = origResultSize + (startIndex - 1);
 
                     LOGGER.trace("Processing Result {} of {}", accumResults, numHits);
 
@@ -546,7 +597,8 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
             Map<String, List<String>> mandatoryAttributes = new HashMap<>();
             if (outgoingValidationEnabled) {
                 NsiliDataModel nsiliDataModel = new NsiliDataModel();
-                mandatoryAttributes = nsiliDataModel.getRequiredAttrsForView(NsiliConstants.NSIL_ALL_VIEW);
+                mandatoryAttributes =
+                        nsiliDataModel.getRequiredAttrsForView(NsiliConstants.NSIL_ALL_VIEW);
             }
             for (Result catalogResult : catalogResults) {
                 try {
@@ -557,7 +609,8 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
                             mandatoryAttributes);
                     dags.add(dag);
                 } catch (DagParsingException dpe) {
-                    LOGGER.error("DAG could not be parsed and will not be returned to caller: {}", dpe);
+                    LOGGER.error("DAG could not be parsed and will not be returned to caller: {}",
+                            dpe);
                     LOGGER.debug("DAG Parsing Details", dpe);
                 }
             }

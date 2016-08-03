@@ -33,6 +33,7 @@ import org.codice.alliance.nsili.common.UCO.InvalidInputParameter;
 import org.codice.alliance.nsili.common.UCO.NameValue;
 import org.codice.alliance.nsili.common.UCO.ProcessingFault;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
+import org.codice.alliance.nsili.endpoint.LibraryImpl;
 import org.codice.alliance.nsili.endpoint.NsiliEndpoint;
 import org.codice.alliance.nsili.endpoint.requests.HitCountRequestImpl;
 import org.codice.alliance.nsili.endpoint.requests.SubmitQueryRequestImpl;
@@ -46,6 +47,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ddf.catalog.CatalogFramework;
+import ddf.catalog.core.versioning.MetacardVersion;
+import ddf.catalog.data.Metacard;
 import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
@@ -135,6 +138,7 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
             throws ProcessingFault, InvalidInputParameter, SystemFault {
         BqsConverter bqsConverter = new BqsConverter(filterBuilder, removeSourceLibrary);
         SubmitQueryRequestImpl submitQueryRequest = new SubmitQueryRequestImpl(aQuery,
+                filterBuilder,
                 bqsConverter,
                 catalogFramework,
                 querySources);
@@ -209,6 +213,30 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
         BqsConverter bqsConverter = new BqsConverter(filterBuilder, removeSourceLibrary);
         Filter parsedFilter = bqsConverter.convertBQSToDDF(aQuery);
 
+        //Always need to ask for the DEFAULT_TAG or we get non-resource metacards
+        Filter resourceFilter = filterBuilder.allOf(parsedFilter,
+                filterBuilder.attribute(Metacard.TAGS)
+                        .is()
+                        .like()
+                        .text(Metacard.DEFAULT_TAG));
+
+        if (!LibraryImpl.queryContainsStatus(aQuery.bqs_query)) {
+            parsedFilter = filterBuilder.anyOf(resourceFilter,
+                    filterBuilder.allOf(parsedFilter,
+                            filterBuilder.attribute(Metacard.TAGS)
+                                    .is()
+                                    .like()
+                                    .text(MetacardVersion.VERSION_TAG),
+                            filterBuilder.attribute(MetacardVersion.VERSION_TAGS)
+                                    .is()
+                                    .like()
+                                    .text(Metacard.DEFAULT_TAG),
+                            filterBuilder.attribute(MetacardVersion.ACTION)
+                                    .is()
+                                    .like()
+                                    .text(MetacardVersion.Action.DELETED.getKey())));
+        }
+
         QueryImpl catalogQuery = new QueryImpl(parsedFilter);
 
         if (defaultTimeout > 0) {
@@ -226,7 +254,8 @@ public class CatalogMgrImpl extends CatalogMgrPOA {
 
         try {
             QueryCountCallable queryCallable = new QueryCountCallable(catalogQueryRequest);
-            resultCount = NsiliEndpoint.getGuestSubject().execute(queryCallable);
+            resultCount = NsiliEndpoint.getGuestSubject()
+                    .execute(queryCallable);
         } catch (Exception e) {
             LOGGER.warn("Unable to query catalog", e);
         }

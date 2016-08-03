@@ -13,6 +13,7 @@
  */
 package org.codice.alliance.nsili.transformer;
 
+import org.codice.alliance.nsili.common.CorbaUtils;
 import org.omg.CORBA.Any;
 
 import com.thoughtworks.xstream.converters.Converter;
@@ -28,8 +29,8 @@ public class AnyConverter implements Converter {
 
     @Override
     public void marshal(Object o, HierarchicalStreamWriter writer, MarshallingContext context) {
-        String value = DAGConverter.getNodeValue((Any) o) != null ?
-                DAGConverter.getNodeValue((Any) o) :
+        String value = CorbaUtils.getNodeValue((Any) o) != null ?
+                CorbaUtils.getNodeValue((Any) o) :
                 "null";
         writer.setValue(value);
     }

@@ -13,12 +13,25 @@
  */
 package org.codice.alliance.nsili.common;
 
+import java.util.Date;
+
+import org.codice.alliance.nsili.common.UCO.AbsTime;
+import org.codice.alliance.nsili.common.UCO.AbsTimeHelper;
+import org.joda.time.DateTime;
+import org.joda.time.IllegalFieldValueException;
+import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAPackage.ObjectNotActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CorbaUtils {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CorbaUtils.class);
 
     public static boolean isIdActive(POA poa, byte[] oid) {
         boolean idActive = false;
@@ -28,5 +41,64 @@ public class CorbaUtils {
         } catch (ObjectNotActive | WrongPolicy | BAD_INV_ORDER ignore) {}
 
         return idActive;
+    }
+
+    public static String getNodeValue(Any any) {
+        String value = null;
+        if (any.type()
+                .kind() == TCKind.tk_wstring) {
+            value = any.extract_wstring();
+        } else if (any.type()
+                .kind() == TCKind.tk_string) {
+            value = any.extract_string();
+        } else if (any.type()
+                .kind() == TCKind.tk_long) {
+            value = String.valueOf(any.extract_long());
+        } else if (any.type()
+                .kind() == TCKind.tk_ulong) {
+            value = String.valueOf(any.extract_ulong());
+        } else if (any.type()
+                .kind() == TCKind.tk_short) {
+            value = String.valueOf(any.extract_short());
+        } else if (any.type()
+                .kind() == TCKind.tk_ushort) {
+            value = String.valueOf(any.extract_ushort());
+        } else if (any.type()
+                .kind() == TCKind.tk_boolean) {
+            value = String.valueOf(any.extract_boolean());
+        } else if (any.type()
+                .kind() == TCKind.tk_double) {
+            value = String.valueOf(any.extract_double());
+        } else {
+            try {
+                if (any.type()
+                        .name()
+                        .equals(AbsTime.class.getSimpleName())) {
+                    Date date = convertDate(any);
+                    if (date != null) {
+                        value = date.toString();
+                    }
+                }
+            } catch (org.omg.CORBA.MARSHAL | IllegalFieldValueException | BadKind e) {
+                LOGGER.debug("Unable to parse date", e);
+            }
+        }
+
+        return value;
+    }
+
+    public static Date convertDate(Any any) {
+        AbsTime absTime = AbsTimeHelper.extract(any);
+        org.codice.alliance.nsili.common.UCO.Date ucoDate = absTime.aDate;
+        org.codice.alliance.nsili.common.UCO.Time ucoTime = absTime.aTime;
+
+        DateTime dateTime = new DateTime((int) ucoDate.year,
+                (int) ucoDate.month,
+                (int) ucoDate.day,
+                (int) ucoTime.hour,
+                (int) ucoTime.minute,
+                (int) ucoTime.second,
+                0);
+        return dateTime.toDate();
     }
 }

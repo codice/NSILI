@@ -13,6 +13,7 @@
  */
 package org.codice.alliance.nsili.common;
 
+import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -61,9 +62,11 @@ import org.slf4j.LoggerFactory;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 
+import ddf.catalog.core.versioning.MetacardVersion;
 import ddf.catalog.data.Attribute;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.Result;
+import ddf.catalog.data.types.Core;
 
 public class ResultDAGConverter {
     private static final Logger LOGGER = LoggerFactory.getLogger(ResultDAGConverter.class);
@@ -241,11 +244,31 @@ public class ResultDAGConverter {
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.STATUS), resultAttributes)) {
-            addStringAttribute(graph,
-                    cardNode,
-                    NsiliConstants.STATUS,
-                    NsiliCardStatus.CHANGED.name(),
-                    orb);
+            String status = NsiliCardStatus.CHANGED.name();
+            Attribute createdAttr = metacard.getAttribute(Core.METACARD_CREATED);
+            Attribute modifiedAttr = metacard.getAttribute(Core.METACARD_MODIFIED);
+            if (createdAttr != null && modifiedAttr != null) {
+                Date createdDate = (Date) createdAttr.getValue();
+                Date modifiedDate = (Date) modifiedAttr.getValue();
+                if (createdDate.equals(modifiedDate)) {
+                    status = NsiliCardStatus.NEW.name();
+                }
+            }
+
+            Attribute versionAction = metacard.getAttribute(MetacardVersion.ACTION);
+
+            if (versionAction != null) {
+                for (Serializable action : versionAction.getValues()) {
+                    if (action.toString()
+                            .trim()
+                            .equals(MetacardVersion.Action.DELETED.getKey())) {
+                        status = NsiliCardStatus.OBSOLETE.name();
+                        break;
+                    }
+                }
+            }
+
+            addStringAttribute(graph, cardNode, NsiliConstants.STATUS, status, orb);
             addedAttributes.add(buildAttr(attribute, NsiliConstants.STATUS));
         }
 
@@ -637,8 +660,9 @@ public class ResultDAGConverter {
         }
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.IDENTIFIER_UUID), resultAttributes)) {
-            if (metacard.getId() != null) {
-                UUID uuid = getUUIDFromCard(metacard.getId());
+            String metacardId = getMetacardId(metacard);
+            if (metacardId != null) {
+                UUID uuid = getUUIDFromCard(metacardId);
                 addStringAttribute(graph,
                         commonNode,
                         NsiliConstants.IDENTIFIER_UUID,
@@ -932,7 +956,11 @@ public class ResultDAGConverter {
     }
 
     public static List<String> getAttributes(DAG dag) {
-        List<String> attributes = new ArrayList<>();
+        return new ArrayList<>(getAttributeMap(dag).keySet());
+    }
+
+    public static Map<String, String> getAttributeMap(DAG dag) {
+        Map<String, String> attributes = new HashMap<>();
 
         Map<Integer, Node> nodeMap = createNodeMap(dag.nodes);
         DirectedAcyclicGraph<Node, Edge> graph = new DirectedAcyclicGraph<>(Edge.class);
@@ -995,7 +1023,7 @@ public class ResultDAGConverter {
                         currEntry++;
                     }
                     attribute += node.attribute_name;
-                    attributes.add(attribute);
+                    attributes.put(attribute, CorbaUtils.getNodeValue(node.value));
                 } else {
                     int lastIdx = nodeStack.size() - 1;
                     nodeStack.remove(lastIdx);
@@ -1148,5 +1176,17 @@ public class ResultDAGConverter {
         }
 
         return dataIsValid.get();
+    }
+
+    public static String getMetacardId(Metacard metacard) {
+        String id = metacard.getId();
+
+        Attribute origIdAttr = metacard.getAttribute(MetacardVersion.VERSION_OF_ID);
+        if (origIdAttr != null && origIdAttr.getValue().toString() != null) {
+            id = origIdAttr.getValue()
+                    .toString();
+        }
+
+        return id;
     }
 }

@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.codice.alliance.nsili.common.CorbaUtils;
 import org.codice.alliance.nsili.common.NsiliApprovalStatus;
 import org.codice.alliance.nsili.common.NsiliCommonUtils;
 import org.codice.alliance.nsili.common.NsiliConstants;
@@ -1643,31 +1644,31 @@ public class TestDAGConverter {
     public void testGetNodeValue() {
         Any any = orb.create_any();
         any.insert_long(12);
-        String value = DAGConverter.getNodeValue(any);
+        String value = CorbaUtils.getNodeValue(any);
         assertThat(value, notNullValue());
         assertThat(value.isEmpty(), is(false));
 
         any = orb.create_any();
         any.insert_string("test string");
-        value = DAGConverter.getNodeValue(any);
+        value = CorbaUtils.getNodeValue(any);
         assertThat(value, notNullValue());
         assertThat(value.isEmpty(), is(false));
 
         any = orb.create_any();
         any.insert_boolean(false);
-        value = DAGConverter.getNodeValue(any);
+        value = CorbaUtils.getNodeValue(any);
         assertThat(value, notNullValue());
         assertThat(value.isEmpty(), is(false));
 
         any = orb.create_any();
         any.insert_short((short) 12);
-        value = DAGConverter.getNodeValue(any);
+        value = CorbaUtils.getNodeValue(any);
         assertThat(value, notNullValue());
         assertThat(value.isEmpty(), is(false));
 
         any = orb.create_any();
         AbsTimeHelper.insert(any, getTestTime());
-        value = DAGConverter.getNodeValue(any);
+        value = CorbaUtils.getNodeValue(any);
         assertThat(value, notNullValue());
         assertThat(value.isEmpty(), is(false));
 
@@ -1675,7 +1676,7 @@ public class TestDAGConverter {
         Any any2 = orb.create_any();
         any2.insert_string("test value");
         NodeHelper.insert(any, new Node(1, NodeType.ATTRIBUTE_NODE, "test", any2));
-        value = DAGConverter.getNodeValue(any);
+        value = CorbaUtils.getNodeValue(any);
         assertThat(value, nullValue());
     }
 
