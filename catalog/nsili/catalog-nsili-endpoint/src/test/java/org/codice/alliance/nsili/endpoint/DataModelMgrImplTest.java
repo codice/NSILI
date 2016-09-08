@@ -34,7 +34,7 @@ import org.codice.alliance.nsili.common.UCO.ProcessingFault;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
 import org.codice.alliance.nsili.endpoint.managers.DataModelMgrImpl;
 
-public class TestDataModelMgrImpl {
+public class DataModelMgrImplTest {
 
     private DataModelMgrImpl dataModelMgr = new DataModelMgrImpl();
 

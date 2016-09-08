@@ -14,9 +14,7 @@
 package org.codice.alliance.nsili.endpoint;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
@@ -30,20 +28,17 @@ import java.util.UUID;
 
 import org.codice.alliance.nsili.common.CorbaUtils;
 import org.codice.alliance.nsili.common.GIAS.ProductMgrHelper;
+import org.codice.alliance.nsili.common.GIAS.Query;
 import org.codice.alliance.nsili.common.GIAS.Request;
-import org.codice.alliance.nsili.common.GIAS.SetAvailabilityRequest;
+import org.codice.alliance.nsili.common.NsiliConstants;
 import org.codice.alliance.nsili.common.ResultDAGConverter;
 import org.codice.alliance.nsili.common.UCO.DAG;
-import org.codice.alliance.nsili.common.UCO.NameValue;
 import org.codice.alliance.nsili.common.UID.Product;
 import org.codice.alliance.nsili.common.UID.ProductHelper;
 import org.codice.alliance.nsili.endpoint.managers.AccessManagerImpl;
-import org.codice.alliance.nsili.endpoint.managers.OrderMgrImpl;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.omg.CORBA.Any;
-import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
@@ -53,7 +48,9 @@ import org.omg.PortableServer.POAPackage.WrongPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import ddf.catalog.data.Metacard;
 import ddf.catalog.data.Result;
+import ddf.catalog.data.impl.AttributeImpl;
 import ddf.catalog.data.impl.MetacardImpl;
 import ddf.catalog.data.impl.ResultImpl;
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
@@ -62,20 +59,28 @@ import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryResponseImpl;
 import ddf.security.service.SecurityServiceException;
 
-public class TestOrderMgrImpl extends TestNsiliCommon {
+public class AccessManagerImplTest extends NsiliCommonTest {
 
-    private OrderMgrImpl orderMgr;
+    private AccessManagerImpl accessManager;
+
+    private Query testQuery;
+
+    private String bqsQuery = "NSIL_CARD.identifier like '%'";
+
+    private Product testProduct = null;
 
     private String testMetacardId = UUID.randomUUID()
             .toString()
             .replaceAll("-", "");
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TestOrderMgrImpl.class);
+    ;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AccessManagerImplTest.class);
 
     @Before
     public void setUp() throws Exception {
         setupCommonMocks();
-        setupOrderMgrMocks();
+        setupAccessMgrMocks();
         try {
             setupOrb();
             orbRunThread = new Thread(() -> orb.run());
@@ -88,17 +93,19 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
             LOGGER.error("Unable to setup guest security credentials", e);
         }
 
+        testQuery = new Query(NsiliConstants.NSIL_ALL_VIEW, bqsQuery);
+
         String managerId = UUID.randomUUID()
                 .toString();
-        orderMgr = new OrderMgrImpl();
-        orderMgr.setFilterBuilder(new GeotoolsFilterBuilder());
-        orderMgr.setCatalogFramework(mockCatalogFramework);
+        accessManager = new AccessManagerImpl();
+        accessManager.setFilterBuilder(new GeotoolsFilterBuilder());
+        accessManager.setCatalogFramework(mockCatalogFramework);
 
         if (!CorbaUtils.isIdActive(rootPOA,
                 managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
             try {
                 rootPOA.activate_object_with_id(managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)),
-                        orderMgr);
+                        accessManager);
             } catch (ServantAlreadyActive | ObjectAlreadyActive | WrongPolicy e) {
                 LOGGER.error("Error activating ProductMgr: {}", e);
             }
@@ -109,7 +116,7 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
     }
 
     @Test
-    public void testIsAvailable() throws Exception {
+    public void testIsAvailableNoURL() throws Exception {
         MetacardImpl testMetacard = new MetacardImpl();
         testMetacard.setId(testMetacardId);
         testMetacard.setTitle("JUnit Test Card");
@@ -121,92 +128,81 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
                 new ArrayList<>(),
                 new HashMap<>());
         Product product = ProductHelper.extract(dag.nodes[0].value);
-        boolean avail = orderMgr.is_available(product, null);
+        boolean avail = accessManager.is_available(product, null);
         assertThat(avail, is(false));
 
-        avail = orderMgr.is_available(null, null);
+        avail = accessManager.is_available(null, null);
         assertThat(avail, is(false));
     }
 
     @Test
-    public void testOrder() throws Exception {
-        NameValue protocolProp = new NameValue();
-        protocolProp.aname = "PROTOCOL";
-        Any protoValueAny = orb.create_any();
-        protoValueAny.insert_string("https");
-        protocolProp.value = protoValueAny;
+    public void testIsAvailableWithBadURL() throws Exception {
+        MetacardImpl testMetacard = new MetacardImpl();
+        testMetacard.setId(testMetacardId);
+        testMetacard.setTitle("JUnit Test Card");
+        testMetacard.setAttribute(new AttributeImpl(Metacard.RESOURCE_DOWNLOAD_URL,
+                "http://localhost:20999/not/present"));
+        Result testResult = new ResultImpl(testMetacard);
 
-        NameValue portProp = new NameValue();
-        portProp.aname = "PORT";
-        Any portValueAny = orb.create_any();
-        portValueAny.insert_long(8993);
-        portProp.value = portValueAny;
+        List<Result> results = new ArrayList<>();
+        results.add(testResult);
+        QueryResponse testResponse = new QueryResponseImpl(null, results, results.size());
+        when(mockCatalogFramework.query(any(QueryRequest.class))).thenReturn(testResponse);
 
-        NameValue[] properties = new NameValue[] {protocolProp, portProp};
-        orderMgr.order(null, properties);
+        DAG dag = ResultDAGConverter.convertResult(testResult,
+                orb,
+                rootPOA,
+                new ArrayList<>(),
+                new HashMap<>());
+        Product product = ProductHelper.extract(dag.nodes[0].value);
+        boolean avail = accessManager.is_available(product, null);
+        assertThat(avail, is(false));
+
+        avail = accessManager.is_available(null, null);
+        assertThat(avail, is(false));
     }
 
     @Test
-    public void testGetTimeout() throws Exception {
-        int timeout = orderMgr.get_timeout(null);
-        assertThat(timeout, is(AccessManagerImpl.DEFAULT_TIMEOUT));
-    }
+    public void testIsUrlValidBadUrls() throws IOException {
+        boolean valid = accessManager.isUrlValid(null);
+        assertThat(valid, is(false));
 
-    @Test
-    public void testGetDefaultTimeout() throws Exception {
-        orderMgr.set_default_timeout(5000);
-        int timeout = orderMgr.get_default_timeout();
-        assertThat(timeout, greaterThan(0));
-    }
+        valid = accessManager.isUrlValid("http://localhost:2000/not/present");
+        assertThat(valid, is(false));
 
-    @Test
-    public void testGetUseModes() throws Exception {
-        String[] useModes = orderMgr.get_use_modes();
-        assertThat(useModes, notNullValue());
-        assertThat(useModes, arrayContainingInAnyOrder("OrderAccess"));
     }
 
     @Test
     public void testQueryAvailDelay() throws Exception {
-        int delay = orderMgr.query_availability_delay(null, null, null);
-        assertThat(delay, greaterThan(0));
+        int delay = accessManager.query_availability_delay(null, null, null);
+        assertThat(delay, greaterThan(-1));
     }
 
     @Test
-    public void testNumberOfPriorities() throws Exception {
-        int numPriorities = orderMgr.get_number_of_priorities();
+    public void testGetNumberOfPriorities() throws Exception {
+        int numPriorities = accessManager.get_number_of_priorities();
         assertThat(numPriorities, is(1));
     }
 
     @Test
     public void testGetActiveRequests() throws Exception {
-        Request[] activeReqs = orderMgr.get_active_requests();
-        assertThat(activeReqs.length, is(0));
+        Request[] requests = accessManager.get_active_requests();
+        assertThat(requests.length, is(0));
     }
 
     @Test
-    public void testSetAvailability() throws Exception {
-        SetAvailabilityRequest request = orderMgr.set_availability(null, null, null, (short) 1);
-        assertThat(request, notNullValue());
+    public void testGetDefaultTimeout() throws Exception {
+        int defaultTimeout = accessManager.get_default_timeout();
+        assertThat(defaultTimeout, is(-1));
     }
 
     @Test
-    public void testGetPropertyNames() throws Exception {
-        String[] properties = orderMgr.get_property_names();
-        assertThat(properties.length, is(2));
+    public void testGetTimeout() throws Exception {
+        int timeout = accessManager.get_timeout(null);
+        assertThat(timeout, is(-1));
     }
 
-    @Test(expected = NO_IMPLEMENT.class)
-    public void testGetPropertyValues() throws Exception {
-        orderMgr.get_property_values(null);
-    }
-
-    @Test(expected = NO_IMPLEMENT.class)
-    public void testGetLibraries() throws Exception {
-        orderMgr.get_libraries();
-    }
-
-    private void setupOrderMgrMocks() throws Exception {
+    private void setupAccessMgrMocks() throws Exception {
         int testTotalHits = 5;
         List<Result> results = new ArrayList<>(testTotalHits);
         MetacardImpl testMetacard = new MetacardImpl();
@@ -219,14 +215,13 @@ public class TestOrderMgrImpl extends TestNsiliCommon {
 
     @After
     public void tearDown() {
-
-        if (orb != null) {
-            orb.destroy();
-        }
-
         if (orbRunThread != null) {
             orbRunThread.interrupt();
             orbRunThread = null;
+        }
+
+        if (orb != null) {
+            orb.destroy();
         }
 
         library = null;

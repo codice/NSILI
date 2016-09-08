@@ -56,9 +56,8 @@ import ddf.catalog.data.Metacard;
 import ddf.catalog.data.impl.MetacardImpl;
 import ddf.catalog.operation.ResourceResponse;
 import ddf.catalog.resource.Resource;
-import ddf.security.Subject;
 
-public class TestOrderRequestImpl extends TestNsiliCommon {
+public class OrderRequestImplTest extends NsiliCommonTest {
 
     private static final String PROTOCOL = "http";
 

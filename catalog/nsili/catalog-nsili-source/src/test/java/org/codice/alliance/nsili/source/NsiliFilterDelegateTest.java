@@ -43,7 +43,7 @@ import org.junit.Test;
 
 import ddf.catalog.data.Metacard;
 
-public class TestNsiliFilterDelegate {
+public class NsiliFilterDelegateTest {
 
     private static final String ANY_TEXT = Metacard.ANY_TEXT;
 

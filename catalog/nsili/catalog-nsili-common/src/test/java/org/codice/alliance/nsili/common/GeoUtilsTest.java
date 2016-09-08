@@ -18,7 +18,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 import org.junit.Test;
 
-public class TestGeoUtils {
+public class GeoUtilsTest {
 
     /* Test data based on https://en.wikipedia.org/wiki/Longitude#Length_of_a_degree_of_longitude */
 

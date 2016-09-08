@@ -23,11 +23,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.codice.alliance.nsili.common.BqsConverter;
 import org.codice.alliance.nsili.common.CB.Callback;
@@ -77,7 +75,7 @@ import ddf.catalog.operation.impl.QueryResponseImpl;
 import ddf.catalog.source.SourceUnavailableException;
 import ddf.catalog.source.UnsupportedQueryException;
 
-public class TestSubmitStandingQueryRequestImpl extends TestNsiliCommon {
+public class SubmitStandingQueryRequestImplTest extends NsiliCommonTest {
 
     private SubmitStandingQueryRequestImpl standingQueryRequest;
 

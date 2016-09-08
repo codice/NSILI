@@ -23,7 +23,7 @@ import org.omg.CORBA.ORB;
 
 import com.thoughtworks.xstream.XStream;
 
-public class TestAnyConverter {
+public class AnyConverterTest {
 
     private static final String VALUE = "somevalue";
 

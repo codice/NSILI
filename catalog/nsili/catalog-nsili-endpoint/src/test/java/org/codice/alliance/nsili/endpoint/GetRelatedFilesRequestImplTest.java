@@ -46,7 +46,7 @@ import org.codice.alliance.nsili.common.UCO.State;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.impl.MetacardImpl;
 
-public class TestGetRelatedFilesRequestImpl {
+public class GetRelatedFilesRequestImplTest {
 
     private static final int TEST_PORT = 21000;
 

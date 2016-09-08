@@ -24,7 +24,7 @@ import org.opengis.filter.Filter;
 
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 
-public class TestBqsConverter {
+public class BqsConverterTest {
 
     private static final String BASIC_BQS_UUID_QUERY = "(NSIL_COMMON.identifierUUID like 'Test')";
 

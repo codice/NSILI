@@ -89,7 +89,7 @@ import ddf.catalog.operation.ResourceResponse;
 import ddf.catalog.resource.Resource;
 import ddf.catalog.resource.impl.URLResourceReader;
 
-public class TestDAGConverter {
+public class DAGConverterTest {
 
     private static final String CARD_ID = "Card ID";
 

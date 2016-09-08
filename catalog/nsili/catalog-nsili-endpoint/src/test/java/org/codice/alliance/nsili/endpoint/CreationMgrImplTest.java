@@ -38,10 +38,7 @@ import org.codice.alliance.nsili.endpoint.managers.CreationMgrImpl;
 import org.junit.Before;
 import org.junit.Test;
 import org.omg.CORBA.NO_IMPLEMENT;
-import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
 import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
@@ -49,16 +46,15 @@ import org.omg.PortableServer.POAPackage.ServantNotActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ddf.catalog.CatalogFramework;
+
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
-import ddf.security.Subject;
 import ddf.security.service.SecurityServiceException;
 
-public class TestCreationMgrImpl extends TestNsiliCommon {
+public class CreationMgrImplTest extends NsiliCommonTest {
 
     private CreationMgrImpl creationMgr;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TestCreationMgrImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CreationMgrImplTest.class);
 
     @Before
     public void setUp() throws Exception {

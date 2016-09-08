@@ -29,7 +29,6 @@ import org.codice.alliance.nsili.common.GIAS.AccessCriteria;
 import org.codice.alliance.nsili.common.GIAS.LibraryManager;
 import org.codice.alliance.nsili.common.NsiliManagerType;
 import org.codice.alliance.nsili.orb.api.CorbaOrb;
-import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,7 +41,7 @@ import ddf.catalog.CatalogFramework;
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.security.service.SecurityServiceException;
 
-public class TestNsiliEndpoint extends TestNsiliCommon {
+public class NsiliEndpointTest extends NsiliCommonTest {
     public static final int TEST_CORBA_PORT = 0;
 
     private static final int MAX_PENDING_RESULTS = 10000;

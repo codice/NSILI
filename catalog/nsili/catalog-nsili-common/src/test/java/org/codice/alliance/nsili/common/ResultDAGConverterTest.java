@@ -40,7 +40,7 @@ import ddf.catalog.data.impl.MetacardImpl;
 import ddf.catalog.data.impl.ResultImpl;
 import ddf.catalog.data.types.Core;
 
-public class TestResultDAGConverter {
+public class ResultDAGConverterTest {
     private static final String CARD_TITLE = "Test Title";
 
     private static final String CARD_SOURCE = "Test Source";

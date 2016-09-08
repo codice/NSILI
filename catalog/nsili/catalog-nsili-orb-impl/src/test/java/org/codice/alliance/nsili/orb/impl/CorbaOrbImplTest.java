@@ -24,7 +24,7 @@ import org.codice.alliance.nsili.orb.api.CorbaServiceListener;
 import org.junit.Test;
 import org.omg.CORBA.ORB;
 
-public class TestCorbaOrbImpl {
+public class CorbaOrbImplTest {
 
     public int listenerCallCounter = 0;
 

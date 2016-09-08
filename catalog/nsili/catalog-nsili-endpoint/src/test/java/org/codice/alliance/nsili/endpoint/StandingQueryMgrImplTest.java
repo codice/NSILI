@@ -73,7 +73,7 @@ import ddf.catalog.source.SourceUnavailableException;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.security.service.SecurityServiceException;
 
-public class TestStandingQueryMgrImpl extends TestNsiliCommon {
+public class StandingQueryMgrImplTest extends NsiliCommonTest {
 
     private CatalogFramework mockCatalogFramework = mock(CatalogFramework.class);
 
@@ -85,7 +85,7 @@ public class TestStandingQueryMgrImpl extends TestNsiliCommon {
 
     private String testMetacardId = UUID.randomUUID().toString();
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TestStandingQueryMgrImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(StandingQueryMgrImplTest.class);
 
     @Before
     public void setUp() throws Exception {

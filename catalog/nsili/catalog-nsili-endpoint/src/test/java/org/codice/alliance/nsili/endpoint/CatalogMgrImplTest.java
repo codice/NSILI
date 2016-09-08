@@ -22,9 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import org.codice.alliance.nsili.endpoint.managers.AccessManagerImpl;
 import org.codice.alliance.nsili.endpoint.managers.CatalogMgrImpl;
@@ -33,10 +31,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.omg.CORBA.IntHolder;
 import org.omg.CORBA.NO_IMPLEMENT;
-import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAPackage.ServantNotActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
@@ -54,18 +49,14 @@ import org.codice.alliance.nsili.common.UCO.InvalidInputParameter;
 import org.codice.alliance.nsili.common.UCO.ProcessingFault;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
 
-import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Result;
-import ddf.catalog.data.impl.MetacardImpl;
-import ddf.catalog.data.impl.ResultImpl;
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryResponseImpl;
-import ddf.security.Subject;
 import ddf.security.service.SecurityServiceException;
 
-public class TestCatalogMgrImpl extends TestNsiliCommon {
+public class CatalogMgrImplTest extends NsiliCommonTest {
 
     private CatalogMgrImpl catalogMgr;
 
@@ -73,7 +64,7 @@ public class TestCatalogMgrImpl extends TestNsiliCommon {
 
     private String bqsQuery = "NSIL_CARD.identifier like '%'";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TestCatalogMgrImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CatalogMgrImplTest.class);
 
     @Before
     public void setUp() throws Exception {

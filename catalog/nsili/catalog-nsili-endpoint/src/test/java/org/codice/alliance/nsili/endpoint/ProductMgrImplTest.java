@@ -67,7 +67,7 @@ import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryResponseImpl;
 import ddf.security.service.SecurityServiceException;
 
-public class TestProductMgrImpl extends TestNsiliCommon {
+public class ProductMgrImplTest extends NsiliCommonTest {
 
     private ProductMgrImpl productMgr;
 
@@ -77,7 +77,7 @@ public class TestProductMgrImpl extends TestNsiliCommon {
             .toString()
             .replaceAll("-", "");
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TestProductMgrImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProductMgrImplTest.class);
 
     @Before
     public void setUp() throws Exception {

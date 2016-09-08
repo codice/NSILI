@@ -14,7 +14,6 @@
 package org.codice.alliance.nsili.endpoint;
 
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.doReturn;
@@ -22,38 +21,26 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 
-import org.codice.alliance.nsili.common.GIAS.LibraryDescription;
-import org.codice.alliance.nsili.common.UCO.InvalidInputParameter;
-import org.codice.alliance.nsili.common.UCO.ProcessingFault;
-import org.codice.alliance.nsili.common.UCO.SystemFault;
+import javax.ws.rs.core.Response;
+
 import org.codice.alliance.nsili.orb.api.CorbaOrb;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAPackage.ServantNotActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
 
-import ddf.security.service.SecurityManager;
 import ddf.security.service.SecurityServiceException;
 
-public class TestNsiliLibraryImpl extends TestNsiliCommon {
+public class NsiliWebEndpointTest extends NsiliCommonTest {
 
-    private static final String TEST_HOSTNAME = "ddfhost";
+    private static final int TEST_CORBA_PORT = 20011;
 
-    private static final String TEST_COUNTRY = "US";
+    private NsiliEndpoint nsiliEndpoint;
 
-    private static final String TEST_ORGANIZATION = "Codice";
-
-    private static final String TEST_VERSION = "NSILI";
-
-    private LibraryImpl library = null;
-
-    private NsiliEndpoint nsiliEndpoint = null;
-
-    private SecurityManager securityManager = mock(SecurityManager.class);
+    private NsiliWebEndpoint nsiliWebEndpoint;
 
     private CorbaOrb mockCorbaOrb = mock(CorbaOrb.class);
 
@@ -61,41 +48,20 @@ public class TestNsiliLibraryImpl extends TestNsiliCommon {
     public void setUp()
             throws SecurityServiceException, AdapterInactive, InvalidName, ServantNotActive,
             WrongPolicy, IOException {
-        System.setProperty("org.codice.ddf.system.hostname", TEST_HOSTNAME);
-        System.setProperty("user.country", TEST_COUNTRY);
-        System.setProperty("org.codice.ddf.system.organization", TEST_ORGANIZATION);
-
         setupCommonMocks();
         setupOrb();
         doReturn(orb).when(mockCorbaOrb).getOrb();
         createNsiliEndpoint();
-        library = nsiliEndpoint.getLibrary();
+        createWebEndpoint();
     }
 
     @Test
-    public void testManagerTypes() throws ProcessingFault, SystemFault {
-        String[] managerTypes = library.get_manager_types();
+    public void testIORFile() {
+        Response response = nsiliWebEndpoint.getIorFile();
+        assertThat(response.getEntity(), notNullValue());
 
-        assertThat(managerTypes, notNullValue());
-        assertThat(managerTypes.length, is(6));
-    }
-
-    @Test
-    public void testLibraryDescription() throws ProcessingFault, SystemFault {
-        LibraryDescription libraryDescription = library.get_library_description();
-        assertThat(libraryDescription.library_name, is(TEST_HOSTNAME));
-        assertThat(libraryDescription.library_description, containsString(TEST_ORGANIZATION));
-        assertThat(libraryDescription.library_version_number, containsString(TEST_VERSION));
-    }
-
-    @Test (expected = NO_IMPLEMENT.class)
-    public void testGetOtherLibraries() throws ProcessingFault, SystemFault, InvalidInputParameter {
-        library.get_other_libraries(null);
-    }
-
-    @Test
-    public void testSetMaxResults() {
-        library.setMaxNumResults(999);
+        String responseStr = response.getEntity().toString();
+        assertThat(responseStr, containsString(nsiliEndpoint.getIorString()));
     }
 
     @After
@@ -111,7 +77,10 @@ public class TestNsiliLibraryImpl extends TestNsiliCommon {
         nsiliEndpoint = new NsiliEndpoint();
         nsiliEndpoint.setSecurityManager(securityManager);
         nsiliEndpoint.setCorbaOrb(mockCorbaOrb);
-        nsiliEndpoint.setLibraryVersion("NSILI|3.2");
         nsiliEndpoint.init();
+    }
+
+    private void createWebEndpoint() {
+        nsiliWebEndpoint = new NsiliWebEndpoint(nsiliEndpoint);
     }
 }

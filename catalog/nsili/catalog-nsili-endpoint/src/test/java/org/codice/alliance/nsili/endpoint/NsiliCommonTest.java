@@ -68,7 +68,7 @@ import ddf.security.assertion.SecurityAssertion;
 import ddf.security.service.SecurityManager;
 import ddf.security.service.SecurityServiceException;
 
-public class TestNsiliCommon {
+public class NsiliCommonTest {
 
     protected SecurityManager securityManager = mock(SecurityManager.class);
 

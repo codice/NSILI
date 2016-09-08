@@ -28,7 +28,7 @@ import org.codice.alliance.nsili.common.GIAS.Association;
 import org.codice.alliance.nsili.common.GIAS.ConceptualAttributeType;
 import org.codice.alliance.nsili.common.datamodel.NsiliDataModel;
 
-public class TestNsiliDataModel {
+public class NsiliDataModelTest {
 
     protected NsiliDataModel nsiliDataModel = new NsiliDataModel();
 
