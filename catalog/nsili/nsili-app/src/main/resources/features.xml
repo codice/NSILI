@@ -30,12 +30,14 @@
     <feature name="catalog-nsili-source" install="manual" version="${project.version}"
              description="Alliance NSILI Source">
         <feature prerequisite="true">catalog-nsili-orb-impl</feature>
+        <bundle dependency="true">mvn:org.codice.alliance.catalog.core/catalog-core-api/${project.version}</bundle>
         <bundle>mvn:org.codice.alliance.nsili/catalog-nsili-source/${project.version}</bundle>
     </feature>
 
     <feature name="catalog-nsili-endpoint" install="manual" version="${project.version}"
              description="Alliance NSILI Endpoint">
         <feature prerequisite="true">catalog-nsili-orb-impl</feature>
+        <bundle dependency="true">mvn:org.codice.alliance.catalog.core/catalog-core-api/${project.version}</bundle>
         <bundle>mvn:org.codice.alliance.nsili/catalog-nsili-endpoint/${project.version}</bundle>
     </feature>
 

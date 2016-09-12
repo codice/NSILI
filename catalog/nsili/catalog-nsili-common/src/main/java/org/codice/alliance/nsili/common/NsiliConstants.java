@@ -353,5 +353,4 @@ public class NsiliConstants {
     public static final String PROP_PORT = "PORT";
 
     public static final String UNKNOWN = "Unknown";
-
 }

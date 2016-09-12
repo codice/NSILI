@@ -88,6 +88,7 @@ import org.slf4j.LoggerFactory;
 
 import ddf.catalog.data.ContentType;
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.MetacardType;
 import ddf.catalog.data.Result;
 import ddf.catalog.data.impl.ResultImpl;
 import ddf.catalog.filter.FilterAdapter;
@@ -256,6 +257,8 @@ public class NsiliSource extends MaskableImpl
     private CorbaOrb corbaOrb = null;
 
     private Object queryLockObj = new Object();
+
+    private MetacardType nsiliMetacardType = null;
 
     static {
         try (InputStream properties = NsiliSource.class.getResourceAsStream(
@@ -840,6 +843,7 @@ public class NsiliSource extends MaskableImpl
             for (DAG dag : dagListHolder.value) {
                 Callable<Result> convertRunner = () -> {
                     DAGConverter dagConverter = new DAGConverter(resourceReader);
+                    dagConverter.setNsiliMetacardType(nsiliMetacardType);
                     Metacard card = dagConverter.convertDAG(dag, swapCoordinates, id);
                     if (card != null) {
                         if (LOGGER.isTraceEnabled()) {
@@ -1145,6 +1149,10 @@ public class NsiliSource extends MaskableImpl
             LOGGER.debug("No changes being made on the poller.");
         }
 
+    }
+
+    public void setNsiliMetacardType(MetacardType nsiliMetacardType) {
+        this.nsiliMetacardType = nsiliMetacardType;
     }
 
     private void availabilityChanged(boolean isAvailable) {

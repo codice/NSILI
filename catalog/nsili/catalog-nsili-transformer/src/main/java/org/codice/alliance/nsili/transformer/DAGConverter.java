@@ -21,44 +21,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
+import org.codice.alliance.catalog.core.api.impl.types.IsrAttributes;
+import org.codice.alliance.catalog.core.api.types.Security;
 import org.codice.alliance.nsili.common.CorbaUtils;
-import org.codice.alliance.nsili.common.NsiliApprovalStatus;
-import org.codice.alliance.nsili.common.NsiliClassification;
-import org.codice.alliance.nsili.common.NsiliClassificationComparator;
 import org.codice.alliance.nsili.common.NsiliConstants;
-import org.codice.alliance.nsili.common.NsiliCxpMetacardType;
-import org.codice.alliance.nsili.common.NsiliCxpStatusType;
-import org.codice.alliance.nsili.common.NsiliExploitationSubQualCode;
-import org.codice.alliance.nsili.common.NsiliGmtiMetacardType;
-import org.codice.alliance.nsili.common.NsiliIRMetacardType;
-import org.codice.alliance.nsili.common.NsiliImageryDecompressionTech;
-import org.codice.alliance.nsili.common.NsiliImageryMetacardType;
-import org.codice.alliance.nsili.common.NsiliImageryType;
-import org.codice.alliance.nsili.common.NsiliMessageMetacardType;
-import org.codice.alliance.nsili.common.NsiliMetacardType;
-import org.codice.alliance.nsili.common.NsiliMetadataEncodingScheme;
-import org.codice.alliance.nsili.common.NsiliProductType;
-import org.codice.alliance.nsili.common.NsiliReportMetacardType;
-import org.codice.alliance.nsili.common.NsiliReportPriority;
-import org.codice.alliance.nsili.common.NsiliReportType;
-import org.codice.alliance.nsili.common.NsiliRfiMetacardType;
-import org.codice.alliance.nsili.common.NsiliRfiStatus;
-import org.codice.alliance.nsili.common.NsiliRfiWorkflowStatus;
-import org.codice.alliance.nsili.common.NsiliSdsOpStatus;
-import org.codice.alliance.nsili.common.NsiliSecurity;
-import org.codice.alliance.nsili.common.NsiliTaskMetacardType;
-import org.codice.alliance.nsili.common.NsiliTaskStatus;
-import org.codice.alliance.nsili.common.NsiliTdlMetacardType;
-import org.codice.alliance.nsili.common.NsiliVideoCategoryType;
-import org.codice.alliance.nsili.common.NsiliVideoEncodingScheme;
-import org.codice.alliance.nsili.common.NsiliVideoMetacardType;
 import org.codice.alliance.nsili.common.ResultDAGConverter;
 import org.codice.alliance.nsili.common.UCO.DAG;
 import org.codice.alliance.nsili.common.UCO.Edge;
@@ -89,6 +61,14 @@ import ddf.catalog.data.Metacard;
 import ddf.catalog.data.MetacardType;
 import ddf.catalog.data.impl.AttributeImpl;
 import ddf.catalog.data.impl.MetacardImpl;
+import ddf.catalog.data.impl.types.ContactAttributes;
+import ddf.catalog.data.impl.types.CoreAttributes;
+import ddf.catalog.data.types.Associations;
+import ddf.catalog.data.types.Contact;
+import ddf.catalog.data.types.Core;
+import ddf.catalog.data.types.DateTime;
+import ddf.catalog.data.types.Location;
+import ddf.catalog.data.types.Media;
 import ddf.catalog.operation.ResourceResponse;
 import ddf.catalog.resource.ResourceNotFoundException;
 import ddf.catalog.resource.ResourceNotSupportedException;
@@ -100,7 +80,7 @@ public class DAGConverter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DAGConverter.class);
 
-    private static final WKTWriter WKT_WRITER = new WKTWriter();
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
 
     private static String sourceId;
 
@@ -112,8 +92,14 @@ public class DAGConverter {
 
     private XStream xstream;
 
+    private MetacardType nsiliMetacardType;
+
     public DAGConverter(ResourceReader resourceReader) {
         this.resourceReader = resourceReader;
+    }
+
+    public void setNsiliMetacardType(MetacardType nsiliMetacardType) {
+        this.nsiliMetacardType = nsiliMetacardType;
     }
 
     public MetacardImpl convertDAG(DAG dag, boolean swapCoordinates, String logSourceId) {
@@ -151,9 +137,8 @@ public class DAGConverter {
 
     private MetacardImpl parseGraph(DirectedAcyclicGraph<Node, Edge> graph,
             boolean swapCoordinates) {
-        MetacardImpl metacard = new MetacardImpl();
+        MetacardImpl metacard = new MetacardImpl(nsiliMetacardType);
 
-        NsiliSecurity security = new NsiliSecurity();
         List<Serializable> associatedCards = new ArrayList<>();
 
         //Traverse the graph
@@ -178,21 +163,12 @@ public class DAGConverter {
                     if (assocNode != null && !isNodeChildOfStart(graph, assocNode, node)) {
                         assocNode = null;
                     }
-
-                    //Handle Marker nodes
-                    if (node.attribute_name.equals(NsiliConstants.NSIL_IR)) {
-                        addNsilIRAttribute(metacard);
-                    }
                 }
             } else if (node.node_type == NodeType.RECORD_NODE) {
                 //Nothing to process from record node
-            } else if (parentEntity != null &&
-                    node.node_type == NodeType.ATTRIBUTE_NODE &&
-                    node.value != null) {
+            } else if (parentEntity != null && node.node_type == NodeType.ATTRIBUTE_NODE
+                    && node.value != null) {
                 switch (parentEntity.attribute_name) {
-                case NsiliConstants.NSIL_APPROVAL:
-                    addNsilApprovalAttribute(metacard, node);
-                    break;
                 case NsiliConstants.NSIL_CARD:
                     if (assocNode != null) {
                         addNsilAssociation(associatedCards, node);
@@ -201,19 +177,16 @@ public class DAGConverter {
                     }
                     break;
                 case NsiliConstants.NSIL_SECURITY:
-                    addNsilSecurityAttribute(security, node);
+                    addNsilSecurityAttribute(metacard, node);
                     break;
                 case NsiliConstants.NSIL_METADATA_SECURITY:
-                    addNsilSecurityAttribute(security, node);
+                    addNsilMetadataSecurityAttribute(metacard, node);
                     break;
                 case NsiliConstants.NSIL_COMMON:
                     addNsilCommonAttribute(metacard, node);
                     break;
                 case NsiliConstants.NSIL_COVERAGE:
                     addNsilCoverageAttribute(metacard, node, swapCoordinates);
-                    break;
-                case NsiliConstants.NSIL_CXP:
-                    addNsilCxpAttribute(metacard, node);
                     break;
                 case NsiliConstants.NSIL_EXPLOITATION_INFO:
                     addNsilExploitationInfoAttribute(metacard, node);
@@ -227,17 +200,11 @@ public class DAGConverter {
                 case NsiliConstants.NSIL_IMAGERY:
                     addNsilImageryAttribute(metacard, node);
                     break;
-                case NsiliConstants.NSIL_MESSAGE:
-                    addNsilMessageAttribute(metacard, node);
-                    break;
                 case NsiliConstants.NSIL_REPORT:
                     addNsilReportAttribute(metacard, node);
                     break;
                 case NsiliConstants.NSIL_RFI:
                     addNsilRfiAttribute(metacard, node);
-                    break;
-                case NsiliConstants.NSIL_SDS:
-                    addNsilSdsAttribute(metacard, node);
                     break;
                 case NsiliConstants.NSIL_STREAM:
                     addNsilStreamAttribute(metacard, node);
@@ -253,14 +220,12 @@ public class DAGConverter {
                     break;
                 case NsiliConstants.NSIL_RELATED_FILE:
                     addNsilRelatedFile(metacard, node);
+                    break;
                 default:
                     break;
                 }
             }
         }
-
-        addMergedSecurityDescriptor(metacard, security);
-        setTopLevelMetacardAttributes(metacard);
 
         //Add associated data
         if (!associatedCards.isEmpty()) {
@@ -268,7 +233,7 @@ public class DAGConverter {
             AttributeImpl attribute = null;
             for (Serializable association : associatedCards) {
                 if (firstAssoc) {
-                    attribute = new AttributeImpl(NsiliMetacardType.ASSOCIATIONS, association);
+                    attribute = new AttributeImpl(Associations.RELATED, association);
                     metacard.setAttribute(attribute);
                     firstAssoc = false;
                 } else {
@@ -302,25 +267,6 @@ public class DAGConverter {
         return endNodeInTree;
     }
 
-    private void addNsilApprovalAttribute(MetacardImpl metacard, Node node) {
-        switch (node.attribute_name) {
-        case NsiliConstants.APPROVED_BY:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.APPROVAL_BY,
-                    getString(node.value)));
-            break;
-        case NsiliConstants.DATE_TIME_MODIFIED:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.APPROVAL_DATETIME_MODIFIED,
-                    CorbaUtils.convertDate(node.value)));
-            break;
-        case NsiliConstants.STATUS:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.APPROVAL_STATUS,
-                    convertApprovalStatus(node.value)));
-            break;
-        default:
-            break;
-        }
-    }
-
     private void addNsilCardAttribute(MetacardImpl metacard, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.IDENTIFIER:
@@ -334,11 +280,7 @@ public class DAGConverter {
             metacard.setModifiedDate(CorbaUtils.convertDate(node.value));
             break;
         case NsiliConstants.PUBLISHER:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.PUBLISHER,
-                    getString(node.value)));
-            break;
-        case NsiliConstants.SOURCE_LIBRARY:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SOURCE_LIBRARY,
+            metacard.setAttribute(new AttributeImpl(ContactAttributes.PUBLISHER_NAME,
                     getString(node.value)));
             break;
         default:
@@ -349,38 +291,38 @@ public class DAGConverter {
     private void addNsilCommonAttribute(MetacardImpl metacard, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.DESCRIPTION_ABSTRACT:
-            metacard.setDescription(getString(node.value));
+            addDescription(metacard, getString(node.value));
             break;
         case NsiliConstants.IDENTIFIER_MISSION:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.IDENTIFIER_MISSION,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.MISSION_ID,
                     getString(node.value)));
             break;
         case NsiliConstants.IDENTIFIER_UUID:
             metacard.setId(getString(node.value));
             break;
         case NsiliConstants.IDENTIFIER_JC3IEDM:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.ID_JC3IEDM,
-                    getLong(node.value)));
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.JC3IEDM_ID,
+                    getInteger(node.value)));
             break;
         case NsiliConstants.LANGUAGE:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.LANGUAGE,
+            metacard.setAttribute(new AttributeImpl(CoreAttributes.LANGUAGE,
                     getString(node.value)));
             break;
         case NsiliConstants.SOURCE:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SOURCE,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.PLATFORM_NAME,
                     getString(node.value)));
             break;
         case NsiliConstants.SUBJECT_CATEGORY_TARGET:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SUBJECT_CATEGORY_TARGET,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.TARGET_CATEGORY_CODE,
                     getString(node.value)));
             break;
         case NsiliConstants.TARGET_NUMBER:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.TARGET_NUMBER,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.TARGET_ID,
                     getString(node.value)));
             break;
         case NsiliConstants.TYPE:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.PRODUCT_TYPE,
-                    convertProductType(node.value)));
+            metacard.setAttribute(new AttributeImpl(CoreAttributes.DATATYPE,
+                    getString(node.value)));
             break;
         default:
             break;
@@ -391,8 +333,7 @@ public class DAGConverter {
             boolean swapCoordinates) {
         switch (node.attribute_name) {
         case NsiliConstants.SPATIAL_COUNTRY_CODE:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.COUNTRY_CODE,
-                    getString(node.value)));
+            metacard.setAttribute(new AttributeImpl(Location.COUNTRY_CODE, getString(node.value)));
             break;
         case NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX:
             if (metacard.getLocation() == null) {
@@ -403,12 +344,13 @@ public class DAGConverter {
             metacard.setLocation(getString(node.value));
             break;
         case NsiliConstants.TEMPORAL_START:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.START_DATETIME,
+            metacard.setAttribute(new AttributeImpl(DateTime.START,
                     CorbaUtils.convertDate(node.value)));
             break;
         case NsiliConstants.TEMPORAL_END:
             Date temporalEnd = CorbaUtils.convertDate(node.value);
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.END_DATETIME, temporalEnd));
+            metacard.setAttribute(new AttributeImpl(DateTime.END,
+                    temporalEnd));
             metacard.setEffectiveDate(temporalEnd);
             break;
         default:
@@ -416,47 +358,22 @@ public class DAGConverter {
         }
     }
 
-    private void addNsilCxpAttribute(MetacardImpl metacard, Node node) {
-        metacard.setType(new NsiliCxpMetacardType());
-        metacard.setContentTypeName(NsiliProductType.COLLECTION_EXPLOITATION_PLAN.toString());
-
-        switch (node.attribute_name) {
-        case NsiliConstants.STATUS:
-            NsiliCxpStatusType cxpStatusType = convertCxpStatus(node.value);
-            if (cxpStatusType != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliCxpMetacardType.STATUS,
-                        cxpStatusType));
-            }
-            break;
-        default:
-            break;
-        }
-    }
-
-    private void addNsilIRAttribute(MetacardImpl metacard) {
-        metacard.setType(new NsiliIRMetacardType());
-    }
-
     private void addNsilExploitationInfoAttribute(MetacardImpl metacard, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.DESCRIPTION:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.EXPLOITATION_DESCRIPTION,
-                    getString(node.value)));
+            addDescription(metacard, getString(node.value));
             break;
         case NsiliConstants.LEVEL:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.EXPLOITATION_LEVEL,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.EXPLOITATION_LEVEL,
                     getShort(node.value)));
             break;
         case NsiliConstants.AUTO_GENERATED:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.EXPLOITATION_AUTO_GEN,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.EXPLOTATION_AUTO_GENERATED,
                     node.value.extract_boolean()));
             break;
         case NsiliConstants.SUBJ_QUALITY_CODE:
-            NsiliExploitationSubQualCode exploitationSubQualCode = convertExplSubQualCd(node.value);
-            if (exploitationSubQualCode != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliMetacardType.EXPLOITATION_SUBJ_QUAL_CODE,
-                        exploitationSubQualCode));
-            }
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.EXPLOITATION_SUBJECTIVE_QUALITY_CODE,
+                    getString(node.value)));
             break;
         default:
             break;
@@ -466,38 +383,29 @@ public class DAGConverter {
     private void addNsilFileAttribute(MetacardImpl metacard, Node node) {
 
         switch (node.attribute_name) {
-        case NsiliConstants.ARCHIVED:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.FILE_ARCHIVED,
-                    node.value.extract_boolean()));
-            break;
-        case NsiliConstants.ARCHIVE_INFORMATION:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.FILE_ARCHIVED_INFO,
+        case NsiliConstants.CREATOR:
+            metacard.setAttribute(new AttributeImpl(Contact.CREATOR_NAME,
                     getString(node.value)));
             break;
-        case NsiliConstants.CREATOR:
-            metacard.setPointOfContact(getString(node.value));
-            break;
         case NsiliConstants.DATE_TIME_DECLARED:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.PRODUCT_CREATE_TIME,
-                    CorbaUtils.convertDate(node.value)));
+            metacard.setCreatedDate(CorbaUtils.convertDate(node.value));
             break;
         case NsiliConstants.EXTENT:
             metacard.setResourceSize(String.valueOf(convertMegabytesToBytes(node.value.extract_double())));
             break;
         case NsiliConstants.FORMAT:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.FILE_FORMAT,
-                    getString(node.value)));
+            metacard.setAttribute(new AttributeImpl(Media.FORMAT, getString(node.value)));
             break;
         case NsiliConstants.FORMAT_VERSION:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.FILE_FORMAT_VER,
-                    getString(node.value)));
+            metacard.setAttribute(new AttributeImpl(Media.FORMAT_VERSION, getString(node.value)));
             break;
         case NsiliConstants.PRODUCT_URL:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.FILE_URL,
-                    getString(node.value)));
+            metacard.setResourceURI(convertURI(getString(node.value)));
             break;
         case NsiliConstants.TITLE:
-            metacard.setTitle(getString(node.value));
+            if (StringUtils.isBlank(metacard.getTitle())) {
+                metacard.setTitle(getString(node.value));
+            }
             break;
         default:
             break;
@@ -506,17 +414,14 @@ public class DAGConverter {
 
     private void addNsilGmtiAttribute(MetacardImpl metacard, Node node) {
         //If any GMTI node is added, then we will set the MetacardType
-        metacard.setType(new NsiliGmtiMetacardType());
-        metacard.setContentTypeName(NsiliProductType.GMTI.toString());
-
         switch (node.attribute_name) {
         case NsiliConstants.IDENTIFIER_JOB:
-            metacard.setAttribute(new AttributeImpl(NsiliGmtiMetacardType.JOB_ID,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.MOVING_TARGET_INDICATOR_JOB_ID,
                     node.value.extract_double()));
             break;
         case NsiliConstants.NUMBER_OF_TARGET_REPORTS:
-            metacard.setAttribute(new AttributeImpl(NsiliGmtiMetacardType.NUM_TARGET_REPORTS,
-                    getLong(node.value)));
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.TARGET_REPORT_COUNT,
+                    getInteger(node.value)));
             break;
         default:
             break;
@@ -525,52 +430,35 @@ public class DAGConverter {
 
     private void addNsilImageryAttribute(MetacardImpl metacard, Node node) {
         //If any Imagery attribute is added, set the card type
-        metacard.setType(new NsiliImageryMetacardType());
-        metacard.setContentTypeName(NsiliProductType.IMAGERY.toString());
-
         switch (node.attribute_name) {
         case NsiliConstants.CATEGORY:
-            NsiliImageryType imageryCategory = convertImageCategory(node.value);
-            if (imageryCategory != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.IMAGERY_CATEGORY,
-                        imageryCategory));
-            }
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.CATEGORY, getString(node.value)));
             break;
         case NsiliConstants.CLOUD_COVER_PCT:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.CLOUD_COVER_PCT,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.CLOUD_COVER,
                     getShort(node.value)));
             break;
         case NsiliConstants.COMMENTS:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.IMAGERY_COMMENTS,
-                    getString(node.value)));
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.COMMENTS, getString(node.value)));
             break;
         case NsiliConstants.DECOMPRESSION_TECHNIQUE:
-            NsiliImageryDecompressionTech decompressionTech =
-                    convertDecompressionTechnique(node.value);
-            if (decompressionTech != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.DECOMPRESSION_TECHNIQUE,
-                        decompressionTech));
-            }
+            metacard.setAttribute(new AttributeImpl(Media.COMPRESSION, getString(node.value)));
             break;
         case NsiliConstants.IDENTIFIER:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.IMAGE_ID,
-                    getString(node.value)));
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.IMAGE_ID, getString(node.value)));
             break;
         case NsiliConstants.NIIRS:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.NIIRS,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.NATIONAL_IMAGERY_INTERPRETABILITY_RATING_SCALE,
                     getShort(node.value)));
             break;
         case NsiliConstants.NUMBER_OF_BANDS:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.NUM_BANDS,
-                    getLong(node.value)));
+            metacard.setAttribute(new AttributeImpl(Media.NUMBER_OF_BANDS, getInteger(node.value)));
             break;
         case NsiliConstants.NUMBER_OF_ROWS:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.NUM_ROWS,
-                    getLong(node.value)));
+            metacard.setAttribute(new AttributeImpl(Media.HEIGHT, getInteger(node.value)));
             break;
         case NsiliConstants.NUMBER_OF_COLS:
-            metacard.setAttribute(new AttributeImpl(NsiliImageryMetacardType.NUM_COLS,
-                    getLong(node.value)));
+            metacard.setAttribute(new AttributeImpl(Media.WIDTH, getInteger(node.value)));
             break;
         case NsiliConstants.TITLE:
             metacard.setTitle(getString(node.value));
@@ -580,52 +468,19 @@ public class DAGConverter {
         }
     }
 
-    private void addNsilMessageAttribute(MetacardImpl metacard, Node node) {
-        metacard.setType(new NsiliMessageMetacardType());
-        metacard.setContentTypeName(NsiliProductType.MESSAGE.toString());
-
-        switch (node.attribute_name) {
-        case NsiliConstants.RECIPIENT:
-            metacard.setAttribute(new AttributeImpl(NsiliMessageMetacardType.RECIPIENT,
-                    getString(node.value)));
-            break;
-        case NsiliConstants.SUBJECT:
-            metacard.setAttribute(new AttributeImpl(NsiliMessageMetacardType.MESSAGE_SUBJECT,
-                    getString(node.value)));
-            break;
-        case NsiliConstants.MESSAGE_BODY:
-            metacard.setAttribute(new AttributeImpl(NsiliMessageMetacardType.MESSAGE_BODY,
-                    getString(node.value)));
-            break;
-        case NsiliConstants.MESSAGE_TYPE:
-            metacard.setAttribute(new AttributeImpl(NsiliMessageMetacardType.MESSAGE_TYPE,
-                    getString(node.value)));
-            break;
-        default:
-            break;
-        }
-    }
-
     private void addNsilReportAttribute(MetacardImpl metacard, Node node) {
-        metacard.setType(new NsiliReportMetacardType());
-        metacard.setContentTypeName(NsiliProductType.REPORT.toString());
         switch (node.attribute_name) {
         case NsiliConstants.ORIGINATORS_REQ_SERIAL_NUM:
-            metacard.setAttribute(new AttributeImpl(NsiliReportMetacardType.ORIGINATOR_REQ_SERIAL_NUM,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.REPORT_SERIAL_NUMBER,
                     getString(node.value)));
             break;
         case NsiliConstants.PRIORITY:
-            NsiliReportPriority reportPriority = convertReportPriority(node.value);
-            if (reportPriority != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliReportMetacardType.PRIORITY,
-                        reportPriority));
-            }
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.REPORT_PRIORITY,
+                    getString(node.value)));
             break;
         case NsiliConstants.TYPE:
-            NsiliReportType reportType = convertReportType(node.value);
-            if (reportType != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliReportMetacardType.TYPE, reportType));
-            }
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.REPORT_TYPE,
+                    getString(node.value)));
             break;
         default:
             break;
@@ -633,72 +488,64 @@ public class DAGConverter {
     }
 
     private void addNsilRfiAttribute(MetacardImpl metacard, Node node) {
-        metacard.setType(new NsiliRfiMetacardType());
-        metacard.setContentTypeName(NsiliProductType.RFI.toString());
-
         switch (node.attribute_name) {
         case NsiliConstants.FOR_ACTION:
-            metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.FOR_ACTION,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.REQUEST_FOR_INFORMATION_FOR_ACTION,
                     getString(node.value)));
             break;
         case NsiliConstants.FOR_INFORMATION:
-            metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.FOR_INFORMATION,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.REQUEST_FOR_INFORMATION_FOR_INFORMATION,
                     getString(node.value)));
             break;
         case NsiliConstants.SERIAL_NUMBER:
-            metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.SERIAL_NUMBER,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.REQUEST_FOR_INFORMATION_SERIAL_NUMBER,
                     getString(node.value)));
             break;
         case NsiliConstants.STATUS:
-            NsiliRfiStatus rfiStatus = convertRfiStatus(node.value);
-            if (rfiStatus != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.STATUS, rfiStatus));
-            }
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.REQUEST_FOR_INFORMATION_STATUS,
+                    getString(node.value)));
             break;
         case NsiliConstants.WORKFLOW_STATUS:
-            NsiliRfiWorkflowStatus workflowStatus = convertRfiWorkflowStatus(node.value);
-            if (workflowStatus != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliRfiMetacardType.WORKFLOW_STATUS,
-                        workflowStatus));
-            }
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.REQUEST_FOR_INFORMATION_WORKFLOW_STATUS,
+                    getString(node.value)));
             break;
         default:
             break;
         }
     }
 
-    private void addNsilSdsAttribute(MetacardImpl metacard, Node node) {
-        metacard.setContentTypeName(NsiliProductType.SYSTEM_DEPLOYMENT_STATUS.toString());
-
-        switch (node.attribute_name) {
-        case NsiliConstants.OPERATIONAL_STATUS:
-            NsiliSdsOpStatus sdsOpStatus = convertSdsOpStatus(node.value);
-            if (sdsOpStatus != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SDS_OPERATIONAL_STATUS,
-                        sdsOpStatus));
-            }
-            break;
-        default:
-            break;
-        }
-    }
-
-    private void addNsilSecurityAttribute(NsiliSecurity security, Node node) {
+    private void addNsilSecurityAttribute(MetacardImpl metacard, Node node) {
         switch (node.attribute_name) {
         case NsiliConstants.POLICY:
-            String mergedPolicy = mergeSecurityPolicyString(security.getPolicy(),
-                    getString(node.value));
-            security.setPolicy(mergedPolicy);
+            metacard.setAttribute(new AttributeImpl(Security.RESOURCE_CLASSIFICATION_SYSTEM,
+                    getString(node.value)));
             break;
         case NsiliConstants.RELEASABILITY:
-            String mergedReleasability = mergeReleasabilityString(security.getReleasability(),
-                    getString(node.value));
-            security.setReleasability(mergedReleasability);
+            metacard.setAttribute(new AttributeImpl(Security.RESOURCE_RELEASABILITY,
+                    getString(node.value)));
             break;
         case NsiliConstants.CLASSIFICATION:
-            String classification = mergeClassificationString(security.getClassification(),
-                    getString(node.value));
-            security.setClassification(classification);
+            metacard.setAttribute(new AttributeImpl(Security.RESOURCE_CLASSIFICATION,
+                    getString(node.value)));
+            break;
+        default:
+            break;
+        }
+    }
+
+    private void addNsilMetadataSecurityAttribute(MetacardImpl metacard, Node node) {
+        switch (node.attribute_name) {
+        case NsiliConstants.POLICY:
+            metacard.setAttribute(new AttributeImpl(Security.METADATA_CLASSIFICATION_SYSTEM,
+                    getString(node.value)));
+            break;
+        case NsiliConstants.RELEASABILITY:
+            metacard.setAttribute(new AttributeImpl(Security.METADATA_RELEASABILITY,
+                    getString(node.value)));
+            break;
+        case NsiliConstants.CLASSIFICATION:
+            metacard.setAttribute(new AttributeImpl(Security.METADATA_CLASSIFICATION,
+                    getString(node.value)));
             break;
         default:
             break;
@@ -706,39 +553,22 @@ public class DAGConverter {
     }
 
     private void addNsilStreamAttribute(MetacardImpl metacard, Node node) {
-
         switch (node.attribute_name) {
-        case NsiliConstants.ARCHIVED:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.STREAM_ARCHIVED,
-                    node.value.extract_boolean()));
-            break;
-        case NsiliConstants.ARCHIVE_INFORMATION:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.STREAM_ARCHIVAL_INFO,
-                    getString(node.value)));
-            break;
         case NsiliConstants.CREATOR:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.STREAM_CREATOR,
+            metacard.setAttribute(new AttributeImpl(Contact.CREATOR_NAME,
                     getString(node.value)));
             break;
         case NsiliConstants.DATE_TIME_DECLARED:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.STREAM_DATETIME_DECLARED,
-                    CorbaUtils.convertDate(node.value)));
+            metacard.setCreatedDate(CorbaUtils.convertDate(node.value));
             break;
         case NsiliConstants.STANDARD:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.STREAM_STANDARD,
-                    getString(node.value)));
+            metacard.setAttribute(new AttributeImpl(Media.FORMAT, getString(node.value)));
             break;
         case NsiliConstants.STANDARD_VERSION:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.STREAM_STANDARD_VER,
-                    getString(node.value)));
+            metacard.setAttribute(new AttributeImpl(Media.FORMAT_VERSION, getString(node.value)));
             break;
         case NsiliConstants.SOURCE_URL:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.STREAM_SOURCE_URL,
-                    getString(node.value)));
-            break;
-        case NsiliConstants.PROGRAM_ID:
-            metacard.setAttribute(new AttributeImpl(NsiliMetacardType.STREAM_PROGRAM_ID,
-                    getShort(node.value)));
+            metacard.setResourceURI(convertURI(getString(node.value)));
             break;
         default:
             break;
@@ -746,18 +576,14 @@ public class DAGConverter {
     }
 
     private void addNsilTaskAttribute(MetacardImpl metacard, Node node) {
-        metacard.setType(new NsiliTaskMetacardType());
-        metacard.setContentTypeName(NsiliProductType.TASK.toString());
         switch (node.attribute_name) {
         case NsiliConstants.COMMENTS:
-            metacard.setAttribute(new AttributeImpl(NsiliTaskMetacardType.COMMENTS,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.TASK_COMMENTS,
                     getString(node.value)));
             break;
         case NsiliConstants.STATUS:
-            NsiliTaskStatus taskStatus = convertTaskStatus(node.value);
-            if (taskStatus != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliTaskMetacardType.STATUS, taskStatus));
-            }
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.TASK_STATUS,
+                    getString(node.value)));
             break;
         default:
             break;
@@ -765,25 +591,22 @@ public class DAGConverter {
     }
 
     private void addNsilTdlAttribute(MetacardImpl metacard, Node node) {
-        metacard.setType(new NsiliTdlMetacardType());
-        metacard.setContentTypeName(NsiliProductType.TDL_DATA.toString());
-
         switch (node.attribute_name) {
         case NsiliConstants.ACTIVITY:
-            metacard.setAttribute(new AttributeImpl(NsiliTdlMetacardType.ACTIVITY,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.TACTICAL_DATA_LINK_ACTIVITY,
                     getShort(node.value)));
             break;
 
         case NsiliConstants.MESSAGE_NUM:
-            metacard.setAttribute(new AttributeImpl(NsiliTdlMetacardType.MESSAGE_NUM,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.TACTICAL_DATA_LINK_MESSAGE_NUMBER,
                     getString(node.value)));
             break;
         case NsiliConstants.PLATFORM:
-            metacard.setAttribute(new AttributeImpl(NsiliTdlMetacardType.PLATFORM,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.PLATFORM_ID,
                     getShort(node.value)));
             break;
         case NsiliConstants.TRACK_NUM:
-            metacard.setAttribute(new AttributeImpl(NsiliTdlMetacardType.TRACK_NUM,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.TACTICAL_DATA_LINK_TRACK_NUMBER,
                     getString(node.value)));
             break;
         default:
@@ -792,55 +615,37 @@ public class DAGConverter {
     }
 
     private void addNsilVideoAttribute(MetacardImpl metacard, Node node) {
-        metacard.setType(new NsiliVideoMetacardType());
-        metacard.setContentTypeName(NsiliProductType.VIDEO.toString());
-
         switch (node.attribute_name) {
         case NsiliConstants.AVG_BIT_RATE:
-            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.AVG_BIT_RATE,
+            metacard.setAttribute(new AttributeImpl(Media.BITS_PER_SECOND,
                     node.value.extract_double()));
             break;
         case NsiliConstants.CATEGORY:
-            NsiliVideoCategoryType videoCategoryType = convertVideoCategory(node.value);
-            if (videoCategoryType != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.CATEGORY,
-                        videoCategoryType));
-            }
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.CATEGORY, getString(node.value)));
             break;
         case NsiliConstants.ENCODING_SCHEME:
-            NsiliVideoEncodingScheme videoEncodingScheme = convertVideoEncodingScheme(node.value);
-            if (videoEncodingScheme != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.ENCODING_SCHEME,
-                        videoEncodingScheme));
-            }
+            metacard.setAttribute(new AttributeImpl(Media.ENCODING, getString(node.value)));
             break;
         case NsiliConstants.FRAME_RATE:
-            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.FRAME_RATE,
+            metacard.setAttribute(new AttributeImpl(Media.FRAMES_PER_SECOND,
                     node.value.extract_double()));
             break;
         case NsiliConstants.NUMBER_OF_ROWS:
-            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.NUM_ROWS,
-                    getLong(node.value)));
+            metacard.setAttribute(new AttributeImpl(Media.HEIGHT, getInteger(node.value)));
             break;
         case NsiliConstants.NUMBER_OF_COLS:
-            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.NUM_COLS,
-                    getLong(node.value)));
-            break;
-        case NsiliConstants.METADATA_ENC_SCHEME:
-            NsiliMetadataEncodingScheme metadataEncodingScheme =
-                    convertMetadataEncScheme(node.value);
-            if (metadataEncodingScheme != null) {
-                metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.METADATA_ENCODING_SCHEME,
-                        metadataEncodingScheme));
-            }
+            metacard.setAttribute(new AttributeImpl(Media.WIDTH, getInteger(node.value)));
             break;
         case NsiliConstants.MISM_LEVEL:
-            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.MISM_LEVEL,
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.VIDEO_MOTION_IMAGERY_SYSTEMS_MATRIX_LEVEL,
                     getShort(node.value)));
             break;
         case NsiliConstants.SCANNING_MODE:
-            metacard.setAttribute(new AttributeImpl(NsiliVideoMetacardType.SCANNING_MODE,
-                    getString(node.value)));
+            metacard.setAttribute(new AttributeImpl(Media.SCANNING_MODE, getString(node.value)));
+            break;
+        case NsiliConstants.VMTI_PROCESSED:
+            metacard.setAttribute(new AttributeImpl(IsrAttributes.VIDEO_MOVING_TARGET_INDICATOR_PROCESSED,
+                    node.value.extract_boolean()));
             break;
         default:
             break;
@@ -882,93 +687,14 @@ public class DAGConverter {
         return relatedFileType;
     }
 
-    private void addMergedSecurityDescriptor(MetacardImpl metacard, NsiliSecurity security) {
-        metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SECURITY_CLASSIFICATION,
-                security.getClassification()));
-        metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SECURITY_POLICY,
-                security.getPolicy()));
-        metacard.setAttribute(new AttributeImpl(NsiliMetacardType.SECURITY_RELEASABILITY,
-                security.getReleasability()));
-    }
-
-    private void setTopLevelMetacardAttributes(MetacardImpl metacard) {
-        //If file data available use that
-        Attribute fileProductURLAttr = metacard.getAttribute(NsiliMetacardType.FILE_URL);
-        if (fileProductURLAttr != null) {
-            metacard.setResourceURI(convertURI(fileProductURLAttr.getValue()
-                    .toString()));
-            Attribute fileFormatVerAttr = metacard.getAttribute(NsiliMetacardType.FILE_FORMAT_VER);
-            if (fileFormatVerAttr != null) {
-                metacard.setContentTypeVersion(fileFormatVerAttr.getValue()
-                        .toString());
-            }
-        } else {
-            //Else use stream info
-            Attribute streamURLAttr = metacard.getAttribute(NsiliMetacardType.STREAM_SOURCE_URL);
-            if (streamURLAttr != null && streamURLAttr.getValue() != null) {
-                metacard.setResourceURI(convertURI(streamURLAttr.getValue()
-                        .toString()));
-
-                Attribute streamFormatVerAttr =
-                        metacard.getAttribute(NsiliMetacardType.STREAM_STANDARD_VER);
-                if (streamFormatVerAttr != null) {
-                    metacard.setContentTypeVersion(streamFormatVerAttr.getValue()
-                            .toString());
-                }
-            }
-        }
-
-        if (NsiliMessageMetacardType.class.getCanonicalName()
-                .equals(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName())) {
-            Attribute subjAttr = metacard.getAttribute(NsiliMessageMetacardType.MESSAGE_SUBJECT);
-            if (subjAttr != null) {
-                metacard.setTitle(subjAttr.getValue()
-                        .toString());
-            }
-
-            Attribute bodyAttr = metacard.getAttribute(NsiliMessageMetacardType.MESSAGE_BODY);
-            if (bodyAttr != null) {
-                metacard.setDescription(bodyAttr.getValue()
-                        .toString());
-            }
-
-            Attribute typeAttr = metacard.getAttribute(NsiliMessageMetacardType.MESSAGE_TYPE);
-            if (typeAttr != null) {
-                //Unset the version when we have a message
-                metacard.setContentTypeVersion(null);
-            }
-        } else if (NsiliVideoMetacardType.class.getCanonicalName()
-                .equals(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName())) {
-            Attribute encodingSchemeAttr =
-                    metacard.getAttribute(NsiliVideoMetacardType.ENCODING_SCHEME);
-            if (encodingSchemeAttr != null) {
-                //Unset the version as we don't know that here
-                metacard.setContentTypeVersion(null);
-            }
-        }
-
-        // Content Type Name Fall Back
-        if (metacard.getContentTypeName() == null) {
-            metacard.setContentTypeName(NsiliProductType.DOCUMENT.toString());
-        }
-    }
-
-    private NsiliProductType convertProductType(Any any) {
-        String productTypeStr = getString(any);
-        return NsiliProductType.fromSpecName(productTypeStr);
-    }
-
     private String convertShape(Any any, boolean swapCoordinates) {
         org.codice.alliance.nsili.common.UCO.Rectangle rectangle = RectangleHelper.extract(any);
         org.codice.alliance.nsili.common.UCO.Coordinate2d upperLeft = rectangle.upper_left;
         org.codice.alliance.nsili.common.UCO.Coordinate2d lowerRight = rectangle.lower_right;
 
         Geometry geom;
-        GeometryFactory geometryFactory = new GeometryFactory();
+
+        final WKTWriter wktWriter = new WKTWriter();
 
         if (upperLeft.x == lowerRight.x && upperLeft.y == lowerRight.y) {
             //Build a Point vs Polygon
@@ -978,7 +704,7 @@ public class DAGConverter {
             } else {
                 pointCoord = new Coordinate(upperLeft.x, upperLeft.y);
             }
-            geom = geometryFactory.createPoint(pointCoord);
+            geom = GEOMETRY_FACTORY.createPoint(pointCoord);
         } else {
             Coordinate[] coordinates = new Coordinate[5];
             Coordinate lowerLeftCoord;
@@ -1004,11 +730,11 @@ public class DAGConverter {
             coordinates[3] = lowerRightCoord;
             coordinates[4] = lowerLeftCoord;
 
-            LinearRing shell = geometryFactory.createLinearRing(coordinates);
-            geom = new Polygon(shell, null, geometryFactory);
+            LinearRing shell = GEOMETRY_FACTORY.createLinearRing(coordinates);
+            geom = new Polygon(shell, null, GEOMETRY_FACTORY);
         }
 
-        return WKT_WRITER.write(geom);
+        return wktWriter.write(geom);
     }
 
     public static int convertMegabytesToBytes(Double megabytes) {
@@ -1033,157 +759,6 @@ public class DAGConverter {
         return uri;
     }
 
-    private NsiliImageryType convertImageCategory(Any any) {
-        String imageryTypeStr = getString(any);
-        NsiliImageryType imageryType = null;
-        try {
-            imageryType = NsiliImageryType.valueOf(imageryTypeStr);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized imagery type: {}", imageryTypeStr, e);
-        }
-        return imageryType;
-    }
-
-    private NsiliImageryDecompressionTech convertDecompressionTechnique(Any any) {
-        String decompressionTechStr = getString(any);
-        NsiliImageryDecompressionTech decompressionTech = null;
-        try {
-            decompressionTech = NsiliImageryDecompressionTech.valueOf(decompressionTechStr);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized decompression technique: {}", decompressionTechStr, e);
-        }
-        return decompressionTech;
-    }
-
-    private NsiliVideoCategoryType convertVideoCategory(Any any) {
-        String videoCategoryType = getString(any);
-        NsiliVideoCategoryType videoCategory = null;
-        try {
-            videoCategory = NsiliVideoCategoryType.valueOf(videoCategoryType);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized video category: {}", videoCategoryType, e);
-        }
-        return videoCategory;
-    }
-
-    private NsiliVideoEncodingScheme convertVideoEncodingScheme(Any any) {
-        String videoEncSchemeStr = getString(any);
-        NsiliVideoEncodingScheme encodingScheme = null;
-        try {
-            encodingScheme = NsiliVideoEncodingScheme.fromSpecName(videoEncSchemeStr);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized video encoding scheme: {}", videoEncSchemeStr, e);
-        }
-        return encodingScheme;
-    }
-
-    private NsiliMetadataEncodingScheme convertMetadataEncScheme(Any any) {
-        String metadataEncSchemeStr = getString(any);
-        NsiliMetadataEncodingScheme metadataEncodingScheme = null;
-        try {
-            metadataEncodingScheme = NsiliMetadataEncodingScheme.valueOf(metadataEncSchemeStr);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized metadata encoding scheme: {}", metadataEncSchemeStr, e);
-        }
-        return metadataEncodingScheme;
-    }
-
-    private NsiliCxpStatusType convertCxpStatus(Any any) {
-        String cxpStatusStr = getString(any);
-        NsiliCxpStatusType cxpStatusType = null;
-        try {
-            cxpStatusType = NsiliCxpStatusType.valueOf(cxpStatusStr);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized CXP Status type: {}", cxpStatusStr, e);
-        }
-        return cxpStatusType;
-    }
-
-    private NsiliRfiStatus convertRfiStatus(Any any) {
-        String rfiStatusStr = getString(any);
-        NsiliRfiStatus rfiStatus = null;
-        try {
-            rfiStatus = NsiliRfiStatus.valueOf(rfiStatusStr);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized RFI status: {}", rfiStatusStr, e);
-        }
-        return rfiStatus;
-    }
-
-    private NsiliRfiWorkflowStatus convertRfiWorkflowStatus(Any any) {
-        String rfiWorkflowStatusStr = getString(any);
-        NsiliRfiWorkflowStatus rfiWorkflowStatus = null;
-        try {
-            rfiWorkflowStatus = NsiliRfiWorkflowStatus.valueOf(rfiWorkflowStatusStr);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized RFI Workflow status: {}", rfiWorkflowStatusStr, e);
-        }
-        return rfiWorkflowStatus;
-    }
-
-    private NsiliTaskStatus convertTaskStatus(Any any) {
-        String taskStatusStr = getString(any);
-        NsiliTaskStatus taskStatus = null;
-        try {
-            taskStatus = NsiliTaskStatus.valueOf(taskStatusStr);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized Task Status: {}", taskStatusStr, e);
-        }
-        return taskStatus;
-    }
-
-    private NsiliExploitationSubQualCode convertExplSubQualCd(Any any) {
-        String explSubQualCodeStr = getString(any);
-        NsiliExploitationSubQualCode exploitationSubQualCode = null;
-        try {
-            exploitationSubQualCode = NsiliExploitationSubQualCode.valueOf(explSubQualCodeStr);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized Exploitation Subjective Quality code: {}",
-                    explSubQualCodeStr, e);
-        }
-        return exploitationSubQualCode;
-    }
-
-    private NsiliSdsOpStatus convertSdsOpStatus(Any any) {
-        String sdsOpStatusStr = getString(any);
-        NsiliSdsOpStatus sdsOpStatus = NsiliSdsOpStatus.fromSpecName(sdsOpStatusStr);
-        if (sdsOpStatus == null) {
-            LOGGER.debug("Unrecognized SDS Op status: {}", sdsOpStatusStr);
-        }
-        return sdsOpStatus;
-    }
-
-    private NsiliApprovalStatus convertApprovalStatus(Any any) {
-        String approvalStr = getString(any);
-        NsiliApprovalStatus approvalStatus = NsiliApprovalStatus.fromSpecName(approvalStr);
-        if (approvalStatus == null) {
-            LOGGER.debug("Unrecognized Approval status: {}", approvalStr);
-        }
-        return approvalStatus;
-    }
-
-    private NsiliReportPriority convertReportPriority(Any any) {
-        String reportPriorityStr = getString(any);
-        NsiliReportPriority reportPriority = null;
-        try {
-            reportPriority = NsiliReportPriority.valueOf(reportPriorityStr);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized Report Priority: {}", reportPriorityStr, e);
-        }
-        return reportPriority;
-    }
-
-    private NsiliReportType convertReportType(Any any) {
-        String reportTypeStr = getString(any);
-        NsiliReportType reportType = null;
-        try {
-            reportType = NsiliReportType.valueOf(reportTypeStr);
-        } catch (IllegalArgumentException e) {
-            LOGGER.debug("Unrecognized Report Type: {}", reportTypeStr, e);
-        }
-        return reportType;
-    }
-
     public static String getString(Any any) {
         if (any.type()
                 .kind() == TCKind.tk_wstring) {
@@ -1195,13 +770,18 @@ public class DAGConverter {
         return null;
     }
 
-    public static Integer getLong(Any any) {
+    public static Integer getInteger(Any any) {
         if (any.type()
                 .kind() == TCKind.tk_long) {
             return any.extract_long();
         } else if (any.type()
                 .kind() == TCKind.tk_ulong) {
             return any.extract_ulong();
+        } else if (any.type()
+                .kind() == TCKind.tk_longlong) {
+            // STANAG-4559 Unsigned Longs are within Java's Integer range
+            Long longVal = any.extract_longlong();
+            return longVal.intValue();
         }
         return null;
     }
@@ -1215,91 +795,6 @@ public class DAGConverter {
             return any.extract_ushort();
         }
         return null;
-    }
-
-    /**
-     * Merge 2 space separated security policies into a single list. Merge is done additively.
-     *
-     * @param policy1 - Initial list of policies.
-     * @param policy2 - Additional policies to add.
-     * @return Non-duplicated policies space separated.
-     */
-    private String mergeSecurityPolicyString(String policy1, String policy2) {
-        if (policy1 == null && policy2 == null) {
-            return null;
-        } else if (policy1 != null && policy2 == null) {
-            return policy1;
-        } else if (policy1 == null && policy2 != null) {
-            return policy2;
-        }
-
-        Set<String> policyAttrs = new HashSet<>();
-        String[] policy1Arr = policy1.split(" ");
-        String[] policy2Arr = policy2.split(" ");
-
-        for (String policy : policy1Arr) {
-            policyAttrs.add(policy);
-        }
-
-        for (String policy : policy2Arr) {
-            policyAttrs.add(policy);
-        }
-
-        return collectionToString(policyAttrs);
-    }
-
-    /**
-     * Merges releasabilities. Merge is done subtractively, so most restrictive applies.
-     *
-     * @param releasability1 - Initial list of releasabilities.
-     * @param releasability2 - Releasabilities to merge.
-     * @return - Non-duplicated releasabilities space separated.
-     */
-    private String mergeReleasabilityString(String releasability1, String releasability2) {
-        if (releasability1 == null) {
-            return releasability2;
-        } else if (releasability2 == null) {
-            return null;
-        }
-
-        Set<String> releasability = new HashSet<>();
-        String[] releasebility1Arr = releasability1.split(" ");
-        String[] releasability2Arr = releasability2.split(" ");
-        for (String release1 : releasebility1Arr) {
-            boolean found = false;
-            for (String release2 : releasability2Arr) {
-                if (release1.equalsIgnoreCase(releasability2)) {
-                    found = true;
-                    break;
-                }
-            }
-            if (found) {
-                releasability.add(release1);
-            }
-        }
-
-        return collectionToString(releasability);
-    }
-
-    /**
-     * Determines most restrictive classification and returns that.
-     *
-     * @param classification1 - Initial classification
-     * @param classification2 - Classification to check
-     * @return Most restrictive classification
-     */
-    private String mergeClassificationString(String classification1, String classification2) {
-        NsiliClassification class1 = NsiliClassification.fromSpecName(classification1);
-        NsiliClassification class2 = NsiliClassification.fromSpecName(classification2);
-        NsiliClassificationComparator classificationComparator =
-                new NsiliClassificationComparator();
-
-        int comparison = classificationComparator.compare(class1, class2);
-        if (comparison <= 0) {
-            return classification1;
-        } else {
-            return classification2;
-        }
     }
 
     private static String collectionToString(Collection<String> collection) {
@@ -1370,6 +865,16 @@ public class DAGConverter {
         }
 
         return thumbnail;
+    }
+
+    private void addDescription(Metacard metacard, String description) {
+        Attribute descAttr = metacard.getAttribute(Core.DESCRIPTION);
+        if (descAttr != null) {
+            descAttr.getValues()
+                    .add(description);
+        } else {
+            metacard.setAttribute(new AttributeImpl(Core.DESCRIPTION, description));
+        }
     }
 
     public static void printDAG(DAG dag) {

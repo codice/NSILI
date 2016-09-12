@@ -23,11 +23,12 @@ import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
 
 public class WKTUtil {
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
+
     public static Geometry getWKTBoundingRectangle(String wktString) throws ParseException {
         Geometry boundingGeo = null;
-        WKTReader wktReader = new WKTReader();
+        WKTReader wktReader = new WKTReader(GEOMETRY_FACTORY);
         Geometry geo = wktReader.read(wktString);
-        GeometryFactory geometryFactory = new GeometryFactory();
 
         if (geo instanceof Point) {
             Point pt = (Point)geo;
@@ -44,8 +45,8 @@ public class WKTUtil {
             coordinates[3] = lowerRightCoord;
             coordinates[4] = lowerLeftCoord;
 
-            LinearRing shell = geometryFactory.createLinearRing(coordinates);
-            boundingGeo = new Polygon(shell, null, geometryFactory);
+            LinearRing shell = GEOMETRY_FACTORY.createLinearRing(coordinates);
+            boundingGeo = new Polygon(shell, null, GEOMETRY_FACTORY);
         } else {
             boundingGeo = geo.getEnvelope();
         }

@@ -48,7 +48,6 @@ import org.slf4j.LoggerFactory;
 
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.filter.FilterBuilder;
-import ddf.security.Subject;
 
 public class OrderMgrImpl extends OrderMgrPOA {
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(OrderMgrImpl.class);
@@ -102,7 +101,7 @@ public class OrderMgrImpl extends OrderMgrPOA {
             if (prop.aname.equals(NsiliConstants.PROP_PROTOCOL)) {
                 protocol = DAGConverter.getString(prop.value);
             } else if (prop.aname.equals(NsiliConstants.PROP_PORT)) {
-                Integer portInteger = DAGConverter.getLong(prop.value);
+                Integer portInteger = DAGConverter.getInteger(prop.value);
                 if (portInteger != null) {
                     port = portInteger;
                 }

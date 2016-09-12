@@ -21,23 +21,27 @@
            http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
     <!-- Metacard Type Subclasses to register -->
-    <bean id="nsiliMetacardType" class="org.codice.alliance.nsili.common.NsiliMetacardType"/>
-    <bean id="nsiliCxpMetacardType" class="org.codice.alliance.nsili.common.NsiliCxpMetacardType"/>
-    <bean id="nsiliGmtiMetacardType"
-          class="org.codice.alliance.nsili.common.NsiliGmtiMetacardType"/>
-    <bean id="nsiliImageryMetacardType"
-          class="org.codice.alliance.nsili.common.NsiliImageryMetacardType"/>
-    <bean id="nsiliIRMetacardType" class="org.codice.alliance.nsili.common.NsiliIRMetacardType"/>
-    <bean id="nsiliMessageMetacardType"
-          class="org.codice.alliance.nsili.common.NsiliMessageMetacardType"/>
-    <bean id="nsiliReportMetacardType"
-          class="org.codice.alliance.nsili.common.NsiliReportMetacardType"/>
-    <bean id="nsiliRfiMetacardType" class="org.codice.alliance.nsili.common.NsiliRfiMetacardType"/>
-    <bean id="nsiliTaskMetacardType"
-          class="org.codice.alliance.nsili.common.NsiliTaskMetacardType"/>
-    <bean id="nsiliTdlMetacardType" class="org.codice.alliance.nsili.common.NsiliTdlMetacardType"/>
-    <bean id="nsiliVideoMetacardType"
-          class="org.codice.alliance.nsili.common.NsiliVideoMetacardType"/>
+    <bean id="nsiliMetacardType" class="ddf.catalog.data.impl.MetacardTypeImpl">
+        <argument value="nsili.aggregate"/>
+        <argument>
+            <list>
+                <bean class="ddf.catalog.data.impl.types.AssociationsAttributes"/>
+                <bean class="ddf.catalog.data.impl.types.ContactAttributes"/>
+                <bean class="ddf.catalog.data.impl.types.MediaAttributes"/>
+                <bean class="ddf.catalog.data.impl.types.DateTimeAttributes"/>
+                <bean class="ddf.catalog.data.impl.types.LocationAttributes"/>
+                <bean class="ddf.catalog.data.impl.types.ValidationAttributes"/>
+                <bean class="org.codice.alliance.catalog.core.api.impl.types.IsrAttributes"/>
+                <bean class="org.codice.alliance.catalog.core.api.impl.types.SecurityAttributes"/>
+            </list>
+        </argument>
+    </bean>
+
+    <service ref="nsiliMetacardType" interface="ddf.catalog.data.MetacardType">
+        <service-properties>
+            <entry key="name" value="nsili.aggregate"/>
+        </service-properties>
+    </service>
 
     <reference id="filterAdapter" interface="ddf.catalog.filter.FilterAdapter"/>
 
@@ -82,6 +86,9 @@
             <property name="excludeSortOrder" value="false"/>
             <property name="filterAdapter" ref="filterAdapter"/>
             <property name="resourceReader" ref="urlReader"/>
+
+            <!-- Custom Metacard Type Definitions -->
+            <property name="nsiliMetacardType" ref="nsiliMetacardType" />
         </cm:managed-component>
     </cm:managed-service-factory>
 
@@ -111,63 +118,9 @@
             <property name="excludeSortOrder" value="false"/>
             <property name="filterAdapter" ref="filterAdapter"/>
             <property name="resourceReader" ref="urlReader"/>
+
+            <!-- Custom Metacard Type Definitions -->
+            <property name="nsiliMetacardType" ref="nsiliMetacardType" />
         </cm:managed-component>
     </cm:managed-service-factory>
-
-    <!-- Register metacard types -->
-    <service ref="nsiliMetacardType" interface="ddf.catalog.data.MetacardType">
-        <service-properties>
-            <entry key="id" value="nsili.metacard"/>
-        </service-properties>
-    </service>
-    <service ref="nsiliCxpMetacardType" interface="ddf.catalog.data.MetacardType">
-        <service-properties>
-            <entry key="id" value="nsili.cxp.metacard"/>
-        </service-properties>
-    </service>
-    <service ref="nsiliGmtiMetacardType" interface="ddf.catalog.data.MetacardType">
-        <service-properties>
-            <entry key="id" value="nsili.gmti.metacard"/>
-        </service-properties>
-    </service>
-    <service ref="nsiliImageryMetacardType" interface="ddf.catalog.data.MetacardType">
-        <service-properties>
-            <entry key="id" value="nsili.imagery.metacard"/>
-        </service-properties>
-    </service>
-    <service ref="nsiliIRMetacardType" interface="ddf.catalog.data.MetacardType">
-        <service-properties>
-            <entry key="id" value="nsili.ir.metacard"/>
-        </service-properties>
-    </service>
-    <service ref="nsiliMessageMetacardType" interface="ddf.catalog.data.MetacardType">
-        <service-properties>
-            <entry key="id" value="nsili.message.metacard"/>
-        </service-properties>
-    </service>
-    <service ref="nsiliReportMetacardType" interface="ddf.catalog.data.MetacardType">
-        <service-properties>
-            <entry key="id" value="nsili.report.metacard"/>
-        </service-properties>
-    </service>
-    <service ref="nsiliRfiMetacardType" interface="ddf.catalog.data.MetacardType">
-        <service-properties>
-            <entry key="id" value="nsili.rfi.metacard"/>
-        </service-properties>
-    </service>
-    <service ref="nsiliTaskMetacardType" interface="ddf.catalog.data.MetacardType">
-        <service-properties>
-            <entry key="id" value="nsili.task.metacard"/>
-        </service-properties>
-    </service>
-    <service ref="nsiliTdlMetacardType" interface="ddf.catalog.data.MetacardType">
-        <service-properties>
-            <entry key="id" value="nsili.tdl.metacard"/>
-        </service-properties>
-    </service>
-    <service ref="nsiliVideoMetacardType" interface="ddf.catalog.data.MetacardType">
-        <service-properties>
-            <entry key="id" value="nsili.video.metacard"/>
-        </service-properties>
-    </service>
 </blueprint>

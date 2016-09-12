@@ -64,10 +64,10 @@ public class BqsConverter {
     private static final String BQS_FULL_DATE_FORMAT = BQS_SHORT_DATE_FORMAT + " HH:mm:ss[.SSS]";
 
     private static final DateTimeFormatter LONG_DATE_FORMATTER = DateTimeFormatter.ofPattern(
-            BQS_FULL_DATE_FORMAT);
+            BQS_FULL_DATE_FORMAT).withZone(ZoneOffset.UTC);
 
     private static final DateTimeFormatter SHORT_DATE_FORMATTER = DateTimeFormatter.ofPattern(
-            BQS_SHORT_DATE_FORMAT);
+            BQS_SHORT_DATE_FORMAT).withZone(ZoneOffset.UTC);
 
     private FilterBuilder filterBuilder;
 
@@ -1185,5 +1185,4 @@ public class BqsConverter {
                     .toString();
         }
     }
-
  }

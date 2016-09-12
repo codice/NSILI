@@ -13,6 +13,7 @@
  */
 package org.codice.alliance.nsili.transformer;
 
+import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -26,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.GregorianCalendar;
@@ -34,36 +36,28 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.codice.alliance.catalog.core.api.impl.types.IsrAttributes;
+import org.codice.alliance.catalog.core.api.impl.types.SecurityAttributes;
+import org.codice.alliance.catalog.core.api.types.Isr;
+import org.codice.alliance.catalog.core.api.types.Security;
 import org.codice.alliance.nsili.common.CorbaUtils;
 import org.codice.alliance.nsili.common.NsiliApprovalStatus;
 import org.codice.alliance.nsili.common.NsiliCommonUtils;
 import org.codice.alliance.nsili.common.NsiliConstants;
-import org.codice.alliance.nsili.common.NsiliCxpMetacardType;
 import org.codice.alliance.nsili.common.NsiliCxpStatusType;
 import org.codice.alliance.nsili.common.NsiliExploitationSubQualCode;
-import org.codice.alliance.nsili.common.NsiliGmtiMetacardType;
-import org.codice.alliance.nsili.common.NsiliIRMetacardType;
 import org.codice.alliance.nsili.common.NsiliImageryDecompressionTech;
-import org.codice.alliance.nsili.common.NsiliImageryMetacardType;
 import org.codice.alliance.nsili.common.NsiliImageryType;
-import org.codice.alliance.nsili.common.NsiliMessageMetacardType;
-import org.codice.alliance.nsili.common.NsiliMetacardType;
 import org.codice.alliance.nsili.common.NsiliMetadataEncodingScheme;
 import org.codice.alliance.nsili.common.NsiliProductType;
-import org.codice.alliance.nsili.common.NsiliReportMetacardType;
 import org.codice.alliance.nsili.common.NsiliReportPriority;
 import org.codice.alliance.nsili.common.NsiliReportType;
-import org.codice.alliance.nsili.common.NsiliRfiMetacardType;
 import org.codice.alliance.nsili.common.NsiliRfiStatus;
 import org.codice.alliance.nsili.common.NsiliRfiWorkflowStatus;
 import org.codice.alliance.nsili.common.NsiliScanningMode;
-import org.codice.alliance.nsili.common.NsiliSdsOpStatus;
-import org.codice.alliance.nsili.common.NsiliTaskMetacardType;
 import org.codice.alliance.nsili.common.NsiliTaskStatus;
-import org.codice.alliance.nsili.common.NsiliTdlMetacardType;
 import org.codice.alliance.nsili.common.NsiliVideoCategoryType;
 import org.codice.alliance.nsili.common.NsiliVideoEncodingScheme;
-import org.codice.alliance.nsili.common.NsiliVideoMetacardType;
 import org.codice.alliance.nsili.common.ResultDAGConverter;
 import org.codice.alliance.nsili.common.UCO.AbsTime;
 import org.codice.alliance.nsili.common.UCO.AbsTimeHelper;
@@ -74,7 +68,9 @@ import org.codice.alliance.nsili.common.UCO.NodeHelper;
 import org.codice.alliance.nsili.common.UCO.NodeType;
 import org.codice.alliance.nsili.common.UCO.RectangleHelper;
 import org.codice.alliance.nsili.common.UCO.Time;
+import org.jgrapht.Graph;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+import org.jgrapht.traverse.DepthFirstIterator;
 import org.junit.Before;
 import org.junit.Test;
 import org.omg.CORBA.Any;
@@ -85,6 +81,17 @@ import ddf.catalog.data.AttributeDescriptor;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.MetacardType;
 import ddf.catalog.data.impl.MetacardImpl;
+import ddf.catalog.data.impl.MetacardTypeImpl;
+import ddf.catalog.data.impl.types.AssociationsAttributes;
+import ddf.catalog.data.impl.types.ContactAttributes;
+import ddf.catalog.data.impl.types.DateTimeAttributes;
+import ddf.catalog.data.impl.types.LocationAttributes;
+import ddf.catalog.data.types.Associations;
+import ddf.catalog.data.types.Contact;
+import ddf.catalog.data.types.Core;
+import ddf.catalog.data.types.DateTime;
+import ddf.catalog.data.types.Location;
+import ddf.catalog.data.types.Media;
 import ddf.catalog.operation.ResourceResponse;
 import ddf.catalog.resource.Resource;
 import ddf.catalog.resource.impl.URLResourceReader;
@@ -265,8 +272,6 @@ public class DAGConverterTest {
 
     private static final String APPROVED_BY = "ApprovedBy";
 
-    private static final NsiliSdsOpStatus SDS_OP_STATUS = NsiliSdsOpStatus.LIMITED_OPERATIONAL;
-
     private ORB orb;
 
     private Calendar cal;
@@ -289,6 +294,16 @@ public class DAGConverterTest {
         int second = 10;
         cal = new GregorianCalendar(year, month, dayOfMonth, hourOfDay, minute, second);
         dagConverter = new DAGConverter(mockResourceReader);
+
+        List<MetacardType> types = new ArrayList<>();
+        types.add(new AssociationsAttributes());
+        types.add(new ContactAttributes());
+        types.add(new DateTimeAttributes());
+        types.add(new LocationAttributes());
+        types.add(new IsrAttributes());
+        types.add(new SecurityAttributes());
+        MetacardTypeImpl metacardTypeImpl = new MetacardTypeImpl("NsiliMetacardType", types);
+        dagConverter.setNsiliMetacardType(metacardTypeImpl);
 
         setupMocks();
     }
@@ -332,7 +347,6 @@ public class DAGConverterTest {
         addImageryPart(graph, productNode);
         addAssocationNode(graph, productNode);
         addApprovalNode(graph, productNode);
-        addSdsNode(graph, productNode);
         addRelatedFile(graph, productNode);
 
         graph.addVertex(productNode);
@@ -358,23 +372,16 @@ public class DAGConverterTest {
         }
 
         //Check top-level meta-card attributes
-        assertThat(NsiliImageryMetacardType.class.getCanonicalName(),
-                is(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName()));
-        assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
-        assertThat(NsiliProductType.IMAGERY.toString(), is(metacard.getContentTypeName()));
-        assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
+        assertThat(metacard.getTitle(), is(IMAGERY_TITLE));
+        assertThat(metacard.getId(), is(CARD_ID));
         assertThat(metacard.getCreatedDate(), notNullValue());
         assertThat(metacard.getEffectiveDate(), notNullValue());
-        assertThat(cal.getTime(), is(metacard.getModifiedDate()));
-        assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
+        assertThat(metacard.getModifiedDate(), is(cal.getTime()));
+        assertThat(metacard.getDescription(), is(COM_DESCRIPTION_ABSTRACT));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
-        assertThat(FILE_PRODUCT_URL,
-                is(metacard.getAttribute(Metacard.RESOURCE_URI)
-                        .getValue()
-                        .toString()));
+        assertThat(metacard.getAttribute(Core.RESOURCE_URI)
+                .getValue()
+                .toString(), is(FILE_PRODUCT_URL));
 
         checkCommonAttributes(metacard);
         checkExploitationInfoAttributes(metacard);
@@ -382,8 +389,6 @@ public class DAGConverterTest {
         checkSecurityAttributes(metacard);
         checkCoverageAttributes(metacard);
         checkAssociationAttribute(metacard);
-        checkApprovalAttribute(metacard);
-        checkSdsAttribute(metacard);
 
         DAGConverter.logMetacard(metacard, "123");
     }
@@ -406,6 +411,8 @@ public class DAGConverterTest {
 
         graph.addVertex(productNode);
 
+        removeNode(graph, NsiliConstants.ADVANCED_GEOSPATIAL);
+
         NsiliCommonUtils.setUCOEdgeIds(graph);
         NsiliCommonUtils.setUCOEdges(productNode, graph);
         imageryDAG.edges = NsiliCommonUtils.getEdgeArrayFromGraph(graph);
@@ -427,157 +434,121 @@ public class DAGConverterTest {
         }
 
         //Check top-level meta-card attributes
-        assertThat(NsiliImageryMetacardType.class.getCanonicalName(),
-                is(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName()));
         assertThat(metacard.getLocation(), is(swapWktLocation));
     }
 
     private void checkExploitationInfoAttributes(MetacardImpl metacard) {
-        Attribute exploitationDescAttr =
-                metacard.getAttribute(NsiliMetacardType.EXPLOITATION_DESCRIPTION);
+        Attribute exploitationDescAttr = metacard.getAttribute(Core.DESCRIPTION);
         assertThat(exploitationDescAttr, notNullValue());
-        assertThat(EXPLOITATION_DESC,
-                is(exploitationDescAttr.getValue()
-                        .toString()));
+        assertThat(exploitationDescAttr.getValues(), hasItem(EXPLOITATION_DESC));
 
-        Attribute exploitationLevelAttr =
-                metacard.getAttribute(NsiliMetacardType.EXPLOITATION_LEVEL);
+        Attribute exploitationLevelAttr = metacard.getAttribute(Isr.EXPLOITATION_LEVEL);
         assertThat(exploitationLevelAttr, notNullValue());
-        assertThat(EXPLOITATION_LEVEL, is((short) exploitationLevelAttr.getValue()));
+        assertThat((short) exploitationLevelAttr.getValue(), is(EXPLOITATION_LEVEL));
 
         Attribute exploitationAutoGenAttr =
-                metacard.getAttribute(NsiliMetacardType.EXPLOITATION_AUTO_GEN);
+                metacard.getAttribute(Isr.EXPLOTATION_AUTO_GENERATED);
         assertThat(exploitationAutoGenAttr, notNullValue());
-        assertThat(EXPLOITATION_AUTO_GEN, is((boolean) exploitationAutoGenAttr.getValue()));
+        assertThat((boolean) exploitationAutoGenAttr.getValue(), is(EXPLOITATION_AUTO_GEN));
 
         Attribute subjQualCodeAttr =
-                metacard.getAttribute(NsiliMetacardType.EXPLOITATION_SUBJ_QUAL_CODE);
+                metacard.getAttribute(Isr.EXPLOITATION_SUBJECTIVE_QUALITY_CODE);
         assertThat(subjQualCodeAttr, notNullValue());
-        assertThat(EXPLOITATION_SUBJ_QUAL_CODE,
-                is(subjQualCodeAttr.getValue()
-                        .toString()));
+        assertThat(subjQualCodeAttr.getValue()
+                .toString(), is(EXPLOITATION_SUBJ_QUAL_CODE));
     }
 
     private void checkStreamAttributes(MetacardImpl metacard) {
-        Attribute archivedAttr = metacard.getAttribute(NsiliMetacardType.STREAM_ARCHIVED);
-        assertThat(archivedAttr, notNullValue());
-        assertThat(STREAM_ARCHIVED, is((boolean) archivedAttr.getValue()));
-
-        Attribute archivalInfoAttr = metacard.getAttribute(NsiliMetacardType.STREAM_ARCHIVAL_INFO);
-        assertThat(archivalInfoAttr, notNullValue());
-        assertThat(ARCHIVE_INFORMATION, is(archivalInfoAttr.getValue()));
-
-        Attribute creatorAttr = metacard.getAttribute(NsiliMetacardType.STREAM_CREATOR);
+        Attribute creatorAttr = metacard.getAttribute(Contact.CREATOR_NAME);
         assertThat(creatorAttr, notNullValue());
-        assertThat(STREAM_CREATOR,
-                is(creatorAttr.getValue()
-                        .toString()));
+        assertThat(creatorAttr.getValue()
+                .toString(), is(STREAM_CREATOR));
 
-        Attribute dateTimeDeclaredAttr =
-                metacard.getAttribute(NsiliMetacardType.STREAM_DATETIME_DECLARED);
+        Attribute dateTimeDeclaredAttr = metacard.getAttribute(Core.CREATED);
         assertThat(dateTimeDeclaredAttr, notNullValue());
-        assertThat(cal.getTime(), is(dateTimeDeclaredAttr.getValue()));
-
-        Attribute programIdAttr = metacard.getAttribute(NsiliMetacardType.STREAM_PROGRAM_ID);
-        assertThat(programIdAttr, notNullValue());
-        assertThat(STREAM_PROGRAM_ID, is((short) programIdAttr.getValue()));
-
+        assertThat(dateTimeDeclaredAttr.getValue(), is(cal.getTime()));
     }
 
     private void checkCommonAttributes(MetacardImpl metacard) {
-        Attribute identifierMsnAttr = metacard.getAttribute(NsiliMetacardType.IDENTIFIER_MISSION);
+        Attribute identifierMsnAttr = metacard.getAttribute(Isr.MISSION_ID);
         assertThat(identifierMsnAttr, notNullValue());
-        assertThat(COM_ID_MSN,
-                is(identifierMsnAttr.getValue()
-                        .toString()));
+        assertThat(identifierMsnAttr.getValue()
+                .toString(), is(COM_ID_MSN));
 
-        Attribute identifierJc3idmAttr = metacard.getAttribute(NsiliMetacardType.ID_JC3IEDM);
+        Attribute identifierJc3idmAttr = metacard.getAttribute(Isr.JC3IEDM_ID);
         assertThat(identifierJc3idmAttr, notNullValue());
-        assertThat(COM_JC3ID, is((int) identifierJc3idmAttr.getValue()));
+        assertThat(identifierJc3idmAttr.getValue(), is(COM_JC3ID));
 
-        Attribute languageAttr = metacard.getAttribute(NsiliMetacardType.LANGUAGE);
+        Attribute languageAttr = metacard.getAttribute(Core.LANGUAGE);
         assertThat(languageAttr, notNullValue());
-        assertThat(COM_LANGUAGE,
-                is(languageAttr.getValue()
-                        .toString()));
+        assertThat(languageAttr.getValue()
+                .toString(), is(COM_LANGUAGE));
 
-        Attribute stanagSourceAttr = metacard.getAttribute(NsiliMetacardType.SOURCE);
+        Attribute stanagSourceAttr = metacard.getAttribute(Isr.PLATFORM_NAME);
         assertThat(stanagSourceAttr, notNullValue());
-        assertThat(COM_SOURCE,
-                is(stanagSourceAttr.getValue()
-                        .toString()));
+        assertThat(stanagSourceAttr.getValue()
+                .toString(), is(COM_SOURCE));
 
-        Attribute subjCatTgtAttr = metacard.getAttribute(NsiliMetacardType.SUBJECT_CATEGORY_TARGET);
+        Attribute subjCatTgtAttr = metacard.getAttribute(Isr.TARGET_CATEGORY_CODE);
         assertThat(subjCatTgtAttr, notNullValue());
-        assertThat(COM_SUBJECT_CATEGORY_TARGET,
-                is(subjCatTgtAttr.getValue()
-                        .toString()));
+        assertThat(subjCatTgtAttr.getValue()
+                .toString(), is(COM_SUBJECT_CATEGORY_TARGET));
 
-        Attribute tgtNumAttr = metacard.getAttribute(NsiliMetacardType.TARGET_NUMBER);
+        Attribute tgtNumAttr = metacard.getAttribute(Isr.TARGET_ID);
         assertThat(tgtNumAttr, notNullValue());
-        assertThat(COM_TARGET_NUMBER,
-                is(tgtNumAttr.getValue()
-                        .toString()));
+        assertThat(tgtNumAttr.getValue()
+                .toString(), is(COM_TARGET_NUMBER));
 
-        Attribute productTypeAttr = metacard.getAttribute(NsiliMetacardType.PRODUCT_TYPE);
+        Attribute productTypeAttr = metacard.getAttribute(Core.DATATYPE);
         assertThat(productTypeAttr, notNullValue());
-        assertThat(COM_TYPE.name(),
-                is(productTypeAttr.getValue()
-                        .toString()));
+        assertThat(productTypeAttr.getValue()
+                .toString(), is(COM_TYPE.getSpecName()));
     }
 
     private void checkImageryAttributes(MetacardImpl metacard) {
-        Attribute cloudCoverPctAttr =
-                metacard.getAttribute(NsiliImageryMetacardType.CLOUD_COVER_PCT);
+        Attribute cloudCoverPctAttr = metacard.getAttribute(Isr.CLOUD_COVER);
         assertThat(cloudCoverPctAttr, notNullValue());
-        assertThat(IMAGERY_CLOUD_COVER_PCT, is((short) cloudCoverPctAttr.getValue()));
+        assertThat((short) cloudCoverPctAttr.getValue(), is(IMAGERY_CLOUD_COVER_PCT));
 
-        Attribute imageryCommentsAttr =
-                metacard.getAttribute(NsiliImageryMetacardType.IMAGERY_COMMENTS);
+        Attribute imageryCommentsAttr = metacard.getAttribute(Isr.COMMENTS);
         assertThat(imageryCommentsAttr, notNullValue());
-        assertThat(IMAGERY_COMMENTS, is(imageryCommentsAttr.getValue()));
+        assertThat(imageryCommentsAttr.getValue(), is(IMAGERY_COMMENTS));
 
-        Attribute imageryCategoryAttr =
-                metacard.getAttribute(NsiliImageryMetacardType.IMAGERY_CATEGORY);
+        Attribute imageryCategoryAttr = metacard.getAttribute(Isr.CATEGORY);
         assertThat(imageryCategoryAttr, notNullValue());
-        assertThat(IMAGERY_CATEGORY,
-                is(imageryCategoryAttr.getValue()
-                        .toString()));
+        assertThat(imageryCategoryAttr.getValue()
+                .toString(), is(IMAGERY_CATEGORY));
 
-        Attribute decompressionTechAttr =
-                metacard.getAttribute(NsiliImageryMetacardType.DECOMPRESSION_TECHNIQUE);
+        Attribute decompressionTechAttr = metacard.getAttribute(Media.COMPRESSION);
         assertThat(decompressionTechAttr, notNullValue());
-        assertThat(IMAGERY_DECOMPRESSION_TECH,
-                is(decompressionTechAttr.getValue()
-                        .toString()));
+        assertThat(decompressionTechAttr.getValue()
+                .toString(), is(IMAGERY_DECOMPRESSION_TECH));
 
-        Attribute imageIdAttr = metacard.getAttribute(NsiliImageryMetacardType.IMAGE_ID);
+        Attribute imageIdAttr = metacard.getAttribute(Isr.IMAGE_ID);
         assertThat(imageIdAttr, notNullValue());
-        assertThat(IMAGERY_IDENTIFIER,
-                is(imageIdAttr.getValue()
-                        .toString()));
+        assertThat(imageIdAttr.getValue()
+                .toString(), is(IMAGERY_IDENTIFIER));
 
-        Attribute niirsAttr = metacard.getAttribute(NsiliImageryMetacardType.NIIRS);
+        Attribute niirsAttr =
+                metacard.getAttribute(Isr.NATIONAL_IMAGERY_INTERPRETABILITY_RATING_SCALE);
         assertThat(niirsAttr, notNullValue());
-        assertThat(IMAGERY_NIIRS, is((short) niirsAttr.getValue()));
+        assertThat((short) niirsAttr.getValue(), is(IMAGERY_NIIRS));
 
-        Attribute numBandsAttr = metacard.getAttribute(NsiliImageryMetacardType.NUM_BANDS);
+        Attribute numBandsAttr = metacard.getAttribute(Media.NUMBER_OF_BANDS);
         assertThat(numBandsAttr, notNullValue());
-        assertThat(IMAGERY_NUM_BANDS, is((int) numBandsAttr.getValue()));
+        assertThat((int) numBandsAttr.getValue(), is(IMAGERY_NUM_BANDS));
 
-        Attribute numRowsAttr = metacard.getAttribute(NsiliImageryMetacardType.NUM_ROWS);
+        Attribute numRowsAttr = metacard.getAttribute(Media.HEIGHT);
         assertThat(numRowsAttr, notNullValue());
-        assertThat(IMAGERY_NUM_ROWS, is((int) numRowsAttr.getValue()));
+        assertThat((int) numRowsAttr.getValue(), is(IMAGERY_NUM_ROWS));
 
-        Attribute numColsAttr = metacard.getAttribute(NsiliImageryMetacardType.NUM_COLS);
+        Attribute numColsAttr = metacard.getAttribute(Media.WIDTH);
         assertThat(numColsAttr, notNullValue());
-        assertThat(IMAGERY_NUM_COLS, is((int) numColsAttr.getValue()));
+        assertThat((int) numColsAttr.getValue(), is(IMAGERY_NUM_COLS));
 
-        Attribute endDateTimeAttr = metacard.getAttribute(NsiliImageryMetacardType.END_DATETIME);
+        Attribute endDateTimeAttr = metacard.getAttribute(DateTime.END);
         assertThat(endDateTimeAttr, notNullValue());
-        assertThat(cal.getTime(), is(endDateTimeAttr.getValue()));
+        assertThat(endDateTimeAttr.getValue(), is(cal.getTime()));
 
         assertThat(metacard.getResourceSize(), notNullValue());
         int size = Integer.parseInt(metacard.getResourceSize());
@@ -586,74 +557,44 @@ public class DAGConverterTest {
 
     private void checkSecurityAttributes(MetacardImpl metacard) {
         Attribute classificationAttr =
-                metacard.getAttribute(NsiliMetacardType.SECURITY_CLASSIFICATION);
+                metacard.getAttribute(Security.METADATA_CLASSIFICATION);
         assertThat(classificationAttr, notNullValue());
-        assertThat(CLASS_CLASSIFICATION,
-                is(classificationAttr.getValue()
-                        .toString()));
+        assertThat(classificationAttr.getValue()
+                .toString(), is(CLASS_CLASSIFICATION));
 
-        Attribute policyAttr = metacard.getAttribute(NsiliMetacardType.SECURITY_POLICY);
+        Attribute policyAttr =
+                metacard.getAttribute(Security.METADATA_CLASSIFICATION_SYSTEM);
         assertThat(policyAttr, notNullValue());
-        assertThat(CLASS_POLICY,
-                is(policyAttr.getValue()
-                        .toString()));
+        assertThat(policyAttr.getValue()
+                .toString(), is(CLASS_POLICY));
 
         Attribute releasabilityAttr =
-                metacard.getAttribute(NsiliMetacardType.SECURITY_RELEASABILITY);
+                metacard.getAttribute(Security.METADATA_RELEASABILITY);
         assertThat(releasabilityAttr, notNullValue());
-        assertThat(CLASS_RELEASABILITY,
-                is(releasabilityAttr.getValue()
-                        .toString()));
+        assertThat(releasabilityAttr.getValue()
+                .toString(), is(CLASS_RELEASABILITY));
     }
 
     private void checkCoverageAttributes(MetacardImpl metacard) {
-        Attribute spatialCtryCodeAttr = metacard.getAttribute(NsiliMetacardType.COUNTRY_CODE);
+        Attribute spatialCtryCodeAttr = metacard.getAttribute(Location.COUNTRY_CODE);
         assertThat(spatialCtryCodeAttr, notNullValue());
-        assertThat(COVERAGE_COUNTRY_CD,
-                is(spatialCtryCodeAttr.getValue()
-                        .toString()));
+        assertThat(spatialCtryCodeAttr.getValue()
+                .toString(), is(COVERAGE_COUNTRY_CD));
 
-        Attribute startTimeAttr = metacard.getAttribute(NsiliMetacardType.START_DATETIME);
+        Attribute startTimeAttr = metacard.getAttribute(DateTime.START);
         assertThat(startTimeAttr, notNullValue());
-        assertThat(cal.getTime(), is(startTimeAttr.getValue()));
+        assertThat(startTimeAttr.getValue(), is(cal.getTime()));
 
-        Attribute endTimeAttr = metacard.getAttribute(NsiliMetacardType.END_DATETIME);
+        Attribute endTimeAttr = metacard.getAttribute(DateTime.END);
         assertThat(endTimeAttr, notNullValue());
-        assertThat(cal.getTime(), is(endTimeAttr.getValue()));
+        assertThat(endTimeAttr.getValue(), is(cal.getTime()));
     }
 
     private void checkAssociationAttribute(MetacardImpl metacard) {
-        Attribute associationsAttr = metacard.getAttribute(NsiliMetacardType.ASSOCIATIONS);
+        Attribute associationsAttr = metacard.getAttribute(Associations.RELATED);
         assertThat(associationsAttr, notNullValue());
         List<Serializable> associations = associationsAttr.getValues();
-        assertThat(NUM_ASSOCIATIONS, is(associations.size()));
-    }
-
-    private void checkApprovalAttribute(MetacardImpl metacard) {
-        Attribute approvedByAttr = metacard.getAttribute(NsiliMetacardType.APPROVAL_BY);
-        assertThat(approvedByAttr, notNullValue());
-        assertThat(APPROVED_BY,
-                is(approvedByAttr.getValue()
-                        .toString()));
-
-        Attribute modifiedAttr =
-                metacard.getAttribute(NsiliMetacardType.APPROVAL_DATETIME_MODIFIED);
-        assertThat(modifiedAttr, notNullValue());
-        assertThat(cal.getTime(), is(modifiedAttr.getValue()));
-
-        Attribute statusAttr = metacard.getAttribute(NsiliMetacardType.APPROVAL_STATUS);
-        assertThat(statusAttr, notNullValue());
-        assertThat(APPROVAL_STATUS.name(),
-                is(statusAttr.getValue()
-                        .toString()));
-    }
-
-    private void checkSdsAttribute(MetacardImpl metacard) {
-        Attribute opStatusAttr = metacard.getAttribute(NsiliMetacardType.SDS_OPERATIONAL_STATUS);
-        assertThat(opStatusAttr, notNullValue());
-        assertThat(SDS_OP_STATUS.name(),
-                is(opStatusAttr.getValue()
-                        .toString()));
+        assertThat(associations.size(), is(NUM_ASSOCIATIONS));
     }
 
     /**
@@ -717,22 +658,15 @@ public class DAGConverterTest {
         }
 
         //Check top-level meta-card attributes
-        assertThat(NsiliGmtiMetacardType.class.getCanonicalName(),
-                is(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName()));
-        assertThat(CARD_ID, is(metacard.getId()));
-        assertThat(NsiliProductType.GMTI.toString(), is(metacard.getContentTypeName()));
-        assertThat(STREAM_STANDARD_VER, is(metacard.getContentTypeVersion()));
+        assertThat(metacard.getId(), is(CARD_ID));
         assertThat(metacard.getCreatedDate(), notNullValue());
         assertThat(metacard.getEffectiveDate(), notNullValue());
-        assertThat(cal.getTime(), is(metacard.getModifiedDate()));
-        assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
+        assertThat(metacard.getModifiedDate(), is(cal.getTime()));
+        assertThat(metacard.getDescription(), is(COM_DESCRIPTION_ABSTRACT));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
-        assertThat(STREAM_SOURCE_URL,
-                is(metacard.getAttribute(Metacard.RESOURCE_URI)
-                        .getValue()
-                        .toString()));
+        assertThat(metacard.getAttribute(Core.RESOURCE_URI)
+                .getValue()
+                .toString(), is(STREAM_SOURCE_URL));
 
         checkCommonAttributes(metacard);
         checkExploitationInfoAttributes(metacard);
@@ -743,13 +677,13 @@ public class DAGConverterTest {
     }
 
     private void checkGmtiAttributes(MetacardImpl metacard) {
-        Attribute gmtiJobAttr = metacard.getAttribute(NsiliGmtiMetacardType.JOB_ID);
+        Attribute gmtiJobAttr = metacard.getAttribute(Isr.MOVING_TARGET_INDICATOR_JOB_ID);
         assertThat(gmtiJobAttr, notNullValue());
-        assertThat(GMTI_JOB_ID, is(gmtiJobAttr.getValue()));
+        assertThat(gmtiJobAttr.getValue(), is(GMTI_JOB_ID));
 
-        Attribute numTgtAttr = metacard.getAttribute(NsiliGmtiMetacardType.NUM_TARGET_REPORTS);
+        Attribute numTgtAttr = metacard.getAttribute(Isr.TARGET_REPORT_COUNT);
         assertThat(numTgtAttr, notNullValue());
-        assertThat(GMTI_TARGET_REPORTS, is((int) numTgtAttr.getValue()));
+        assertThat((int) numTgtAttr.getValue(), is(GMTI_TARGET_REPORTS));
     }
 
     /**
@@ -814,42 +748,19 @@ public class DAGConverterTest {
         }
 
         //Check top-level meta-card attributes
-        assertThat(NsiliMessageMetacardType.class.getCanonicalName(),
-                is(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName()));
-        assertThat(MESSAGE_SUBJECT, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
-        assertThat(NsiliProductType.MESSAGE.toString(), is(metacard.getContentTypeName()));
-        assertThat(metacard.getContentTypeVersion(), nullValue());
+        assertThat(metacard.getId(), is(CARD_ID));
         assertThat(metacard.getCreatedDate(), notNullValue());
         assertThat(metacard.getEffectiveDate(), notNullValue());
-        assertThat(cal.getTime(), is(metacard.getModifiedDate()));
-        assertThat(MESSAGE_BODY, is(metacard.getDescription()));
+        assertThat(metacard.getModifiedDate(), is(cal.getTime()));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
-        assertThat(FILE_PRODUCT_URL,
-                is(metacard.getAttribute(Metacard.RESOURCE_URI)
-                        .getValue()
-                        .toString()));
+        assertThat(metacard.getAttribute(Core.RESOURCE_URI)
+                .getValue()
+                .toString(), is(FILE_PRODUCT_URL));
 
         checkCommonAttributes(metacard);
         checkExploitationInfoAttributes(metacard);
-        checkStreamAttributes(metacard);
-        checkMessageAttributes(metacard);
         checkSecurityAttributes(metacard);
         checkCoverageAttributes(metacard);
-    }
-
-    private void checkMessageAttributes(MetacardImpl metacard) {
-        Attribute messageRecipAttr = metacard.getAttribute(NsiliMessageMetacardType.RECIPIENT);
-        assertThat(messageRecipAttr, notNullValue());
-        assertThat(MESSAGE_RECIPIENT, is(messageRecipAttr.getValue()));
-
-        Attribute typeAttr = metacard.getAttribute(NsiliMessageMetacardType.MESSAGE_TYPE);
-        assertThat(typeAttr, notNullValue());
-        assertThat(MESSAGE_TYPE,
-                is(typeAttr.getValue()
-                        .toString()));
     }
 
     /**
@@ -885,7 +796,6 @@ public class DAGConverterTest {
         graph.addVertex(productNode);
 
         addCardNode(graph, productNode);
-        addFileNode(graph, productNode);
         addStreamNode(graph, productNode);
         addMetadataSecurity(graph, productNode);
         addSecurityNode(graph, productNode);
@@ -914,23 +824,15 @@ public class DAGConverterTest {
         }
 
         //Check top-level meta-card attributes
-        assertThat(NsiliVideoMetacardType.class.getCanonicalName(),
-                is(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName()));
-        assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
-        assertThat(NsiliProductType.VIDEO.toString(), is(metacard.getContentTypeName()));
-        assertThat(metacard.getContentTypeVersion(), nullValue());
+        assertThat(metacard.getId(), is(CARD_ID));
         assertThat(metacard.getCreatedDate(), notNullValue());
         assertThat(metacard.getEffectiveDate(), notNullValue());
-        assertThat(cal.getTime(), is(metacard.getModifiedDate()));
-        assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
+        assertThat(metacard.getModifiedDate(), is(cal.getTime()));
+        assertThat(metacard.getDescription(), is(COM_DESCRIPTION_ABSTRACT));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
-        assertThat(FILE_PRODUCT_URL,
-                is(metacard.getAttribute(Metacard.RESOURCE_URI)
-                        .getValue()
-                        .toString()));
+        assertThat(metacard.getAttribute(Core.RESOURCE_URI)
+                .getValue()
+                .toString(), is(STREAM_SOURCE_URL));
 
         checkCommonAttributes(metacard);
         checkExploitationInfoAttributes(metacard);
@@ -1098,51 +1000,41 @@ public class DAGConverterTest {
     }
 
     private void checkVideoAttributes(MetacardImpl metacard) {
-        Attribute avgBitRateAttr = metacard.getAttribute(NsiliVideoMetacardType.AVG_BIT_RATE);
+        Attribute avgBitRateAttr = metacard.getAttribute(Media.BITS_PER_SECOND);
         assertThat(avgBitRateAttr, notNullValue());
-        assertThat(VIDEO_AVG_BIT_RATE, is(avgBitRateAttr.getValue()));
+        assertThat(avgBitRateAttr.getValue(), is(VIDEO_AVG_BIT_RATE));
 
-        Attribute categoryAttr = metacard.getAttribute(NsiliVideoMetacardType.CATEGORY);
+        Attribute categoryAttr = metacard.getAttribute(Isr.CATEGORY);
         assertThat(categoryAttr, notNullValue());
-        assertThat(VIDEO_CATEGORY,
-                is(categoryAttr.getValue()
-                        .toString()));
+        assertThat(categoryAttr.getValue()
+                .toString(), is(VIDEO_CATEGORY));
 
-        Attribute encodingSchemeAttr =
-                metacard.getAttribute(NsiliVideoMetacardType.ENCODING_SCHEME);
+        Attribute encodingSchemeAttr = metacard.getAttribute(Media.ENCODING);
         assertThat(encodingSchemeAttr, notNullValue());
-        assertThat(VIDEO_ENCODING_SCHEME.name(),
-                is(encodingSchemeAttr.getValue()
-                        .toString()));
+        assertThat(encodingSchemeAttr.getValue()
+                .toString(), is(VIDEO_ENCODING_SCHEME.getSpecName()));
 
-        Attribute frameRateAttr = metacard.getAttribute(NsiliVideoMetacardType.FRAME_RATE);
+        Attribute frameRateAttr = metacard.getAttribute(Media.FRAMES_PER_SECOND);
         assertThat(frameRateAttr, notNullValue());
-        assertThat(VIDEO_FRAME_RATE, is(frameRateAttr.getValue()));
+        assertThat(frameRateAttr.getValue(), is(VIDEO_FRAME_RATE));
 
-        Attribute numRowsAttr = metacard.getAttribute(NsiliVideoMetacardType.NUM_ROWS);
+        Attribute numRowsAttr = metacard.getAttribute(Media.HEIGHT);
         assertThat(numRowsAttr, notNullValue());
-        assertThat(VIDEO_NUM_ROWS, is((int) numRowsAttr.getValue()));
+        assertThat((int) numRowsAttr.getValue(), is(VIDEO_NUM_ROWS));
 
-        Attribute numColsAttr = metacard.getAttribute(NsiliVideoMetacardType.NUM_COLS);
+        Attribute numColsAttr = metacard.getAttribute(Media.WIDTH);
         assertThat(numColsAttr, notNullValue());
-        assertThat(VIDEO_NUM_COLS, is((int) numColsAttr.getValue()));
+        assertThat((int) numColsAttr.getValue(), is(VIDEO_NUM_COLS));
 
-        Attribute metadataEncSchemeAttr =
-                metacard.getAttribute(NsiliVideoMetacardType.METADATA_ENCODING_SCHEME);
-        assertThat(metadataEncSchemeAttr, notNullValue());
-        assertThat(VIDEO_METADATA_ENC_SCHEME,
-                is(metadataEncSchemeAttr.getValue()
-                        .toString()));
-
-        Attribute mismLevelAttr = metacard.getAttribute(NsiliVideoMetacardType.MISM_LEVEL);
+        Attribute mismLevelAttr =
+                metacard.getAttribute(Isr.VIDEO_MOTION_IMAGERY_SYSTEMS_MATRIX_LEVEL);
         assertThat(mismLevelAttr, notNullValue());
-        assertThat(VIDEO_MISM_LEVEL, is((short) mismLevelAttr.getValue()));
+        assertThat((short) mismLevelAttr.getValue(), is(VIDEO_MISM_LEVEL));
 
-        Attribute scanningModeAttr = metacard.getAttribute(NsiliVideoMetacardType.SCANNING_MODE);
+        Attribute scanningModeAttr = metacard.getAttribute(Media.SCANNING_MODE);
         assertThat(scanningModeAttr, notNullValue());
-        assertThat(VIDEO_SCANNING_MODE,
-                is(scanningModeAttr.getValue()
-                        .toString()));
+        assertThat(scanningModeAttr.getValue()
+                .toString(), is(VIDEO_SCANNING_MODE));
     }
 
     /**
@@ -1205,23 +1097,16 @@ public class DAGConverterTest {
         }
 
         //Check top-level meta-card attributes
-        assertThat(NsiliReportMetacardType.class.getCanonicalName(),
-                is(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName()));
-        assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
-        assertThat(NsiliProductType.REPORT.toString(), is(metacard.getContentTypeName()));
-        assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
+        assertThat(metacard.getTitle(), is(FILE_TITLE));
+        assertThat(metacard.getId(), is(CARD_ID));
         assertThat(metacard.getCreatedDate(), notNullValue());
         assertThat(metacard.getEffectiveDate(), notNullValue());
-        assertThat(cal.getTime(), is(metacard.getModifiedDate()));
-        assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
+        assertThat(metacard.getModifiedDate(), is(cal.getTime()));
+        assertThat(metacard.getDescription(), is(COM_DESCRIPTION_ABSTRACT));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
-        assertThat(FILE_PRODUCT_URL,
-                is(metacard.getAttribute(Metacard.RESOURCE_URI)
-                        .getValue()
-                        .toString()));
+        assertThat(metacard.getAttribute(Core.RESOURCE_URI)
+                .getValue()
+                .toString(), is(FILE_PRODUCT_URL));
 
         checkCommonAttributes(metacard);
         checkExploitationInfoAttributes(metacard);
@@ -1231,24 +1116,20 @@ public class DAGConverterTest {
     }
 
     private void checkReportAttributes(MetacardImpl metacard) {
-        Attribute origReqSerialAttr =
-                metacard.getAttribute(NsiliReportMetacardType.ORIGINATOR_REQ_SERIAL_NUM);
+        Attribute origReqSerialAttr = metacard.getAttribute(Isr.REPORT_SERIAL_NUMBER);
         assertThat(origReqSerialAttr, notNullValue());
-        assertThat(REPORT_REQ_SERIAL_NUM,
-                is(origReqSerialAttr.getValue()
-                        .toString()));
+        assertThat(origReqSerialAttr.getValue()
+                .toString(), is(REPORT_REQ_SERIAL_NUM));
 
-        Attribute priorityAttr = metacard.getAttribute(NsiliReportMetacardType.PRIORITY);
+        Attribute priorityAttr = metacard.getAttribute(Isr.REPORT_PRIORITY);
         assertThat(priorityAttr, notNullValue());
-        assertThat(REPORT_PRIORITY,
-                is(priorityAttr.getValue()
-                        .toString()));
+        assertThat(priorityAttr.getValue()
+                .toString(), is(REPORT_PRIORITY));
 
-        Attribute typeAttr = metacard.getAttribute(NsiliReportMetacardType.TYPE);
+        Attribute typeAttr = metacard.getAttribute(Isr.REPORT_TYPE);
         assertThat(typeAttr, notNullValue());
-        assertThat(REPORT_TYPE,
-                is(typeAttr.getValue()
-                        .toString()));
+        assertThat(typeAttr.getValue()
+                .toString(), is(REPORT_TYPE));
     }
 
     /**
@@ -1312,38 +1193,21 @@ public class DAGConverterTest {
         }
 
         //Check top-level meta-card attributes
-        assertThat(NsiliCxpMetacardType.class.getCanonicalName(),
-                is(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName()));
-        assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
-        assertThat(NsiliProductType.COLLECTION_EXPLOITATION_PLAN.toString(),
-                is(metacard.getContentTypeName()));
-        assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
+        assertThat(metacard.getTitle(), is(FILE_TITLE));
+        assertThat(metacard.getId(), is(CARD_ID));
         assertThat(metacard.getCreatedDate(), notNullValue());
         assertThat(metacard.getEffectiveDate(), notNullValue());
-        assertThat(cal.getTime(), is(metacard.getModifiedDate()));
-        assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
+        assertThat(metacard.getModifiedDate(), is(cal.getTime()));
+        assertThat(metacard.getDescription(), is(COM_DESCRIPTION_ABSTRACT));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
-        assertThat(FILE_PRODUCT_URL,
-                is(metacard.getAttribute(Metacard.RESOURCE_URI)
-                        .getValue()
-                        .toString()));
+        assertThat(metacard.getAttribute(Core.RESOURCE_URI)
+                .getValue()
+                .toString(), is(FILE_PRODUCT_URL));
 
         checkCommonAttributes(metacard);
         checkExploitationInfoAttributes(metacard);
-        checkCxpAttributes(metacard);
         checkSecurityAttributes(metacard);
         checkCoverageAttributes(metacard);
-    }
-
-    private void checkCxpAttributes(MetacardImpl metacard) {
-        Attribute cxpAttr = metacard.getAttribute(NsiliCxpMetacardType.STATUS);
-        assertThat(cxpAttr, notNullValue());
-        assertThat(CXP_STATUS,
-                is(cxpAttr.getValue()
-                        .toString()));
     }
 
     /**
@@ -1407,23 +1271,16 @@ public class DAGConverterTest {
         }
 
         //Check top-level meta-card attributes
-        assertThat(NsiliIRMetacardType.class.getCanonicalName(),
-                is(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName()));
-        assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
-        assertThat(NsiliProductType.DOCUMENT.toString(), is(metacard.getContentTypeName()));
-        assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
+        assertThat(metacard.getTitle(), is(FILE_TITLE));
+        assertThat(metacard.getId(), is(CARD_ID));
         assertThat(metacard.getCreatedDate(), notNullValue());
         assertThat(metacard.getEffectiveDate(), notNullValue());
-        assertThat(cal.getTime(), is(metacard.getModifiedDate()));
-        assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
+        assertThat(metacard.getModifiedDate(), is(cal.getTime()));
+        assertThat(metacard.getDescription(), is(COM_DESCRIPTION_ABSTRACT));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
-        assertThat(FILE_PRODUCT_URL,
-                is(metacard.getAttribute(Metacard.RESOURCE_URI)
-                        .getValue()
-                        .toString()));
+        assertThat(metacard.getAttribute(Core.RESOURCE_URI)
+                .getValue()
+                .toString(), is(FILE_PRODUCT_URL));
 
         checkCommonAttributes(metacard);
         checkExploitationInfoAttributes(metacard);
@@ -1497,23 +1354,16 @@ public class DAGConverterTest {
         }
 
         //Check top-level meta-card attributes
-        assertThat(NsiliRfiMetacardType.class.getCanonicalName(),
-                is(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName()));
-        assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
-        assertThat(NsiliProductType.RFI.toString(), is(metacard.getContentTypeName()));
-        assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
+        assertThat(metacard.getTitle(), is(FILE_TITLE));
+        assertThat(metacard.getId(), is(CARD_ID));
         assertThat(metacard.getCreatedDate(), notNullValue());
         assertThat(metacard.getEffectiveDate(), notNullValue());
-        assertThat(cal.getTime(), is(metacard.getModifiedDate()));
-        assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
+        assertThat(metacard.getModifiedDate(), is(cal.getTime()));
+        assertThat(metacard.getDescription(), is(COM_DESCRIPTION_ABSTRACT));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
-        assertThat(FILE_PRODUCT_URL,
-                is(metacard.getAttribute(Metacard.RESOURCE_URI)
-                        .getValue()
-                        .toString()));
+        assertThat(metacard.getAttribute(Core.RESOURCE_URI)
+                .getValue()
+                .toString(), is(FILE_PRODUCT_URL));
 
         checkCommonAttributes(metacard);
         checkExploitationInfoAttributes(metacard);
@@ -1523,35 +1373,34 @@ public class DAGConverterTest {
     }
 
     private void checkRFIAttributes(MetacardImpl metacard) {
-        Attribute forActionAttr = metacard.getAttribute(NsiliRfiMetacardType.FOR_ACTION);
+        Attribute forActionAttr =
+                metacard.getAttribute(Isr.REQUEST_FOR_INFORMATION_FOR_ACTION);
         assertThat(forActionAttr, notNullValue());
-        assertThat(RFI_FOR_ACTION,
-                is(forActionAttr.getValue()
-                        .toString()));
+        assertThat(forActionAttr.getValue()
+                .toString(), is(RFI_FOR_ACTION));
 
-        Attribute forInfoAttr = metacard.getAttribute(NsiliRfiMetacardType.FOR_INFORMATION);
+        Attribute forInfoAttr =
+                metacard.getAttribute(Isr.REQUEST_FOR_INFORMATION_FOR_INFORMATION);
         assertThat(forInfoAttr, notNullValue());
-        assertThat(RFI_FOR_INFORMATION,
-                is(forInfoAttr.getValue()
-                        .toString()));
+        assertThat(forInfoAttr.getValue()
+                .toString(), is(RFI_FOR_INFORMATION));
 
-        Attribute serialNumAttr = metacard.getAttribute(NsiliRfiMetacardType.SERIAL_NUMBER);
+        Attribute serialNumAttr =
+                metacard.getAttribute(Isr.REQUEST_FOR_INFORMATION_SERIAL_NUMBER);
         assertThat(serialNumAttr, notNullValue());
-        assertThat(RFI_SERIAL_NUM,
-                is(serialNumAttr.getValue()
-                        .toString()));
+        assertThat(serialNumAttr.getValue()
+                .toString(), is(RFI_SERIAL_NUM));
 
-        Attribute statusAttr = metacard.getAttribute(NsiliRfiMetacardType.STATUS);
+        Attribute statusAttr = metacard.getAttribute(Isr.REQUEST_FOR_INFORMATION_STATUS);
         assertThat(statusAttr, notNullValue());
-        assertThat(RFI_STATUS,
-                is(statusAttr.getValue()
-                        .toString()));
+        assertThat(statusAttr.getValue()
+                .toString(), is(RFI_STATUS));
 
-        Attribute workflowStatusAttr = metacard.getAttribute(NsiliRfiMetacardType.WORKFLOW_STATUS);
+        Attribute workflowStatusAttr =
+                metacard.getAttribute(Isr.REQUEST_FOR_INFORMATION_WORKFLOW_STATUS);
         assertThat(workflowStatusAttr, notNullValue());
-        assertThat(RFI_WORKFLOW_STATUS,
-                is(workflowStatusAttr.getValue()
-                        .toString()));
+        assertThat(workflowStatusAttr.getValue()
+                .toString(), is(RFI_WORKFLOW_STATUS));
     }
 
     /**
@@ -1615,23 +1464,16 @@ public class DAGConverterTest {
         }
 
         //Check top-level meta-card attributes
-        assertThat(NsiliTaskMetacardType.class.getCanonicalName(),
-                is(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName()));
-        assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
-        assertThat(NsiliProductType.TASK.toString(), is(metacard.getContentTypeName()));
-        assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
+        assertThat(metacard.getTitle(), is(FILE_TITLE));
+        assertThat(metacard.getId(), is(CARD_ID));
         assertThat(metacard.getCreatedDate(), notNullValue());
         assertThat(metacard.getEffectiveDate(), notNullValue());
-        assertThat(cal.getTime(), is(metacard.getModifiedDate()));
-        assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
+        assertThat(metacard.getModifiedDate(), is(cal.getTime()));
+        assertThat(metacard.getDescription(), is(COM_DESCRIPTION_ABSTRACT));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
-        assertThat(FILE_PRODUCT_URL,
-                is(metacard.getAttribute(Metacard.RESOURCE_URI)
-                        .getValue()
-                        .toString()));
+        assertThat(metacard.getAttribute(Core.RESOURCE_URI)
+                .getValue()
+                .toString(), is(FILE_PRODUCT_URL));
 
         checkCommonAttributes(metacard);
         checkExploitationInfoAttributes(metacard);
@@ -1681,17 +1523,15 @@ public class DAGConverterTest {
     }
 
     private void checkTaskAttributes(MetacardImpl metacard) {
-        Attribute commentAttr = metacard.getAttribute(NsiliTaskMetacardType.COMMENTS);
+        Attribute commentAttr = metacard.getAttribute(Isr.TASK_COMMENTS);
         assertThat(commentAttr, notNullValue());
-        assertThat(TASK_COMMENTS,
-                is(commentAttr.getValue()
-                        .toString()));
+        assertThat(commentAttr.getValue()
+                .toString(), is(TASK_COMMENTS));
 
-        Attribute statusAttr = metacard.getAttribute(NsiliTaskMetacardType.STATUS);
+        Attribute statusAttr = metacard.getAttribute(Isr.TASK_STATUS);
         assertThat(statusAttr, notNullValue());
-        assertThat(TASK_STATUS,
-                is(statusAttr.getValue()
-                        .toString()));
+        assertThat(statusAttr.getValue()
+                .toString(), is(TASK_STATUS));
     }
 
     /**
@@ -1756,52 +1596,44 @@ public class DAGConverterTest {
         }
 
         //Check top-level meta-card attributes
-        assertThat(NsiliTdlMetacardType.class.getCanonicalName(),
-                is(metacard.getMetacardType()
-                        .getClass()
-                        .getCanonicalName()));
-        assertThat(FILE_TITLE, is(metacard.getTitle()));
-        assertThat(CARD_ID, is(metacard.getId()));
-        assertThat(NsiliProductType.TDL_DATA.toString(), is(metacard.getContentTypeName()));
-        assertThat(FILE_FORMAT_VER, is(metacard.getContentTypeVersion()));
+        assertThat(metacard.getTitle(), is(FILE_TITLE));
+        assertThat(metacard.getId(), is(CARD_ID));
         assertThat(metacard.getCreatedDate(), notNullValue());
         assertThat(metacard.getEffectiveDate(), notNullValue());
-        assertThat(cal.getTime(), is(metacard.getModifiedDate()));
-        assertThat(COM_DESCRIPTION_ABSTRACT, is(metacard.getDescription()));
+        assertThat(metacard.getModifiedDate(), is(cal.getTime()));
+        assertThat(metacard.getDescription(), is(COM_DESCRIPTION_ABSTRACT));
         assertThat(metacard.getLocation(), is(WKT_LOCATION));
-        assertThat(FILE_PRODUCT_URL,
-                is(metacard.getAttribute(Metacard.RESOURCE_URI)
-                        .getValue()
-                        .toString()));
+        assertThat(metacard.getAttribute(Core.RESOURCE_URI)
+                .getValue()
+                .toString(), is(FILE_PRODUCT_URL));
 
         checkCommonAttributes(metacard);
         checkExploitationInfoAttributes(metacard);
-        checkStreamAttributes(metacard);
         checkTdlAttributes(metacard);
         checkSecurityAttributes(metacard);
         checkCoverageAttributes(metacard);
     }
 
     private void checkTdlAttributes(MetacardImpl metacard) {
-        Attribute activityAttr = metacard.getAttribute(NsiliTdlMetacardType.ACTIVITY);
+        Attribute activityAttr = metacard.getAttribute(Isr.TACTICAL_DATA_LINK_ACTIVITY);
         assertThat(activityAttr, notNullValue());
-        assertThat(TDL_ACTIVITY, is((short) activityAttr.getValue()));
+        assertThat((short) activityAttr.getValue(), is(TDL_ACTIVITY));
 
-        Attribute msgNumAttr = metacard.getAttribute(NsiliTdlMetacardType.MESSAGE_NUM);
+        Attribute msgNumAttr =
+                metacard.getAttribute(Isr.TACTICAL_DATA_LINK_MESSAGE_NUMBER);
         assertThat(msgNumAttr, notNullValue());
-        assertThat(TDL_MESSAGE_NUM,
-                is(msgNumAttr.getValue()
-                        .toString()));
+        assertThat(msgNumAttr.getValue()
+                .toString(), is(TDL_MESSAGE_NUM));
 
-        Attribute platformNumAttr = metacard.getAttribute(NsiliTdlMetacardType.PLATFORM);
+        Attribute platformNumAttr = metacard.getAttribute(Isr.PLATFORM_ID);
         assertThat(platformNumAttr, notNullValue());
-        assertThat(TDL_PLATFORM_NUM, is((short) platformNumAttr.getValue()));
+        assertThat((short) platformNumAttr.getValue(), is(TDL_PLATFORM_NUM));
 
-        Attribute trackNumAttr = metacard.getAttribute(NsiliTdlMetacardType.TRACK_NUM);
+        Attribute trackNumAttr =
+                metacard.getAttribute(Isr.TACTICAL_DATA_LINK_TRACK_NUMBER);
         assertThat(trackNumAttr, notNullValue());
-        assertThat(TDL_TRACK_NUM,
-                is(trackNumAttr.getValue()
-                        .toString()));
+        assertThat(trackNumAttr.getValue()
+                .toString(), is(TDL_TRACK_NUM));
     }
 
     @Test
@@ -1837,7 +1669,7 @@ public class DAGConverterTest {
         MetacardImpl metacard = dagConverter.convertDAG(dag, false, SOURCE_ID);
 
         //Check top-level meta-card attributes
-        assertThat(CARD_ID, is(metacard.getId()));
+        assertThat(metacard.getId(), is(CARD_ID));
     }
 
     private Node createRootNode() {
@@ -2129,19 +1961,6 @@ public class DAGConverterTest {
                 approvalNode,
                 NsiliConstants.STATUS,
                 BAD_ENUM_VALUE,
-                orb);
-    }
-
-    private void addSdsNode(DirectedAcyclicGraph<Node, Edge> graph, Node productNode) {
-        Any sdsAny = orb.create_any();
-        Node sdsNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_SDS, sdsAny);
-        graph.addVertex(sdsNode);
-        graph.addEdge(productNode, sdsNode);
-
-        ResultDAGConverter.addStringAttribute(graph,
-                sdsNode,
-                NsiliConstants.OPERATIONAL_STATUS,
-                SDS_OP_STATUS.getSpecName(),
                 orb);
     }
 
@@ -2601,6 +2420,12 @@ public class DAGConverterTest {
                 NsiliConstants.SCANNING_MODE,
                 VIDEO_SCANNING_MODE,
                 orb);
+
+        ResultDAGConverter.addBooleanAttribute(graph,
+                videoNode,
+                NsiliConstants.VMTI_PROCESSED,
+                false,
+                orb);
     }
 
     private void addBadVideoNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2847,6 +2672,12 @@ public class DAGConverterTest {
                 NsiliConstants.SPATIAL_GEOGRAPHIC_REF_BOX,
                 spatialCoverage,
                 orb);
+
+        ResultDAGConverter.addStringAttribute(graph,
+                coverageNode,
+                NsiliConstants.ADVANCED_GEOSPATIAL,
+                WKT_LOCATION,
+                orb);
     }
 
     private void addExpoloitationInfoNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
@@ -2880,7 +2711,8 @@ public class DAGConverterTest {
                 orb);
     }
 
-    private void addBadExpoloitationInfoNode(DirectedAcyclicGraph<Node, Edge> graph, Node parentNode) {
+    private void addBadExpoloitationInfoNode(DirectedAcyclicGraph<Node, Edge> graph,
+            Node parentNode) {
         Any exploitationAny = orb.create_any();
         Node exploitationNode = new Node(0,
                 NodeType.ENTITY_NODE,
@@ -2920,11 +2752,9 @@ public class DAGConverterTest {
             if (attribute != null) {
                 if (attribute.getValues() != null) {
                     String valueStr = getValueString(attribute.getValues());
-                    outStream.println("  " + descriptor.getName() + " : " +
-                            valueStr);
+                    outStream.println("  " + descriptor.getName() + " : " + valueStr);
                 } else {
-                    outStream.println("  " + descriptor.getName() + " : " +
-                            attribute.getValue());
+                    outStream.println("  " + descriptor.getName() + " : " + attribute.getValue());
                 }
             }
         }
@@ -2979,5 +2809,19 @@ public class DAGConverterTest {
                 .getResource();
         doReturn(mockResponse).when(mockResourceReader)
                 .retrieveResource(anyObject(), anyMap());
+    }
+
+    private void removeNode(Graph<Node, Edge> graph, String nodeName) {
+        DepthFirstIterator<Node, Edge> depthFirstIterator = new DepthFirstIterator<>(graph);
+        List<Node> removeVertices = new ArrayList<>();
+        while (depthFirstIterator.hasNext()) {
+            depthFirstIterator.setCrossComponentTraversal(false);
+            Node node = depthFirstIterator.next();
+            if (node.attribute_name.equals(nodeName)) {
+                removeVertices.add(node);
+            }
+        }
+
+        removeVertices.forEach(graph::removeVertex);
     }
 }

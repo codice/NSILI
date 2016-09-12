@@ -38,7 +38,8 @@ public class CorbaUtils {
         try {
             poa.id_to_servant(oid);
             idActive = true;
-        } catch (ObjectNotActive | WrongPolicy | BAD_INV_ORDER ignore) {}
+        } catch (ObjectNotActive | WrongPolicy | BAD_INV_ORDER ignore) {
+        }
 
         return idActive;
     }
@@ -51,6 +52,9 @@ public class CorbaUtils {
         } else if (any.type()
                 .kind() == TCKind.tk_string) {
             value = any.extract_string();
+        } else if (any.type()
+                .kind() == TCKind.tk_longlong) {
+            value = String.valueOf(any.extract_longlong());
         } else if (any.type()
                 .kind() == TCKind.tk_long) {
             value = String.valueOf(any.extract_long());
@@ -79,8 +83,10 @@ public class CorbaUtils {
                         value = date.toString();
                     }
                 }
-            } catch (org.omg.CORBA.MARSHAL | IllegalFieldValueException | BadKind e) {
-                LOGGER.debug("Unable to parse date", e);
+            } catch (BadKind e) {
+                //Ignore BadKind errors as this isn't a data parsing exception
+            } catch (org.omg.CORBA.MARSHAL | IllegalFieldValueException e) {
+                LOGGER.debug("Unable to parse date value from: {}", any,  e);
             }
         }
 

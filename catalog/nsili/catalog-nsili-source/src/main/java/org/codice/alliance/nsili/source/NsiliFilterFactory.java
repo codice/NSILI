@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
 
@@ -84,6 +85,8 @@ public class NsiliFilterFactory {
     private Map<String, List<AttributeInformation>> queryableAttributes;
 
     private String view;
+
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
 
     public NsiliFilterFactory(Map<String, List<AttributeInformation>> queryableAttributes,
             String view) {
@@ -410,7 +413,7 @@ public class NsiliFilterFactory {
     }
 
     public String convertWktToBqs(String wkt) {
-        WKTReader wktReader = new WKTReader();
+        WKTReader wktReader = new WKTReader(GEOMETRY_FACTORY);
         Geometry geometry;
         try {
             geometry = wktReader.read(wkt);
