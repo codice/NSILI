@@ -261,6 +261,7 @@ public class NsiliEndpointTest extends NsiliCommonTest {
         nsiliEndpoint.setCorbaOrb(mockCorbaOrb);
         nsiliEndpoint.setSecurityManager(securityManager);
         nsiliEndpoint.setDefaultUpdateFrequencySec(1);
+        nsiliEndpoint.setMaxWaitToStartTimeMinutes(1);
         nsiliEndpoint.setOutgoingValidationEnabled(true);
         nsiliEndpoint.setRemoveSourceLibrary(true);
         nsiliEndpoint.setLibraryVersion("NSILI|3.2");

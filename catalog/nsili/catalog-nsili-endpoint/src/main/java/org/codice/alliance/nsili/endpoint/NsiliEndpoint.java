@@ -20,6 +20,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.codice.alliance.nsili.common.NsilCorbaExceptionUtil;
 import org.codice.alliance.nsili.orb.api.CorbaOrb;
@@ -74,6 +77,8 @@ public class NsiliEndpoint implements CorbaServiceListener, QuerySources {
     private FilterBuilder filterBuilder;
 
     private int defaultUpdateFrequencySec = 60;
+
+    private long maxWaitToStartTimeSec = TimeUnit.MINUTES.toSeconds(5);
 
     private int maxPendingResults = 10000;
 
@@ -168,7 +173,14 @@ public class NsiliEndpoint implements CorbaServiceListener, QuerySources {
     public void setDefaultUpdateFrequencySec(int defaultUpdateFrequencySec) {
         this.defaultUpdateFrequencySec = defaultUpdateFrequencySec;
         if (library != null) {
-            library.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencySec * 1000);
+            library.setDefaultUpdateFrequencyMsec(TimeUnit.SECONDS.toMillis(defaultUpdateFrequencySec));
+        }
+    }
+
+    public void setMaxWaitToStartTimeMinutes(long maxWaitToStartTimeMinutes) {
+        this.maxWaitToStartTimeSec = TimeUnit.MINUTES.toSeconds(maxWaitToStartTimeMinutes);
+        if (library != null) {
+            library.setMaxWaitToStartTimeMsecs(TimeUnit.MINUTES.toMillis(maxWaitToStartTimeMinutes));
         }
     }
 
@@ -312,12 +324,13 @@ public class NsiliEndpoint implements CorbaServiceListener, QuerySources {
         library = new LibraryImpl(rootPOA);
         library.setCatalogFramework(framework);
         library.setFilterBuilder(filterBuilder);
-        library.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencySec * 1000);
+        library.setDefaultUpdateFrequencyMsec(TimeUnit.SECONDS.toMillis(defaultUpdateFrequencySec));
         library.setMaxPendingResults(maxPendingResults);
         library.setQuerySources(querySources);
         library.setLibraryVersion(libraryVersion);
         library.setRemoveSourceLibrary(removeSourceLibrary);
         library.setOutgoingValidationEnabled(outgoingValidationEnabled);
+        library.setMaxWaitToStartTimeMsecs(TimeUnit.SECONDS.toMillis(maxWaitToStartTimeSec));
 
         libraryRef = rootPOA.servant_to_reference(library);
 

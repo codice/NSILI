@@ -27,6 +27,11 @@
                 default="60"
         />
         <AD
+                description="Maximum time to wait before starting a standing query (minutes)"
+                name="Standing Query Max Wait To Start Time" id="maxWaitToStartTimeMinutes" required="true" type="Integer"
+                default="60"
+        />
+        <AD
                 description="Maximum Number of results to cache for each client."
                 name="Maximum Number Pending Results" id="maxPendingResults" required="true" type="Integer"
                 default="10000"

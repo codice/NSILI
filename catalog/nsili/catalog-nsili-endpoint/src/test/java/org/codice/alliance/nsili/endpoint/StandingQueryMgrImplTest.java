@@ -25,6 +25,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.codice.alliance.nsili.common.CorbaUtils;
 import org.codice.alliance.nsili.common.GIAS.Event;
@@ -108,6 +109,7 @@ public class StandingQueryMgrImplTest extends NsiliCommonTest {
         standingQueryMgr.setFilterBuilder(new GeotoolsFilterBuilder());
         standingQueryMgr.setCatalogFramework(mockCatalogFramework);
         standingQueryMgr.setDefaultUpdateFrequencyMsec(60000);
+        standingQueryMgr.setMaxWaitToStartTimeMsecs(TimeUnit.MINUTES.toMillis(5));
         standingQueryMgr.setMaxPendingResults(10000);
 
         if (!CorbaUtils.isIdActive(rootPOA,

@@ -39,6 +39,7 @@
         <property name="securityHandler" ref="securityHandler" />
         <property name="securityManager" ref="securityManager" />
         <property name="defaultUpdateFrequencySec" value="60" />
+        <property name="maxWaitToStartTimeMinutes" value="60" />
         <property name="maxPendingResults" value="10000" />
         <property name="outgoingValidationEnabled" value="false" />
         <property name="libraryVersion" value="NSILI|3.2" />

@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.shiro.subject.ExecutionException;
@@ -141,6 +142,8 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
 
     private boolean outgoingValidationEnabled;
 
+    private long maxWaitToStartTimeMsecs;
+
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(
             SubmitStandingQueryRequestImpl.class);
 
@@ -148,7 +151,8 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
             SortAttribute[] sort_attributes, QueryLifeSpan lifespan, NameValue[] properties,
             CatalogFramework catalogFramework, FilterBuilder filterBuilder,
             long defaultUpdateFrequencyMsec, Set<String> querySources, int maxPendingResults,
-            boolean removeSourceLibrary, boolean outgoingValidationEnabled) {
+            boolean removeSourceLibrary, boolean outgoingValidationEnabled,
+            long maxWaitToStartTimeMsecs) {
         id = UUID.randomUUID()
                 .toString();
         if (result_attributes != null) {
@@ -167,6 +171,7 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
         }
         this.bqsFilter = bqsConverter.convertBQSToDDF(aQuery);
         this.outgoingValidationEnabled = outgoingValidationEnabled;
+        this.maxWaitToStartTimeMsecs = maxWaitToStartTimeMsecs;
 
         parseLifeSpan(lifespan);
         if (LOGGER.isTraceEnabled()) {
@@ -398,12 +403,11 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
 
         public void run() {
             while (running) {
-                boolean shouldRun = true;
                 long queryTime = lastExecutionTime - 1000;
 
                 //Don't want to change the query time until we process all of the results from the
                 //last query
-                if (!moreResultsAvailOnLastQuery) {
+                if (!moreResultsAvailOnLastQuery && !paused) {
                     lastExecutionTime = System.currentTimeMillis();
                 }
 
@@ -415,17 +419,20 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
                 }
 
                 if (startDate != null) {
-                    if (startDate.getTime() > lastExecutionTime) {
-                        shouldRun = false;
+                    long now = System.currentTimeMillis();
+                    if (startDate.getTime() > now) {
+                        long waitToStart = startDate.getTime() - now;
+                        long waitSecs = TimeUnit.MILLISECONDS.toSeconds(waitToStart);
+                        waitToStart = Math.min(waitToStart, maxWaitToStartTimeMsecs);
+                        LOGGER.debug("Start time for subscription is in the future, waiting {} seconds", waitSecs);
+                        try {
+                            Thread.sleep(waitToStart);
+                        } catch (Exception ignore) {}
                     }
                 }
 
                 //Right now we don't produce the Association View
-                if (query.view.equals(NsiliConstants.NSIL_ASSOCIATION_VIEW)) {
-                    shouldRun = false;
-                }
-
-                if (shouldRun && !paused) {
+                if (!query.view.equals(NsiliConstants.NSIL_ASSOCIATION_VIEW) && !paused) {
                     if (standingQueryData.size() <= maxPendingResults) {
                         DAGQueryResult queryResult = getData(queryTime);
                         if (queryResult != null) {
@@ -547,7 +554,7 @@ public class SubmitStandingQueryRequestImpl extends SubmitStandingQueryRequestPO
 
             QueryRequestImpl catalogQueryRequest;
             if (querySources == null || querySources.isEmpty()) {
-                LOGGER.trace("Query request will be local, no sources specified");
+                LOGGER.trace("Query request will be local, no sources specified: {}", parsedFilter);
                 catalogQueryRequest = new QueryRequestImpl(catalogQuery);
             } else {
                 if (LOGGER.isTraceEnabled()) {

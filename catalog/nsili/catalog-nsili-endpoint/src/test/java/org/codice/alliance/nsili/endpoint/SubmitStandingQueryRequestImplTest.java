@@ -26,6 +26,8 @@ import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.codice.alliance.nsili.common.BqsConverter;
 import org.codice.alliance.nsili.common.CB.Callback;
@@ -380,6 +382,7 @@ public class SubmitStandingQueryRequestImplTest extends NsiliCommonTest {
         //Set artificially low for for test cases.
         long defaultUpdateFrequencyMsec = 2000;
         int maxPendingResults = 10000;
+        long maxWaitToStartTimeMsecs = TimeUnit.MINUTES.toMillis(5);
         standingQueryRequest = new SubmitStandingQueryRequestImpl(query,
                 resultAttributes,
                 sortAttributes,
@@ -391,7 +394,8 @@ public class SubmitStandingQueryRequestImplTest extends NsiliCommonTest {
                 null,
                 maxPendingResults,
                 true,
-                false);
+                false,
+                maxWaitToStartTimeMsecs);
         standingQueryRequest.register_callback(mockCallback2);
 
         String managerId = UUID.randomUUID().toString();

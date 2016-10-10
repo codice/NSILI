@@ -65,6 +65,8 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
 
     private boolean outgoingValidationEnabled;
 
+    private long maxWaitToStartTimeMsecs;
+
     private long defaultTimeout = AccessManagerImpl.DEFAULT_TIMEOUT;
 
     public StandingQueryMgrImpl(Set<String> querySources) {
@@ -96,6 +98,10 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
 
     public void setOutgoingValidationEnabled(boolean outgoingValidationEnabled) {
         this.outgoingValidationEnabled = outgoingValidationEnabled;
+    }
+
+    public void setMaxWaitToStartTimeMsecs(long maxWaitToStartTimeMsecs) {
+        this.maxWaitToStartTimeMsecs = maxWaitToStartTimeMsecs;
     }
 
     protected void init() {
@@ -142,7 +148,8 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
                 querySources,
                 maxPendingResults,
                 removeSourceLibrary,
-                outgoingValidationEnabled);
+                outgoingValidationEnabled,
+                maxWaitToStartTimeMsecs);
 
         String id = UUID.randomUUID()
                 .toString();

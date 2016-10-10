@@ -96,6 +96,8 @@ public class LibraryImpl extends LibraryPOA {
 
     private SecurityManager securityManager;
 
+    private long maxWaitToStartTimeMsecs;
+
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(LibraryImpl.class);
 
     public LibraryImpl(POA poa) {
@@ -143,6 +145,10 @@ public class LibraryImpl extends LibraryPOA {
 
     public void setOutgoingValidationEnabled(boolean outgoingValidationEnabled) {
         this.outgoingValidationEnabled = outgoingValidationEnabled;
+    }
+
+    public void setMaxWaitToStartTimeMsecs(long maxWaitToStartTimeMsecs) {
+        this.maxWaitToStartTimeMsecs = maxWaitToStartTimeMsecs;
     }
 
     @Override
@@ -250,6 +256,7 @@ public class LibraryImpl extends LibraryPOA {
             standingQueryMgr.setMaxPendingResults(maxPendingResults);
             standingQueryMgr.setRemoveSourceLibrary(removeSourceLibrary);
             standingQueryMgr.setOutgoingValidationEnabled(outgoingValidationEnabled);
+            standingQueryMgr.setMaxWaitToStartTimeMsecs(maxWaitToStartTimeMsecs);
             if (!CorbaUtils.isIdActive(poa,
                     managerId.getBytes(Charset.forName(NsiliEndpoint.ENCODING)))) {
                 try {
