@@ -172,7 +172,6 @@ public class ResultDAGConverter {
             dataIsValid.set(true);
             Map<String, List<String>> addedAttrMap = getAttrMap(addedAttributes);
             addedAttrMap.entrySet()
-                    .stream()
                     .forEach(entry -> dataIsValid.set(
                             dataIsValid.get() && processEntry(entry.getKey(),
                                     mandatoryAttributes.get(entry.getKey()),
@@ -315,6 +314,12 @@ public class ResultDAGConverter {
 
             String attribute = parentAttrName + NsiliConstants.NSIL_FILE;
 
+            //Although not required, CSD Alpha requires this field to be populated on synchronization
+            if (shouldAdd(buildAttr(attribute, NsiliConstants.ARCHIVED), resultAttributes)) {
+                addBooleanAttribute(graph, fileNode, NsiliConstants.ARCHIVED, false, orb);
+                addedAttributes.add(buildAttr(attribute, NsiliConstants.ARCHIVED));
+            }
+
             if (shouldAdd(buildAttr(attribute, NsiliConstants.TITLE), resultAttributes)
                     && metacard.getTitle() != null) {
                 addStringAttribute(graph, fileNode, NsiliConstants.TITLE, metacard.getTitle(), orb);
@@ -449,6 +454,7 @@ public class ResultDAGConverter {
 
         String attribute = parentAttrName + NsiliConstants.NSIL_SECURITY;
 
+        boolean classificationAdded = false;
         if (shouldAdd(buildAttr(attribute, NsiliConstants.CLASSIFICATION), resultAttributes)) {
             Attribute metadataClassificationAttr =
                     metacard.getAttribute(Security.METADATA_CLASSIFICATION);
@@ -469,6 +475,7 @@ public class ResultDAGConverter {
                         classification,
                         orb);
                 addedAttributes.add(buildAttr(attribute, NsiliConstants.CLASSIFICATION));
+                classificationAdded = true;
             }
         }
 
@@ -514,6 +521,30 @@ public class ResultDAGConverter {
             }
         }
 
+        if (!classificationAdded) {
+            //Add defaults from NSILI
+            addStringAttribute(graph,
+                    securityNode,
+                    NsiliConstants.CLASSIFICATION,
+                    NsiliClassification.NO_CLASSIFICATION.getSpecName(),
+                    orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.CLASSIFICATION));
+
+            addStringAttribute(graph,
+                    securityNode,
+                    NsiliConstants.POLICY,
+                    NsiliConstants.NATO,
+                    orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.POLICY));
+
+            addStringAttribute(graph,
+                    securityNode,
+                    NsiliConstants.RELEASABILITY,
+                    NsiliConstants.NATO,
+                    orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.RELEASABILITY));
+        }
+
         return addedAttributes;
     }
 
@@ -529,6 +560,7 @@ public class ResultDAGConverter {
         graph.addVertex(metadataSecurityNode);
         graph.addEdge(productNode, metadataSecurityNode);
 
+        boolean classificationAdded = false;
         String attribute = parentAttrName + NsiliConstants.NSIL_METADATA_SECURITY;
 
         if (shouldAdd(buildAttr(attribute, NsiliConstants.CLASSIFICATION), resultAttributes)) {
@@ -551,6 +583,7 @@ public class ResultDAGConverter {
                         classification,
                         orb);
                 addedAttributes.add(buildAttr(attribute, NsiliConstants.CLASSIFICATION));
+                classificationAdded = true;
             }
         }
 
@@ -598,6 +631,30 @@ public class ResultDAGConverter {
                         orb);
                 addedAttributes.add(buildAttr(attribute, NsiliConstants.RELEASABILITY));
             }
+        }
+
+        if (!classificationAdded) {
+            //Add defaults from NSILI
+            addStringAttribute(graph,
+                    metadataSecurityNode,
+                    NsiliConstants.CLASSIFICATION,
+                    NsiliClassification.NO_CLASSIFICATION.getSpecName(),
+                    orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.CLASSIFICATION));
+
+            addStringAttribute(graph,
+                    metadataSecurityNode,
+                    NsiliConstants.POLICY,
+                    NsiliConstants.NATO,
+                    orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.POLICY));
+
+            addStringAttribute(graph,
+                    metadataSecurityNode,
+                    NsiliConstants.RELEASABILITY,
+                    NsiliConstants.NATO,
+                    orb);
+            addedAttributes.add(buildAttr(attribute, NsiliConstants.RELEASABILITY));
         }
 
         return addedAttributes;
@@ -790,6 +847,14 @@ public class ResultDAGConverter {
                                 NsiliConstants.DECOMPRESSION_TECHNIQUE));
                     }
                 }
+            } else {
+                //Default to JPEG compression
+                addStringAttribute(graph,
+                        imageryNode,
+                        NsiliConstants.DECOMPRESSION_TECHNIQUE,
+                        NsiliImageryDecompressionTech.C3.toString(),
+                        orb);
+                addedAttributes.add(buildAttr(attribute, NsiliConstants.DECOMPRESSION_TECHNIQUE));
             }
         }
 
@@ -805,6 +870,10 @@ public class ResultDAGConverter {
                             orb);
                     addedAttributes.add(buildAttr(attribute, NsiliConstants.NUMBER_OF_BANDS));
                 }
+            } else {
+                //Default to 0 if not set
+                addIntegerAttribute(graph, imageryNode, NsiliConstants.NUMBER_OF_BANDS, 0, orb);
+                addedAttributes.add(buildAttr(attribute, NsiliConstants.NUMBER_OF_BANDS));
             }
         }
 
@@ -832,6 +901,14 @@ public class ResultDAGConverter {
                             orb);
                     addedAttributes.add(buildAttr(attribute, NsiliConstants.CATEGORY));
                 }
+            } else {
+                //Default to VIS if we don't know the category from data.
+                addStringAttribute(graph,
+                        imageryNode,
+                        NsiliConstants.CATEGORY,
+                        NsiliImageryType.VIS.toString(),
+                        orb);
+                addedAttributes.add(buildAttr(attribute, NsiliConstants.CATEGORY));
             }
         }
 
@@ -855,9 +932,22 @@ public class ResultDAGConverter {
             if (imageIdAttr != null) {
                 String imageId = String.valueOf(imageIdAttr.getValue());
                 if (imageId != null) {
+                    imageId = imageId.substring(0, 10);
                     addStringAttribute(graph, imageryNode, NsiliConstants.IDENTIFIER, imageId, orb);
                     addedAttributes.add(buildAttr(attribute, NsiliConstants.IDENTIFIER));
                 }
+            } else {
+                //Default to 10 characters of title or 10 characters of ID
+                String identifier = metacard.getId()
+                        .substring(0, 10);
+                Attribute titleAttr = metacard.getAttribute(Core.TITLE);
+                if (titleAttr != null) {
+                    String title = String.valueOf(titleAttr.getValue());
+                    identifier = title.substring(0, 10);
+                }
+
+                addStringAttribute(graph, imageryNode, NsiliConstants.IDENTIFIER, identifier, orb);
+                addedAttributes.add(buildAttr(attribute, NsiliConstants.IDENTIFIER));
             }
         }
 
@@ -1439,6 +1529,11 @@ public class ResultDAGConverter {
             }
         }
 
+        if (addedAttributes.isEmpty()) {
+            graph.removeEdge(partNode, cbrnNode);
+            graph.removeVertex(cbrnNode);
+        }
+
         return addedAttributes;
     }
 
@@ -1587,6 +1682,11 @@ public class ResultDAGConverter {
                     addedAttributes.add(buildAttr(attribute, NsiliConstants.SUBJ_QUALITY_CODE));
                 }
             }
+        }
+
+        if (addedAttributes.isEmpty()) {
+            graph.removeEdge(partNode, exploitationInfoNode);
+            graph.removeVertex(exploitationInfoNode);
         }
 
         return addedAttributes;

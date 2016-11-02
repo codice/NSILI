@@ -331,6 +331,8 @@ public class NsiliConstants {
 
     public static final String GENERAL_ASSESSMENT = "generalAssessment";
 
+    public static final String NATO = "NATO";
+
     //Association Constants
     public static final String HAS_PART = "HAS PART";
 

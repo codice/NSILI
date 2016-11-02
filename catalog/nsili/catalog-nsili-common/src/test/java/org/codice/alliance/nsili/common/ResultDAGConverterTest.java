@@ -134,6 +134,7 @@ public class ResultDAGConverterTest {
     @Test
     public void testMandatoryAttributesSuccess() throws Exception {
         MetacardImpl card = getTestCard();
+        card.setAttribute(new AttributeImpl(Core.RESOURCE_DOWNLOAD_URL, "http://test/file.jpg"));
 
         ResultImpl result = new ResultImpl();
         result.setMetacard(card);
@@ -146,6 +147,40 @@ public class ResultDAGConverterTest {
                 new ArrayList<>(),
                 mandatoryAttrs);
         assertThat(dag, notNullValue());
+
+        String fileArchiveAttr = NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_FILE + "."
+                + NsiliConstants.ARCHIVED;
+        assertThat(checkDagContains(dag, fileArchiveAttr), is(true));
+
+        String securityClassAttr =
+                NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_SECURITY + "."
+                        + NsiliConstants.CLASSIFICATION;
+        assertThat(checkDagContains(dag, securityClassAttr), is(true));
+
+        String securityPolicyAttr =
+                NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_SECURITY + "."
+                        + NsiliConstants.POLICY;
+        assertThat(checkDagContains(dag, securityPolicyAttr), is(true));
+
+        String securityReleasabilityAttr =
+                NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_SECURITY + "."
+                        + NsiliConstants.RELEASABILITY;
+        assertThat(checkDagContains(dag, securityReleasabilityAttr), is(true));
+
+        String metadataSecurityClassAttr =
+                NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_METADATA_SECURITY + "."
+                        + NsiliConstants.CLASSIFICATION;
+        assertThat(checkDagContains(dag, metadataSecurityClassAttr), is(true));
+
+        String metadataSecurityPolicyAttr =
+                NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_METADATA_SECURITY + "."
+                        + NsiliConstants.POLICY;
+        assertThat(checkDagContains(dag, metadataSecurityPolicyAttr), is(true));
+
+        String metadataSecurityReleasabilityAttr =
+                NsiliConstants.NSIL_PRODUCT + ":" + NsiliConstants.NSIL_METADATA_SECURITY + "."
+                        + NsiliConstants.RELEASABILITY;
+        assertThat(checkDagContains(dag, metadataSecurityReleasabilityAttr), is(true));
     }
 
     @Test
