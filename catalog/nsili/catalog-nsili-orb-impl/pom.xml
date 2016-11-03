@@ -61,7 +61,6 @@
                         <Export-Package/>
                         <Embed-Dependency>
                             catalog-core-api-impl,
-                            commons-lang3,
                             platform-util
                         </Embed-Dependency>
                     </instructions>
