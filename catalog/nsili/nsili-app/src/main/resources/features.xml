@@ -52,7 +52,7 @@
     </feature>
 
     <feature name="nsili-app" install="auto" version="${project.version}"
-             description="The Alliance NSILI App provides interoperability with STANAG 4559 compliant services. ::Alliance NSILI">
+             description="The NSILI App provides interoperability with STANAG 4559 compliant services.::NSILI">
         <feature prerequisite="true">catalog-app</feature>
         <bundle dependency="true">mvn:org.apache.commons/commons-lang3/${commons-lang3.version}</bundle>
         <feature>catalog-email</feature>
