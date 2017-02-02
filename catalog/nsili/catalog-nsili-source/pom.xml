@@ -172,6 +172,11 @@
             <version>${ddf.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>ddf.security.core</groupId>
+            <artifactId>security-core-impl</artifactId>
+            <version>${ddf.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -204,7 +209,8 @@
                             antlr4-runtime,
                             guava,
                             geospatial,
-                            commons-net
+                            commons-net,
+                            security-core-impl
                         </Embed-Dependency>
                     </instructions>
                 </configuration>
