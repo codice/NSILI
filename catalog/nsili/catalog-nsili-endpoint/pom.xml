@@ -69,7 +69,7 @@
         <dependency>
             <groupId>org.apache.cxf</groupId>
             <artifactId>cxf-rt-rs-security-xml</artifactId>
-            <version>3.0.4</version>
+            <version>${cxf.version}</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -91,7 +91,7 @@
         <dependency>
             <groupId>org.apache.cxf</groupId>
             <artifactId>cxf-rt-rs-security-xml</artifactId>
-            <version>3.1.4</version>
+            <version>${cxf.version}</version>
         </dependency>
         <dependency>
             <groupId>org.antlr</groupId>
