@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.security.service.SecurityServiceException;
 
-public class CreationMgrImplTest extends NsiliCommonTest {
+public class CreationMgrImplTest extends NsiliTestCommon {
 
     private CreationMgrImpl creationMgr;
 

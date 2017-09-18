@@ -46,7 +46,7 @@ import org.codice.alliance.nsili.common.UCO.RequestDescription;
 import org.codice.alliance.nsili.common.UCO.Status;
 import org.codice.alliance.nsili.common.UCO.SystemFault;
 import org.codice.alliance.nsili.common.UID.Product;
-import org.codice.alliance.nsili.endpoint.NsiliCommonTest;
+import org.codice.alliance.nsili.endpoint.NsiliTestCommon;
 import org.codice.alliance.nsili.endpoint.managers.AccessManagerImpl;
 import org.codice.alliance.nsili.endpoint.managers.EmailConfiguration;
 import org.junit.Before;
@@ -62,7 +62,7 @@ import ddf.catalog.operation.ResourceResponse;
 import ddf.catalog.resource.Resource;
 import ddf.security.service.SecurityServiceException;
 
-public class OrderRequestImplTest extends NsiliCommonTest {
+public class OrderRequestImplTest extends NsiliTestCommon {
 
     private static final String PROTOCOL = "http";
 

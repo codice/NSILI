@@ -196,7 +196,7 @@ public class NsiliSource extends MaskableImpl
 
     private int clientTimeout;
 
-    private String id;
+    private String sourceId;
 
     private String iorString;
 
@@ -232,7 +232,7 @@ public class NsiliSource extends MaskableImpl
 
     private HashMap<String, List<String>> sortableAttributes;
 
-    private String description;
+    private String sourceDescription;
 
     private String ddfOrgName = DEFAULT_USER_INFO;
 
@@ -360,7 +360,7 @@ public class NsiliSource extends MaskableImpl
         try {
             uri = new URI(iorUrl);
         } catch (URISyntaxException e) {
-            LOGGER.debug("{} : Invalid URL specified for IOR string: {}", id, iorUrl, e);
+            LOGGER.debug("{} : Invalid URL specified for IOR string: {}", sourceId, iorUrl, e);
             return;
         }
 
@@ -381,7 +381,7 @@ public class NsiliSource extends MaskableImpl
         if (StringUtils.isNotBlank(iorString)) {
             LOGGER.debug("{} : Successfully obtained IOR file from {}", getId(), iorUrl);
         } else {
-            LOGGER.debug("{} : Received an empty or null IOR String.", id);
+            LOGGER.debug("{} : Received an empty or null IOR String.", sourceId);
         }
     }
 
@@ -393,7 +393,7 @@ public class NsiliSource extends MaskableImpl
         try (InputStream inputStream = new FileInputStream(iorUrl.substring(7))) {
             iorString = IOUtils.toString(inputStream, StandardCharsets.ISO_8859_1.name());
         } catch (IOException e) {
-            LOGGER.debug("{} : Unable to process IOR String.", id, e);
+            LOGGER.debug("{} : Unable to process IOR String.", sourceId, e);
         }
     }
 
@@ -409,9 +409,9 @@ public class NsiliSource extends MaskableImpl
             //Remove leading/trailing whitespace as the CORBA init can't handle that.
             iorString = iorString.trim();
         } catch (IOException e) {
-            LOGGER.debug("{} : Unable to process IOR String.", id, e);
+            LOGGER.debug("{} : Unable to process IOR String.", sourceId, e);
         } catch (Exception e) {
-            LOGGER.debug("{} : Error retrieving IOR file for {}.", id, iorUrl, e);
+            LOGGER.debug("{} : Error retrieving IOR file for {}.", sourceId, iorUrl, e);
         }
     }
 
@@ -423,7 +423,7 @@ public class NsiliSource extends MaskableImpl
         try {
             uri = new URI(iorUrl);
         } catch (URISyntaxException e) {
-            LOGGER.debug("{} : Invalid URL specified for IOR string: {}", id, iorUrl, e);
+            LOGGER.debug("{} : Invalid URL specified for IOR string: {}", sourceId, iorUrl, e);
         }
 
         FTPClient ftpClient = new FTPClient();
@@ -435,7 +435,7 @@ public class NsiliSource extends MaskableImpl
             }
 
             if (!ftpClient.login(serverUsername, serverPassword)) {
-                LOGGER.debug("{} : FTP server log in unsuccessful.", id);
+                LOGGER.debug("{} : FTP server log in unsuccessful.", sourceId);
             } else {
                 int timeoutMsec = clientTimeout * 1000;
                 ftpClient.setConnectTimeout(timeoutMsec);
@@ -452,7 +452,7 @@ public class NsiliSource extends MaskableImpl
                 iorString = iorString.trim();
             }
         } catch (Exception e) {
-            LOGGER.debug("{} : Error retrieving IOR file for {}.", id, iorUrl, e);
+            LOGGER.debug("{} : Error retrieving IOR file for {}.", sourceId, iorUrl, e);
         }
     }
 
@@ -496,7 +496,7 @@ public class NsiliSource extends MaskableImpl
             setDataModelMgr(DataModelMgrHelper.narrow(libraryManager));
 
         } catch (ProcessingFault | SystemFault | InvalidInputParameter e) {
-            LOGGER.debug("{} : Unable to retrieve mandatory managers.", id, e);
+            LOGGER.debug("{} : Unable to retrieve mandatory managers.", sourceId, e);
         }
 
         if (catalogMgr != null && orderMgr != null && productMgr != null && dataModelMgr != null) {
@@ -517,10 +517,10 @@ public class NsiliSource extends MaskableImpl
         try {
             views = dataModelMgr.get_view_names(new NameValue[0]);
         } catch (ProcessingFault | SystemFault | InvalidInputParameter e) {
-            LOGGER.debug("{} : Unable to retrieve views.", id, e);
+            LOGGER.debug("{} : Unable to retrieve views.", sourceId, e);
         }
         if (views == null) {
-            LOGGER.debug("{} : Unable to retrieve views.", id);
+            LOGGER.debug("{} : Unable to retrieve views.", sourceId);
         }
         this.views = views;
     }
@@ -583,7 +583,7 @@ public class NsiliSource extends MaskableImpl
 
             }
         } catch (ProcessingFault | SystemFault | InvalidInputParameter e) {
-            LOGGER.debug("{} : Unable to retrieve queryable attributes.", id, e);
+            LOGGER.debug("{} : Unable to retrieve queryable attributes.", sourceId, e);
         }
 
         if (resultAttributesMap.size() == 0) {
@@ -617,7 +617,7 @@ public class NsiliSource extends MaskableImpl
                 map.put(views[i].view_name, attributeInformationList);
             }
         } catch (ProcessingFault | SystemFault | InvalidInputParameter e) {
-            LOGGER.debug("{} : Unable to retrieve queryable attributes.", id, e);
+            LOGGER.debug("{} : Unable to retrieve queryable attributes.", sourceId, e);
         }
 
         if (map.size() == 0) {
@@ -627,9 +627,9 @@ public class NsiliSource extends MaskableImpl
     }
 
     /**
-     * Obtains the description of the source from the Library interface.
+     * Obtains the sourceDescription of the source from the Library interface.
      *
-     * @return a description of the source
+     * @return a sourceDescription of the source
      */
     private void setSourceDescription() {
         StringBuilder stringBuilder = new StringBuilder();
@@ -638,13 +638,13 @@ public class NsiliSource extends MaskableImpl
             stringBuilder.append(libraryDescription.library_name + " : ");
             stringBuilder.append(libraryDescription.library_description);
         } catch (ProcessingFault | SystemFault e) {
-            LOGGER.debug("{} : Unable to retrieve source description.", id, e);
+            LOGGER.debug("{} : Unable to retrieve source sourceDescription.", sourceId, e);
         }
         String description = stringBuilder.toString();
         if (StringUtils.isBlank(description)) {
-            LOGGER.debug("{} :  Unable to retrieve source description.", getId());
+            LOGGER.debug("{} :  Unable to retrieve source sourceDescription.", getId());
         }
-        this.description = description;
+        this.sourceDescription = description;
     }
 
     public void destroy() {
@@ -676,7 +676,7 @@ public class NsiliSource extends MaskableImpl
             setClientTimeout(clientTimeout);
         }
         String id = (String) configuration.get(ID);
-        if (StringUtils.isNotBlank(id) && !id.equals(this.id)) {
+        if (StringUtils.isNotBlank(id) && !id.equals(this.sourceId)) {
             setId(id);
         }
         String iorUrl = (String) configuration.get(IOR_URL);
@@ -715,7 +715,7 @@ public class NsiliSource extends MaskableImpl
         StringBuilder sb = new StringBuilder();
         sb.append(describableProperties.getProperty(DESCRIPTION))
                 .append(System.getProperty(System.lineSeparator()))
-                .append(description);
+                .append(sourceDescription);
         return sb.toString();
     }
 
@@ -804,10 +804,10 @@ public class NsiliSource extends MaskableImpl
         long numHits = 0;
         try {
             synchronized (queryLockObj) {
-                LOGGER.debug("{} : Submit query: {}", id, query.bqs_query);
-                LOGGER.debug("{} : Requesting result attributes: {}", id, Arrays.toString(resultAttributes));
-                LOGGER.debug("{} : Sort Attributes: {}", id, Arrays.toString(sortAttributes));
-                LOGGER.debug("{} : Properties: {}", id, Arrays.toString(properties));
+                LOGGER.debug("{} : Submit query: {}", sourceId, query.bqs_query);
+                LOGGER.debug("{} : Requesting result attributes: {}", sourceId, Arrays.toString(resultAttributes));
+                LOGGER.debug("{} : Sort Attributes: {}", sourceId, Arrays.toString(sortAttributes));
+                LOGGER.debug("{} : Properties: {}", sourceId, Arrays.toString(properties));
                 HitCountRequest hitCountRequest = catalogMgr.hit_count(query, properties);
                 IntHolder hitHolder = new IntHolder();
                 hitCountRequest.complete(hitHolder);
@@ -829,8 +829,7 @@ public class NsiliSource extends MaskableImpl
                 submitQueryRequest.complete_DAG_results(dagListHolder);
             }
         } catch (ProcessingFault | SystemFault | InvalidInputParameter e) {
-            LOGGER.debug("{} : Unable to query source. {}",
-                    id,
+            LOGGER.debug("{} : Unable to query source. {}", sourceId,
                     NsilCorbaExceptionUtil.getExceptionDetails(e),
                     e);
         }
@@ -982,7 +981,7 @@ public class NsiliSource extends MaskableImpl
     }
 
     public void setId(String id) {
-        this.id = id;
+        this.sourceId = id;
         super.setId(id);
     }
 

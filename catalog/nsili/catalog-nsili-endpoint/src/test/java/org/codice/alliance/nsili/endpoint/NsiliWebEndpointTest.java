@@ -35,7 +35,7 @@ import org.omg.PortableServer.POAPackage.WrongPolicy;
 
 import ddf.security.service.SecurityServiceException;
 
-public class NsiliWebEndpointTest extends NsiliCommonTest {
+public class NsiliWebEndpointTest extends NsiliTestCommon {
 
     private static final int TEST_CORBA_PORT = 20011;
 

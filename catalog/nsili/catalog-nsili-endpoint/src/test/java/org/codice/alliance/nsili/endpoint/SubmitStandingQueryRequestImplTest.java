@@ -27,7 +27,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.codice.alliance.nsili.common.BqsConverter;
 import org.codice.alliance.nsili.common.CB.Callback;
@@ -77,7 +76,7 @@ import ddf.catalog.operation.impl.QueryResponseImpl;
 import ddf.catalog.source.SourceUnavailableException;
 import ddf.catalog.source.UnsupportedQueryException;
 
-public class SubmitStandingQueryRequestImplTest extends NsiliCommonTest {
+public class SubmitStandingQueryRequestImplTest extends NsiliTestCommon {
 
     private SubmitStandingQueryRequestImpl standingQueryRequest;
 

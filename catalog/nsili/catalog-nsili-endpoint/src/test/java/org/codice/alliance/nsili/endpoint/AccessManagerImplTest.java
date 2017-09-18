@@ -59,7 +59,7 @@ import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryResponseImpl;
 import ddf.security.service.SecurityServiceException;
 
-public class AccessManagerImplTest extends NsiliCommonTest {
+public class AccessManagerImplTest extends NsiliTestCommon {
 
     private AccessManagerImpl accessManager;
 

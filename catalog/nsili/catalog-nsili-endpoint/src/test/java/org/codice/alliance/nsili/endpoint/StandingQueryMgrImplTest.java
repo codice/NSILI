@@ -74,7 +74,7 @@ import ddf.catalog.source.SourceUnavailableException;
 import ddf.catalog.source.UnsupportedQueryException;
 import ddf.security.service.SecurityServiceException;
 
-public class StandingQueryMgrImplTest extends NsiliCommonTest {
+public class StandingQueryMgrImplTest extends NsiliTestCommon {
 
     private CatalogFramework mockCatalogFramework = mock(CatalogFramework.class);
 

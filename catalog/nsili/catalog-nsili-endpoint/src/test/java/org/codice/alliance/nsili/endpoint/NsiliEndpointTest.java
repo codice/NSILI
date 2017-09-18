@@ -50,7 +50,7 @@ import ddf.catalog.CatalogFramework;
 import ddf.catalog.filter.proxy.builder.GeotoolsFilterBuilder;
 import ddf.security.service.SecurityServiceException;
 
-public class NsiliEndpointTest extends NsiliCommonTest {
+public class NsiliEndpointTest extends NsiliTestCommon {
 
     private static final int MAX_PENDING_RESULTS = 10000;
 
