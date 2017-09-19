@@ -28,7 +28,7 @@ public enum NsiliManagerType {
     CREATION_MGR("CreationMgr"),
     UPDATE_MGR("UpdateMgr");
 
-    private String specName;
+    private final String specName;
     private static final Map<String, NsiliManagerType> typeBySpecName = new HashMap<>();
     static {
         for (NsiliManagerType managerType: NsiliManagerType.values()) {
@@ -42,10 +42,6 @@ public enum NsiliManagerType {
 
     public String getSpecName() {
         return specName;
-    }
-
-    public void setSpecName(String specName) {
-        this.specName = specName;
     }
 
     public static NsiliManagerType fromSpecName(String specName) {
