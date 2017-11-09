@@ -34,7 +34,6 @@ import ddf.catalog.data.impl.types.ContactAttributes;
 import ddf.catalog.data.impl.types.DateTimeAttributes;
 import ddf.catalog.data.impl.types.LocationAttributes;
 import ddf.catalog.data.types.Associations;
-import ddf.catalog.data.types.Contact;
 import ddf.catalog.data.types.Core;
 import ddf.catalog.data.types.DateTime;
 import ddf.catalog.data.types.Location;
@@ -436,7 +435,7 @@ public class DAGConverterTest {
   }
 
   private void checkStreamAttributes(MetacardImpl metacard) {
-    Attribute creatorAttr = metacard.getAttribute(Contact.CREATOR_NAME);
+    Attribute creatorAttr = metacard.getAttribute(Isr.ORGANIZATIONAL_UNIT);
     assertThat(creatorAttr, notNullValue());
     assertThat(creatorAttr.getValue().toString(), is(STREAM_CREATOR));
 

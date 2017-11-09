@@ -31,7 +31,6 @@ import ddf.catalog.data.impl.MetacardImpl;
 import ddf.catalog.data.impl.types.ContactAttributes;
 import ddf.catalog.data.impl.types.CoreAttributes;
 import ddf.catalog.data.types.Associations;
-import ddf.catalog.data.types.Contact;
 import ddf.catalog.data.types.Core;
 import ddf.catalog.data.types.DateTime;
 import ddf.catalog.data.types.Location;
@@ -54,6 +53,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.codice.alliance.catalog.core.api.impl.types.IsrAttributes;
+import org.codice.alliance.catalog.core.api.types.Isr;
 import org.codice.alliance.catalog.core.api.types.Security;
 import org.codice.alliance.nsili.common.CorbaUtils;
 import org.codice.alliance.nsili.common.NsiliConstants;
@@ -375,7 +375,7 @@ public class DAGConverter {
 
     switch (node.attribute_name) {
       case NsiliConstants.CREATOR:
-        metacard.setAttribute(new AttributeImpl(Contact.CREATOR_NAME, getString(node.value)));
+        metacard.setAttribute(new AttributeImpl(Isr.ORGANIZATIONAL_UNIT, getString(node.value)));
         break;
       case NsiliConstants.DATE_TIME_DECLARED:
         metacard.setCreatedDate(CorbaUtils.convertDate(node.value));
@@ -551,7 +551,7 @@ public class DAGConverter {
   private void addNsilStreamAttribute(MetacardImpl metacard, Node node) {
     switch (node.attribute_name) {
       case NsiliConstants.CREATOR:
-        metacard.setAttribute(new AttributeImpl(Contact.CREATOR_NAME, getString(node.value)));
+        metacard.setAttribute(new AttributeImpl(Isr.ORGANIZATIONAL_UNIT, getString(node.value)));
         break;
       case NsiliConstants.DATE_TIME_DECLARED:
         metacard.setCreatedDate(CorbaUtils.convertDate(node.value));
