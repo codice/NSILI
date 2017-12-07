@@ -16,6 +16,7 @@ package org.codice.alliance.nsili.common;
 import ddf.catalog.data.ContentType;
 import ddf.catalog.data.impl.ContentTypeImpl;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
@@ -24,23 +25,25 @@ public class NsiliConstants {
 
   public static final String STANAG_VERSION = "STANAG 4559";
 
-  public static final Set<String> CONTENT_STRINGS =
-      new HashSet<>(
-          CollectionUtils.collect(
-              Arrays.asList(NsiliProductType.values()),
-              (Object object) -> {
-                NsiliProductType type = (NsiliProductType) object;
-                return type.getSpecName();
-              }));
+  private static final Set<String> CONTENT_STRINGS =
+      Collections.unmodifiableSet(
+          new HashSet<>(
+              CollectionUtils.collect(
+                  Arrays.asList(NsiliProductType.values()),
+                  (Object object) -> {
+                    NsiliProductType type = (NsiliProductType) object;
+                    return type.getSpecName();
+                  })));
 
-  public static final Set<ContentType> CONTENT_TYPES =
-      new HashSet<>(
-          CollectionUtils.collect(
-              Arrays.asList(NsiliProductType.values()),
-              (Object object) -> {
-                NsiliProductType type = (NsiliProductType) object;
-                return new ContentTypeImpl(type.getSpecName(), STANAG_VERSION);
-              }));
+  private static final Set<ContentType> CONTENT_TYPES =
+      Collections.unmodifiableSet(
+          new HashSet<>(
+              CollectionUtils.collect(
+                  Arrays.asList(NsiliProductType.values()),
+                  (Object object) -> {
+                    NsiliProductType type = (NsiliProductType) object;
+                    return new ContentTypeImpl(type.getSpecName(), STANAG_VERSION);
+                  })));
 
   // Categories
   public static final String NSIL_CORE = "NSIL_CORE";
@@ -359,4 +362,14 @@ public class NsiliConstants {
   public static final String PROP_PORT = "PORT";
 
   public static final String UNKNOWN = "Unknown";
+
+  private NsiliConstants() {}
+
+  public static Set<String> getContentStrings() {
+    return CONTENT_STRINGS;
+  }
+
+  public static Set<ContentType> getContentTypes() {
+    return CONTENT_TYPES;
+  }
 }
