@@ -26,8 +26,6 @@ public class StandingQueryData {
 
   private final Object dataLockObj = new Object();
 
-  public StandingQueryData() {}
-
   public int size() {
     synchronized (dataLockObj) {
       return totalSize;
