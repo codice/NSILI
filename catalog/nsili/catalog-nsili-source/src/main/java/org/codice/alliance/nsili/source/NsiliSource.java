@@ -726,7 +726,7 @@ public class NsiliSource extends MaskableImpl
    * Uses the NsiliFilterDelegate to create a STANAG 4559 BQS (Boolean Syntax Query) from the DDF
    * Query
    *
-   * @param query - the query recieved from the Search-Ui
+   * @param query - the incoming query
    * @return - a STANAG4559 complaint query
    * @throws UnsupportedQueryException
    */
