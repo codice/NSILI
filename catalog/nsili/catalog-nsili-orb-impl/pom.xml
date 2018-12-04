@@ -47,6 +47,11 @@
             <artifactId>catalog-nsili-orb-api</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.11</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -64,6 +69,33 @@
                             platform-util
                         </Embed-Dependency>
                     </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>idlj-maven-plugin</artifactId>
+                <version>1.2.1</version>
+                <executions>
+                    <execution>
+                        <id>generate-sources-from-idl</id>
+                        <goals>
+                            <goal>generate-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <sourceDirectory>${basedir}/src/test/idl</sourceDirectory>
+                    <outputDirectory>${basedir}/target/generated-test-sources</outputDirectory>
+                    <sources>
+                        <source>
+                            <additionalArguments>
+                                <list>-pkgTranslate</list>
+                                <list>TESTING</list>
+                                <list>org.codice.alliance.nsili.orb.testing</list>
+                            </additionalArguments>
+                            <compatible>false</compatible>
+                        </source>
+                    </sources>
                 </configuration>
             </plugin>
             <plugin>
@@ -89,7 +121,7 @@
                                         <limit implementation="org.codice.jacoco.LenientLimit">
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.90</minimum>
+                                            <minimum>0.89</minimum>
                                         </limit>
                                         <limit implementation="org.codice.jacoco.LenientLimit">
                                             <counter>BRANCH</counter>
