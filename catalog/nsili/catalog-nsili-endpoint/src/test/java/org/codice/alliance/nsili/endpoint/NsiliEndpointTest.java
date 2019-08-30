@@ -63,6 +63,12 @@ public class NsiliEndpointTest extends NsiliTestCommon {
   private static final String[] VALID_SOURCE_IDS =
       new String[] {"Valid Source ID 3", "Valid Source ID 2"};
 
+  private static final String[] VALID_ATTRIBUTE_OVERRIDES =
+      new String[] {"NSIL_CARD.numberOfParts", "NSIL_COMMON.language"};
+
+  private static final String[] VALID_ATTRIBUTE_EXCLUSIONS =
+      new String[] {"NSIL_FILE.isProductLocal", "NSIL_RELATED_FILE.extent"};
+
   private NsiliEndpoint nsiliEndpoint;
 
   private AccessCriteria testAccessCriteria;
@@ -164,6 +170,20 @@ public class NsiliEndpointTest extends NsiliTestCommon {
     nsiliEndpoint.setMaxNumResults(100);
     int setNumResults = nsiliEndpoint.getMaxNumResults();
     assertThat(setNumResults, is(100));
+  }
+
+  @Test
+  public void testValidSetAttributeOverrides() throws Exception {
+    Set<String> overrides = new HashSet<>(Arrays.asList(VALID_ATTRIBUTE_OVERRIDES));
+    nsiliEndpoint.setAttributeOverrides(overrides);
+    assertThat(nsiliEndpoint.getAttributeOverrides(), is(overrides));
+  }
+
+  @Test
+  public void testValidSetAttributeExclusions() throws Exception {
+    Set<String> exclusions = new HashSet<>(Arrays.asList(VALID_ATTRIBUTE_EXCLUSIONS));
+    nsiliEndpoint.setAttributeExclusions(exclusions);
+    assertThat(nsiliEndpoint.getAttributeExclusions(), is(exclusions));
   }
 
   @Test

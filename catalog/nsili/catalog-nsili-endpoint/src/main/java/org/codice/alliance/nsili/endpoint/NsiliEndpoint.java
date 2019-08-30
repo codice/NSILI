@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.codice.alliance.core.email.EmailSender;
 import org.codice.alliance.nsili.common.NsilCorbaExceptionUtil;
+import org.codice.alliance.nsili.common.ResultDAGConverter;
 import org.codice.alliance.nsili.endpoint.managers.EmailConfiguration;
 import org.codice.alliance.nsili.orb.api.CorbaOrb;
 import org.codice.alliance.nsili.orb.api.CorbaServiceListener;
@@ -87,7 +88,15 @@ public class NsiliEndpoint implements CorbaServiceListener, QuerySources {
 
   private Set<String> querySources = new HashSet<>();
 
+  private Set<String> attributeOverrides = new HashSet<>();
+
+  private Set<String> attributeExclusions = new HashSet<>();
+
   private String libraryVersion;
+
+  private String libraryDescription;
+
+  private boolean forceHttpUrls;
 
   private boolean removeSourceLibrary = true;
 
@@ -109,6 +118,14 @@ public class NsiliEndpoint implements CorbaServiceListener, QuerySources {
 
   private void setLibraryQuerySources(Set<String> querySources) {
     Optional.ofNullable(library).ifPresent(l -> l.setQuerySources(querySources));
+  }
+
+  private void setLibraryAttributeOverrides(Set<String> attributeOverrides) {
+    Optional.ofNullable(library).ifPresent(l -> l.setAttributeOverrides(attributeOverrides));
+  }
+
+  private void setLibraryAttributeExclusions(Set<String> attributeExclusions) {
+    Optional.ofNullable(library).ifPresent(l -> l.setAttributeExclusions(attributeExclusions));
   }
 
   public void setMaxNumResults(int maxNumResults) {
@@ -138,6 +155,36 @@ public class NsiliEndpoint implements CorbaServiceListener, QuerySources {
       LOGGER.debug(
           "The set of source ids to add to the querySources list must be nonnull and contain valid connected sources.");
     }
+  }
+
+  public Set<String> getAttributeOverrides() {
+    return attributeOverrides;
+  }
+
+  public void setAttributeOverrides(Set<String> attributeOverrides) {
+    if (attributeOverrides == null) {
+      this.attributeOverrides.clear();
+    } else {
+      this.attributeOverrides.addAll(attributeOverrides);
+      setLibraryAttributeOverrides(attributeOverrides);
+    }
+  }
+
+  public Set<String> getAttributeExclusions() {
+    return attributeExclusions;
+  }
+
+  public void setAttributeExclusions(Set<String> attributeExclusions) {
+    if (attributeExclusions == null) {
+      this.attributeExclusions.clear();
+    } else {
+      this.attributeExclusions.addAll(attributeExclusions);
+      setLibraryAttributeExclusions(attributeExclusions);
+    }
+  }
+
+  public void setForceHttpUrls(Boolean forceHttpUrls) {
+    ResultDAGConverter.setForceHttp(forceHttpUrls);
   }
 
   @Override
@@ -223,6 +270,13 @@ public class NsiliEndpoint implements CorbaServiceListener, QuerySources {
     this.libraryVersion = libraryVersion;
     if (library != null) {
       library.setLibraryVersion(libraryVersion);
+    }
+  }
+
+  public void setLibraryDescription(String libraryDescription) {
+    this.libraryDescription = libraryDescription;
+    if (library != null) {
+      library.setLibraryDescription(libraryDescription);
     }
   }
 
@@ -353,6 +407,7 @@ public class NsiliEndpoint implements CorbaServiceListener, QuerySources {
     library.setMaxPendingResults(maxPendingResults);
     library.setQuerySources(querySources);
     library.setLibraryVersion(libraryVersion);
+    library.setLibraryDescription(libraryDescription);
     library.setRemoveSourceLibrary(removeSourceLibrary);
     library.setOutgoingValidationEnabled(outgoingValidationEnabled);
     library.setMaxWaitToStartTimeMsecs(TimeUnit.SECONDS.toMillis(maxWaitToStartTimeSec));

@@ -42,14 +42,36 @@
                 default="true"
         />
         <AD
+                description="Should outgoing product URLs be forced to use HTTP? This may be necessary if clients cannot talk over HTTPS."
+                name="Force HTTP URLs" id="forceHttpUrls" required="false" type="Boolean"
+                default="false"
+        />
+        <AD
                 description="Library version returned when queried by external clients - indicates the version supported by this endpoint."
                 name="Library Version" id="libraryVersion" required="true" type="String"
                 default="NSILI|3.2"
         />
         <AD
+                description="Library description returned when queried by external clients."
+                name="Library Description" id="libraryDescription" required="false" type="String"
+                default=""
+        />
+        <AD
                 description="Enabled or disabled outgoing DAG validation against mandatory attributes"
                 name="Enabled Outgoing Validation" id="outgoingValidationEnabled" required="true" type="Boolean"
                 default="false"
+        />
+
+        <AD
+                name="Attributes to always include:" id="attributeOverrides" description="Attributes to always return in DAG - even if not requested."
+                required="false" type="String" cardinality="1000"
+                default=""
+        />
+
+        <AD
+                name="Attributes to always exclude:" id="attributeExclusion" description="Attributes to always exclude in DAG - even if requested."
+                required="false" type="String" cardinality="1000"
+                default=""
         />
 
         <AD

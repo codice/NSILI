@@ -21,6 +21,8 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LinearRing;
 import com.vividsolutions.jts.geom.Polygon;
+import com.vividsolutions.jts.io.ParseException;
+import com.vividsolutions.jts.io.WKTReader;
 import com.vividsolutions.jts.io.WKTWriter;
 import ddf.catalog.data.Attribute;
 import ddf.catalog.data.AttributeDescriptor;
@@ -90,6 +92,33 @@ public class DAGConverter {
   private XStream xstream;
 
   private MetacardType nsiliMetacardType;
+
+  private static Map<String, String> typeConversionMap;
+
+  static {
+    // TODO (CAL-520): Complete NSIL -> DCMI type mapping
+    typeConversionMap = new HashMap<>();
+    typeConversionMap.put("COLLECTION/EXPLOITATION PLAN", "Collection");
+    typeConversionMap.put("DOCUMENT", "Text");
+    typeConversionMap.put("GEOGRAPHIC AREA OF INTEREEST", "Dataset");
+    // typeConversionMap.put("GEOSPATIAL VECTOR", "");
+    // typeConversionMap.put("GMTI", "");
+    typeConversionMap.put("IMAGERY", "Image");
+    // typeConversionMap.put("INTELLIGENCE REQUIREMENT", "");
+    typeConversionMap.put("MESSAGE", "Text");
+    // typeConversionMap.put("OPERATIONAL ROLES", "");
+    // typeConversionMap.put("ORBAT", "");
+    // typeConversionMap.put("REPORT", "");
+    // typeConversionMap.put("RFI", "");
+    // typeConversionMap.put("SYSTEM ASSIGNMENTS", "");
+    // typeConversionMap.put("SYSTEM SPECIFICATIONS, "");
+    // typeConversionMap.put("SYSTEM DEPLOYMENT STATUS, "");
+    // typeConversionMap.put("TACTICAL SYMBOL", "");
+    // typeConversionMap.put("TDL DATA", "");
+    typeConversionMap.put("VIDEO", "Video");
+    typeConversionMap.put("CBRN", "Text");
+    typeConversionMap.put("ELECTRONIC ORDER OF BATTLE", "Interactive Resource");
+  }
 
   public DAGConverter(ResourceReader resourceReader) {
     this.resourceReader = resourceReader;
@@ -226,6 +255,9 @@ public class DAGConverter {
       case NsiliConstants.NSIL_RELATED_FILE:
         addNsilRelatedFile(metacard, node);
         break;
+      case NsiliConstants.NSIL_CBRN:
+        addNsilCbrnAttribute(metacard, node);
+        break;
       default:
         break;
     }
@@ -319,7 +351,8 @@ public class DAGConverter {
         metacard.setAttribute(new AttributeImpl(IsrAttributes.TARGET_ID, getString(node.value)));
         break;
       case NsiliConstants.TYPE:
-        metacard.setAttribute(new AttributeImpl(CoreAttributes.DATATYPE, getString(node.value)));
+        metacard.setAttribute(
+            new AttributeImpl(CoreAttributes.DATATYPE, translateType(getString(node.value))));
         break;
       default:
         break;
@@ -337,7 +370,10 @@ public class DAGConverter {
         }
         break;
       case NsiliConstants.ADVANCED_GEOSPATIAL:
-        metacard.setLocation(getString(node.value));
+        String wkt = checkForEmptyPolygon(node.value, swapCoordinates);
+        if (wkt != null) {
+          metacard.setLocation(wkt);
+        }
         break;
       case NsiliConstants.TEMPORAL_START:
         metacard.setAttribute(
@@ -680,6 +716,49 @@ public class DAGConverter {
     return relatedFileType;
   }
 
+  private void addNsilCbrnAttribute(MetacardImpl metacard, Node node) {
+    switch (node.attribute_name) {
+      case NsiliConstants.OPERATION_NAME:
+        metacard.setAttribute(
+            new AttributeImpl(
+                IsrAttributes.CHEMICAL_BIOLOGICAL_RADIOLOGICAL_NUCLEAR_OPERATION_NAME,
+                getString(node.value)));
+        break;
+      case NsiliConstants.INCIDENT_NUM:
+        metacard.setAttribute(
+            new AttributeImpl(
+                IsrAttributes.CHEMICAL_BIOLOGICAL_RADIOLOGICAL_NUCLEAR_INCIDENT_NUMBER,
+                getString(node.value)));
+        break;
+      case NsiliConstants.EVENT_TYPE:
+        metacard.setAttribute(
+            new AttributeImpl(
+                IsrAttributes.CHEMICAL_BIOLOGICAL_RADIOLOGICAL_NUCLEAR_TYPE,
+                getString(node.value)));
+        break;
+      case NsiliConstants.CBRN_CATEGORY:
+        metacard.setAttribute(
+            new AttributeImpl(
+                IsrAttributes.CHEMICAL_BIOLOGICAL_RADIOLOGICAL_NUCLEAR_CATEGORY,
+                getString(node.value)));
+        break;
+      case NsiliConstants.SUBSTANCE:
+        metacard.setAttribute(
+            new AttributeImpl(
+                IsrAttributes.CHEMICAL_BIOLOGICAL_RADIOLOGICAL_NUCLEAR_SUBSTANCE,
+                getString(node.value)));
+        break;
+      case NsiliConstants.ALARM_CLASSIFICATION:
+        metacard.setAttribute(
+            new AttributeImpl(
+                IsrAttributes.CHEMICAL_BIOLOGICAL_RADIOLOGICAL_NUCLEAR_ALARM_CLASSIFICATION,
+                getString(node.value)));
+        break;
+      default:
+        break;
+    }
+  }
+
   private String convertShape(Any any, boolean swapCoordinates) {
     org.codice.alliance.nsili.common.UCO.Rectangle rectangle = RectangleHelper.extract(any);
     org.codice.alliance.nsili.common.UCO.Coordinate2d upperLeft = rectangle.upper_left;
@@ -728,6 +807,35 @@ public class DAGConverter {
     }
 
     return wktWriter.write(geom);
+  }
+
+  private static String checkForEmptyPolygon(Any any, boolean swapCoordinates) {
+    String wkt = getString(any);
+    Geometry geom;
+    if (wkt != null) {
+      WKTReader reader = new WKTReader(GEOMETRY_FACTORY);
+      try {
+        geom = reader.read(wkt);
+        if (geom instanceof Polygon) {
+          if (geom.getArea() > 0.0) {
+            LOGGER.debug("Polygon detected with valid area.");
+          } else {
+            LOGGER.debug("Polygon detected with empty area - converting to point.");
+            Coordinate pointCoord = geom.getCoordinate();
+            if (swapCoordinates) {
+              pointCoord = new Coordinate(pointCoord.y, pointCoord.x);
+            }
+            geom = GEOMETRY_FACTORY.createPoint(pointCoord);
+          }
+        }
+        final WKTWriter wktWriter = new WKTWriter();
+        wkt = wktWriter.write(geom);
+      } catch (ParseException e) {
+        LOGGER.debug("Unable to parse WKT of {}", wkt);
+        wkt = null;
+      }
+    }
+    return wkt;
   }
 
   public static int convertMegabytesToBytes(Double megabytes) {
@@ -857,8 +965,20 @@ public class DAGConverter {
     }
   }
 
-  public static void printDAG(DAG dag) {
-    if (dag.nodes != null && dag.edges != null) {
+  private String translateType(String nsilType) {
+    String result = typeConversionMap.get(nsilType);
+    if (result == null) {
+      result = nsilType;
+    }
+    return result;
+  }
+
+  public static String printDAG(DAG dag) {
+    if (dag.nodes == null || dag.edges == null) {
+      return null;
+    } else {
+      StringBuilder sb = new StringBuilder();
+
       Map<Integer, Node> nodeMap = ResultDAGConverter.createNodeMap(dag.nodes);
       DirectedAcyclicGraph<Node, Edge> graph = getNodeEdgeDirectedAcyclicGraph(dag, nodeMap);
 
@@ -873,8 +993,10 @@ public class DAGConverter {
 
         DijkstraShortestPath<Node, Edge> path = new DijkstraShortestPath<>(graph, rootNode, node);
 
-        printNode(node, (int) Math.round(path.getPathLength()));
+        sb.append(printNode(node, (int) Math.round(path.getPathLength())));
       }
+
+      return sb.toString();
     }
   }
 
@@ -896,7 +1018,7 @@ public class DAGConverter {
     return graph;
   }
 
-  public static void printNode(Node node, int offset) {
+  public static String printNode(Node node, int offset) {
     String attrName = node.attribute_name;
 
     StringBuilder sb = new StringBuilder();
@@ -913,7 +1035,8 @@ public class DAGConverter {
     } else {
       sb.append(attrName);
     }
-    LOGGER.trace("{}", sb);
+    sb.append('\n');
+    return sb.toString();
   }
 
   private String dagToXML(DAG dag) {

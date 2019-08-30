@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.commons.lang3.StringUtils;
 import org.codice.alliance.nsili.common.CorbaUtils;
 import org.codice.alliance.nsili.common.GIAS.AccessCriteria;
 import org.codice.alliance.nsili.common.GIAS.CatalogMgrHelper;
@@ -55,6 +56,7 @@ import org.codice.alliance.nsili.endpoint.managers.OrderMgrImpl;
 import org.codice.alliance.nsili.endpoint.managers.ProductMgrImpl;
 import org.codice.alliance.nsili.endpoint.managers.StandingQueryMgrImpl;
 import org.codice.ddf.configuration.SystemBaseUrl;
+import org.codice.ddf.configuration.SystemInfo;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.Object;
 import org.omg.PortableServer.POA;
@@ -97,7 +99,13 @@ public class LibraryImpl extends LibraryPOA {
 
   private Set<String> querySources = new HashSet<>();
 
+  private Set<String> attributeOverrides = new HashSet<>();
+
+  private Set<String> attributeExclusions = new HashSet<>();
+
   private String libraryVersion = "NSILI|3.2";
+
+  private String libraryDescription;
 
   private boolean removeSourceLibrary = true;
 
@@ -138,12 +146,30 @@ public class LibraryImpl extends LibraryPOA {
     }
   }
 
+  public void setAttributeOverrides(Set<String> attributeOverrides) {
+    this.attributeOverrides.clear();
+    if (attributeOverrides != null) {
+      this.attributeOverrides.addAll(attributeOverrides);
+    }
+  }
+
+  public void setAttributeExclusions(Set<String> attributeExclusions) {
+    this.attributeExclusions.clear();
+    if (attributeExclusions != null) {
+      this.attributeExclusions.addAll(attributeExclusions);
+    }
+  }
+
   public void setRemoveSourceLibrary(boolean removeSourceLibrary) {
     this.removeSourceLibrary = removeSourceLibrary;
   }
 
   public void setLibraryVersion(String libraryVersion) {
     this.libraryVersion = libraryVersion;
+  }
+
+  public void setLibraryDescription(String libraryDescription) {
+    this.libraryDescription = libraryDescription;
   }
 
   public void setSecurityManager(SecurityManager securityManager) {
@@ -200,7 +226,8 @@ public class LibraryImpl extends LibraryPOA {
 
   private Object getStandingQueryMgrObject(String managerId) {
     Object obj;
-    StandingQueryMgrImpl standingQueryMgr = new StandingQueryMgrImpl(querySources);
+    StandingQueryMgrImpl standingQueryMgr =
+        new StandingQueryMgrImpl(querySources, attributeOverrides, attributeExclusions);
     standingQueryMgr.setCatalogFramework(catalogFramework);
     standingQueryMgr.setFilterBuilder(filterBuilder);
     standingQueryMgr.setDefaultUpdateFrequencyMsec(defaultUpdateFrequencyMsec);
@@ -328,10 +355,14 @@ public class LibraryImpl extends LibraryPOA {
   public LibraryDescription get_library_description() throws ProcessingFault, SystemFault {
     LOGGER.trace("get_library_description called");
     String host = System.getProperty(SystemBaseUrl.EXTERNAL_HOST);
-    String country = System.getProperty("user.country");
-    String organization = System.getProperty("org.codice.ddf.system.organization");
-    String libraryDescr = country + "|" + organization;
-    return new LibraryDescription(host, libraryDescr, libraryVersion);
+    String desc = libraryDescription;
+    if (StringUtils.isBlank(desc)) {
+      String country = System.getProperty("user.country");
+      String organization = SystemInfo.getOrganization();
+      desc = country + "|" + organization;
+    }
+    String description = host + "@" + desc + "@" + libraryVersion;
+    return new LibraryDescription(host, description, libraryVersion);
   }
 
   @Override
@@ -350,6 +381,7 @@ public class LibraryImpl extends LibraryPOA {
       String metacardId = ResultDAGConverter.getMetacardId(result.getMetacard());
       Result mappedRes = resultMap.get(metacardId);
       if (mappedRes == null) {
+        LOGGER.trace("Keeping metacard with id {} for further processing", metacardId);
         resultMap.put(metacardId, result);
       } else {
         if (mappedRes.getMetacard().getModifiedDate() != null) {

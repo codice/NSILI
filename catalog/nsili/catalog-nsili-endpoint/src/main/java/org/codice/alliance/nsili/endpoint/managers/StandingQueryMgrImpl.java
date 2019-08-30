@@ -16,6 +16,7 @@ package org.codice.alliance.nsili.endpoint.managers;
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.filter.FilterBuilder;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -59,6 +60,10 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
 
   private Set<String> querySources = new HashSet<>();
 
+  private Set<String> attributeOverrides = new HashSet<>();
+
+  private Set<String> attributeExclusions = new HashSet<>();
+
   private boolean removeSourceLibrary;
 
   private boolean outgoingValidationEnabled;
@@ -67,9 +72,16 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
 
   private long defaultTimeout = AccessManagerImpl.DEFAULT_TIMEOUT;
 
-  public StandingQueryMgrImpl(Set<String> querySources) {
+  public StandingQueryMgrImpl(
+      Set<String> querySources, Set<String> attributeOverrides, Set<String> attributeExclusions) {
     if (querySources != null) {
       this.querySources.addAll(querySources);
+    }
+    if (attributeOverrides != null) {
+      this.attributeOverrides.addAll(attributeOverrides);
+    }
+    if (attributeExclusions != null) {
+      this.attributeExclusions.addAll(attributeExclusions);
     }
     init();
   }
@@ -103,6 +115,7 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
   }
 
   protected void init() {
+    LOGGER.trace("StandingQueryMgrImpl.init() called");
     NamedEventType startEventType = NamedEventType.from_int(NamedEventType._START_EVENT);
     Event startEvent = new Event("START_EVENT", startEventType, "");
     NamedEventType stopEventType = NamedEventType.from_int(NamedEventType._STOP_EVENT);
@@ -114,6 +127,7 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
 
   @Override
   public Event[] get_event_descriptions() throws ProcessingFault, SystemFault {
+    LOGGER.trace("get_event_descriptions called - returning eventTypes");
     return eventTypes;
   }
 
@@ -125,7 +139,7 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
       QueryLifeSpan lifespan,
       NameValue[] properties)
       throws InvalidInputParameter, ProcessingFault, SystemFault {
-
+    LOGGER.trace("submit_standing_query called");
     if (aQuery == null) {
       InvalidInputParameter except = new InvalidInputParameter();
       exception_details details = new exception_details();
@@ -135,12 +149,32 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
       throw except;
     }
 
+    // Add in any attribute overrides if they exist, remove any exclusions if they exist
+    if (LOGGER.isTraceEnabled()) {
+      LOGGER.trace("Requested result_attributes:");
+      Arrays.stream(result_attributes).forEach(attr -> LOGGER.debug(attr));
+    }
+    Set<String> attributes = new HashSet<>();
+    attributes.addAll(Arrays.asList(result_attributes));
+    if (attributeOverrides.size() > 0) {
+      attributes.addAll(attributeOverrides);
+    }
+    if (attributeExclusions.size() > 0) {
+      attributes.removeAll(attributeExclusions);
+    }
+
+    String[] updatedAttributes = attributes.toArray(new String[0]);
+    if (LOGGER.isTraceEnabled()) {
+      LOGGER.trace("Updated attributes with overrides and exclusions:");
+      Arrays.stream(updatedAttributes).forEach(attr -> LOGGER.debug(attr));
+    }
+
     LOGGER.debug("Registering Standing Query View: {}, BQS: {}", aQuery.view, aQuery.bqs_query);
 
     SubmitStandingQueryRequestImpl standingQueryRequest =
         new SubmitStandingQueryRequestImpl(
             aQuery,
-            result_attributes,
+            updatedAttributes,
             sort_attributes,
             lifespan,
             properties,
@@ -177,51 +211,59 @@ public class StandingQueryMgrImpl extends StandingQueryMgrPOA {
 
   @Override
   public String[] get_property_names() throws ProcessingFault, SystemFault {
+    LOGGER.trace("get_property_names called - throwing NO_IMPLEMENT exception");
     throw new NO_IMPLEMENT();
   }
 
   @Override
   public NameValue[] get_property_values(String[] desired_properties)
       throws InvalidInputParameter, ProcessingFault, SystemFault {
+    LOGGER.trace(
+        "get_property_values called with {} - throwing NO_IMPLEMENT exception", desired_properties);
     throw new NO_IMPLEMENT();
   }
 
   @Override
   public Library[] get_libraries() throws ProcessingFault, SystemFault {
+    LOGGER.trace("get_libraries called - throwing NO_IMPLEMENT exception");
     throw new NO_IMPLEMENT();
   }
 
   @Override
   public Request[] get_active_requests() throws ProcessingFault, SystemFault {
+    LOGGER.trace("get_active_requests called - returning empty array");
     return new Request[0];
   }
 
   @Override
   public int get_default_timeout() throws ProcessingFault, SystemFault {
+    LOGGER.trace("get_default_timeout called - returning {}", defaultTimeout);
     return (int) defaultTimeout;
   }
 
   @Override
   public void set_default_timeout(int new_default)
       throws InvalidInputParameter, ProcessingFault, SystemFault {
+    LOGGER.trace("set_default_timeout called - setting with new value {}", new_default);
     this.defaultTimeout = new_default;
   }
 
   @Override
   public int get_timeout(Request aRequest)
       throws InvalidInputParameter, ProcessingFault, SystemFault {
+    LOGGER.trace("get_timeout called - returning {}", defaultTimeout);
     return (int) defaultTimeout;
   }
 
   @Override
   public void set_timeout(Request aRequest, int new_lifetime)
       throws InvalidInputParameter, ProcessingFault, SystemFault {
-    // This method is not expected to be called
+    LOGGER.trace("set_timeout called - this is a noop");
   }
 
   @Override
   public void delete_request(Request aRequest)
       throws InvalidInputParameter, ProcessingFault, SystemFault {
-    // This method is not expected to be called
+    LOGGER.trace("delete_request called - this is a noop");
   }
 }

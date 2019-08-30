@@ -84,6 +84,44 @@ public class ResultDAGConverter {
   private static final Pattern ATTRIBUTE_PATTERN =
       Pattern.compile("([a-zA-Z0-9_:]+):([a-zA-Z0-9_]+).([a-zA-Z0-9]+)");
 
+  private static Map<String, String> typeConversionMap;
+
+  private static boolean forceHttp;
+
+  static {
+    // TODO (CAL-520): Complete DCMI -> NSIL type mapping
+    typeConversionMap = new HashMap<>();
+    typeConversionMap.put("Collection", "COLLECTION/EXPLOITATION PLAN");
+    // Text can be any of DOCUMENT, MESSAGE, CBRN, and others - will be checked later
+    typeConversionMap.put("Text", "DOCUMENT");
+    // typeConversionMap.put("", "GEOSPATIAL VECTOR");
+    // typeConversionMap.put("", "GMTI");
+    typeConversionMap.put("Image", "IMAGERY");
+    // typeConversionMap.put("", "INTELLIGENCE REQUIREMENT");
+    // typeConversionMap.put("", "RFI");
+    // typeConversionMap.put("", "TDL DATA");
+    typeConversionMap.put("Video", "VIDEO");
+    typeConversionMap.put("Interactive Resource", "ELECTRONIC ORDER OF BATTLE");
+  }
+
+  // should this be brought out into configs?
+  private static Map<String, String> translationToNATOTable;
+
+  static {
+    // US values map to NATO
+    translationToNATOTable = new HashMap<>();
+    translationToNATOTable.put("U", "UNCLASSIFIED");
+    translationToNATOTable.put("S", "SECRET");
+    translationToNATOTable.put("TS", "COSMIC TOP SECRET");
+    // NATO values map directly
+    translationToNATOTable.put("COSMIC TOP SECRET", "COSMIC TOP SECRET");
+    translationToNATOTable.put("SECRET", "SECRET");
+    translationToNATOTable.put("CONFIDENTIAL", "CONFIDENTIAL");
+    translationToNATOTable.put("RESTRICTED", "RESTRICTED");
+    translationToNATOTable.put("UNCLASSIFIED", "UNCLASSIFIED");
+    translationToNATOTable.put("NO CLASSIFICATION", "NO CLASSIFICATION");
+  }
+
   public static DAG convertResult(
       Result result,
       ORB orb,
@@ -184,6 +222,7 @@ public class ResultDAGConverter {
       ORB orb,
       String parentAttrName,
       List<String> resultAttributes) {
+
     List<String> addedAttributes = new ArrayList<>();
     Any any = orb.create_any();
     Node cardNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_CARD, any);
@@ -224,6 +263,10 @@ public class ResultDAGConverter {
         attribute,
         NsiliConstants.PUBLISHER);
 
+    if (shouldAdd(buildAttr(attribute, NsiliConstants.NUM_OF_PARTS), resultAttributes)) {
+      addIntegerAttribute(graph, cardNode, NsiliConstants.NUM_OF_PARTS, 1, orb);
+    }
+
     return addedAttributes;
   }
 
@@ -238,25 +281,14 @@ public class ResultDAGConverter {
     if (!shouldAdd(buildAttr(attribute, NsiliConstants.STATUS), resultAttributes)) {
       return;
     }
-    String status = NsiliCardStatus.CHANGED.name();
-    Attribute createdAttr = metacard.getAttribute(Core.METACARD_CREATED);
-    Attribute modifiedAttr = metacard.getAttribute(Core.METACARD_MODIFIED);
-    if (createdAttr != null && modifiedAttr != null) {
-      Date createdDate = (Date) createdAttr.getValue();
-      Date modifiedDate = (Date) modifiedAttr.getValue();
-      if (createdDate.equals(modifiedDate)) {
-        status = NsiliCardStatus.NEW.name();
-      }
-    }
-
-    Attribute versionAction = metacard.getAttribute(MetacardVersion.ACTION);
-
-    if (versionAction != null) {
-      for (Serializable action : versionAction.getValues()) {
-        if (action.toString().trim().equals(MetacardVersion.Action.DELETED.getKey())) {
-          status = NsiliCardStatus.OBSOLETE.name();
-          break;
-        }
+    Attribute actionAttribute = metacard.getAttribute(MetacardVersion.ACTION);
+    String status = NsiliCardStatus.NEW.name();
+    if (actionAttribute != null) {
+      if (String.valueOf(actionAttribute.getValue())
+          .startsWith(MetacardVersion.Action.DELETED.getKey())) {
+        status = NsiliCardStatus.OBSOLETE.name();
+      } else {
+        status = NsiliCardStatus.CHANGED.name();
       }
     }
 
@@ -328,11 +360,25 @@ public class ResultDAGConverter {
     }
 
     if (shouldAdd(buildAttr(attribute, NsiliConstants.PRODUCT_URL), resultAttributes)) {
-      String downloadUrl = String.valueOf(downloadUrlAttr.getValue());
-      if (downloadUrl != null) {
-        downloadUrl = modifyUrl(downloadUrl, metacard.getTitle());
-        addStringAttribute(graph, fileNode, NsiliConstants.PRODUCT_URL, downloadUrl, orb);
-        addedAttributes.add(buildAttr(attribute, NsiliConstants.PRODUCT_URL));
+      // per spec, if metacard was deleted the product URL should be cleared
+      boolean isMetacardDeleted = false; // default to not deleted
+      Attribute versionAction = metacard.getAttribute(MetacardVersion.ACTION);
+      if (versionAction != null) {
+        for (Serializable action : versionAction.getValues()) {
+          if (action.toString().trim().equals(MetacardVersion.Action.DELETED.getKey())) {
+            isMetacardDeleted = true;
+            break;
+          }
+        }
+      }
+
+      if (!isMetacardDeleted) {
+        String downloadUrl = String.valueOf(downloadUrlAttr.getValue());
+        if (downloadUrl != null) {
+          downloadUrl = modifyUrl(downloadUrl, metacard.getTitle());
+          addStringAttribute(graph, fileNode, NsiliConstants.PRODUCT_URL, downloadUrl, orb);
+          addedAttributes.add(buildAttr(attribute, NsiliConstants.PRODUCT_URL));
+        }
       }
     }
 
@@ -344,7 +390,7 @@ public class ResultDAGConverter {
 
     addStrAttribute(
         graph,
-        metacard.getAttribute(Media.FORMAT),
+        metacard.getAttribute(Media.TYPE),
         orb,
         resultAttributes,
         addedAttributes,
@@ -387,19 +433,23 @@ public class ResultDAGConverter {
       List<String> addedAttributes,
       Node fileNode,
       String attribute) {
-    if (shouldAdd(buildAttr(attribute, NsiliConstants.EXTENT), resultAttributes)
-        && metacard.getResourceSize() != null) {
-      try {
-        Double resSize = Double.valueOf(metacard.getResourceSize());
-        Double resSizeMB = convertToMegabytes(resSize);
-        if (resSizeMB != null) {
-          addDoubleAttribute(graph, fileNode, NsiliConstants.EXTENT, resSizeMB, orb);
-          addedAttributes.add(buildAttr(attribute, NsiliConstants.EXTENT));
+    if (shouldAdd(buildAttr(attribute, NsiliConstants.EXTENT), resultAttributes)) {
+      Double resSizeMB = 0.0;
+      if (metacard.getResourceSize() != null) {
+        try {
+          Double resSize = Double.valueOf(metacard.getResourceSize());
+          resSizeMB = convertToMegabytes(resSize);
+          if (resSizeMB == null) {
+            resSizeMB = 0.0;
+          }
+        } catch (NumberFormatException nfe) {
+          LOGGER.debug(
+              "Invalid resource size: could not parse \"{}\" as a double. Defaulting to 0.0",
+              metacard.getResourceSize());
         }
-      } catch (NumberFormatException nfe) {
-        LOGGER.debug(
-            "Couldn't convert the resource size to double: {}", metacard.getResourceSize());
       }
+      addDoubleAttribute(graph, fileNode, NsiliConstants.EXTENT, resSizeMB, orb);
+      addedAttributes.add(buildAttr(attribute, NsiliConstants.EXTENT));
     }
   }
 
@@ -620,8 +670,9 @@ public class ResultDAGConverter {
       }
 
       if (classification != null) {
+        String natoClassification = translationToNATOTable.get(classification);
         addStringAttribute(
-            graph, metadataSecurityNode, NsiliConstants.CLASSIFICATION, classification, orb);
+            graph, metadataSecurityNode, NsiliConstants.CLASSIFICATION, natoClassification, orb);
         addedAttributes.add(buildAttr(attribute, NsiliConstants.CLASSIFICATION));
         classificationAdded = true;
       }
@@ -635,7 +686,8 @@ public class ResultDAGConverter {
       Metacard metacard,
       ORB orb,
       String parentAttrName,
-      List<String> resultAttributes) {
+      List<String> resultAttributes)
+      throws DagParsingException {
     List<String> addedAttributes = new ArrayList<>();
     Any any = orb.create_any();
     Node partNode = new Node(0, NodeType.ENTITY_NODE, NsiliConstants.NSIL_PART, any);
@@ -659,10 +711,8 @@ public class ResultDAGConverter {
         addCoverageNodeWithAttributes(
             graph, partNode, metacard, orb, attribute + ":", resultAttributes));
 
-    Attribute typeAttr = metacard.getAttribute(Core.DATATYPE);
-    if (typeAttr != null) {
-      type = getType(String.valueOf(typeAttr.getValue()));
-    }
+    // Figure out what the NSILI product type should be using the DCMI -> NSIL type mapping
+    type = translateType(metacard);
 
     if (type.equalsIgnoreCase(NsiliProductType.IMAGERY.getSpecName())) {
       addedAttributes.addAll(
@@ -685,13 +735,13 @@ public class ResultDAGConverter {
     } else if (type.equalsIgnoreCase(NsiliProductType.TASK.getSpecName())) {
       addedAttributes.addAll(
           addTaskPart(graph, partNode, metacard, orb, attribute + ":", resultAttributes));
+    } else if (type.equalsIgnoreCase(NsiliProductType.CBRN.getSpecName())) {
+      addedAttributes.addAll(
+          addCbrnPart(graph, partNode, metacard, orb, attribute + ":", resultAttributes));
     }
 
     addedAttributes.addAll(
         addExploitationInfoPart(graph, partNode, metacard, orb, attribute + ":", resultAttributes));
-
-    addedAttributes.addAll(
-        addCbrnPart(graph, partNode, metacard, orb, attribute + ":", resultAttributes));
 
     addedAttributes.addAll(
         addCommonNodeWithAttributes(
@@ -1595,6 +1645,11 @@ public class ResultDAGConverter {
       }
     }
 
+    if (addedAttributes.isEmpty()) {
+      graph.removeEdge(partNode, intRepNode);
+      graph.removeVertex(intRepNode);
+    }
+
     return addedAttributes;
   }
 
@@ -1643,6 +1698,11 @@ public class ResultDAGConverter {
         entityPartNode,
         attribute,
         NsiliConstants.ALIAS);
+
+    if (addedAttributes.isEmpty()) {
+      graph.removeEdge(partNode, entityPartNode);
+      graph.removeVertex(entityPartNode);
+    }
 
     return addedAttributes;
   }
@@ -1961,15 +2021,10 @@ public class ResultDAGConverter {
 
     if (shouldAdd(buildAttr(attribute, NsiliConstants.EXTENT), resultAttributes)
         && metacard.getThumbnail() != null) {
-      try {
-        Double resSize = (double) metacard.getThumbnail().length;
-        Double resSizeMB = convertToMegabytes(resSize);
-        addDoubleAttribute(graph, relatedFileNode, NsiliConstants.EXTENT, resSizeMB, orb);
-        addedAttributes.add(buildAttr(attribute, NsiliConstants.EXTENT));
-      } catch (NumberFormatException nfe) {
-        LOGGER.debug(
-            "Couldn't convert the thumbnail size to double: {}", metacard.getResourceSize());
-      }
+      Double resSize = (double) metacard.getThumbnail().length;
+      Double resSizeMB = convertToMegabytes(resSize);
+      addDoubleAttribute(graph, relatedFileNode, NsiliConstants.EXTENT, resSizeMB, orb);
+      addedAttributes.add(buildAttr(attribute, NsiliConstants.EXTENT));
     }
 
     if (shouldAdd(buildAttr(attribute, NsiliConstants.URL), resultAttributes)) {
@@ -1986,6 +2041,7 @@ public class ResultDAGConverter {
                             + THUMBNAIL_TRANSFORMER,
                         true))
                 .toASCIIString();
+        thumbnailURL = modifyUrl(thumbnailURL, null);
         addStringAttribute(graph, relatedFileNode, NsiliConstants.URL, thumbnailURL, orb);
         addedAttributes.add(buildAttr(attribute, NsiliConstants.URL));
       } catch (URISyntaxException e) {
@@ -2151,7 +2207,7 @@ public class ResultDAGConverter {
     Map<String, String> attributes = new HashMap<>();
 
     Map<Integer, Node> nodeMap = createNodeMap(dag.nodes);
-    DirectedAcyclicGraph<Node, Edge> graph = getNodeEdgeDirectedAcyclicGraph(dag, nodeMap);
+    DirectedAcyclicGraph<Node, Edge> graph = DAGUtils.getNodeEdgeDirectedAcyclicGraph(dag, nodeMap);
 
     DepthFirstIterator<Node, Edge> graphIT = new DepthFirstIterator<>(graph, nodeMap.get(0));
     List<String> nodeStack = new ArrayList<>();
@@ -2221,24 +2277,6 @@ public class ResultDAGConverter {
     return attributes;
   }
 
-  private static DirectedAcyclicGraph<Node, Edge> getNodeEdgeDirectedAcyclicGraph(
-      DAG dag, Map<Integer, Node> nodeMap) {
-    DirectedAcyclicGraph<Node, Edge> graph = new DirectedAcyclicGraph<>(Edge.class);
-
-    for (Node node : dag.nodes) {
-      graph.addVertex(node);
-    }
-
-    for (Edge edge : dag.edges) {
-      Node node1 = nodeMap.get(edge.start_node);
-      Node node2 = nodeMap.get(edge.end_node);
-      if (node1 != null && node2 != null) {
-        graph.addEdge(node1, node2);
-      }
-    }
-    return graph;
-  }
-
   private static boolean metacardContainsGeoInfo(Metacard metacard) {
     boolean foundGeoInfo = false;
 
@@ -2249,8 +2287,17 @@ public class ResultDAGConverter {
     return foundGeoInfo;
   }
 
-  private static String modifyUrl(String url, String name) {
-    return url + "&nsiliFilename=" + name;
+  protected static String modifyUrl(String url, String name) {
+    String newUrl = url;
+    if (forceHttp) {
+      String pattern = "https://([^/:]+)(:\\d{1,5})?/(.*)";
+      newUrl = url.replaceAll(pattern, "http://$1:" + SystemBaseUrl.EXTERNAL.getHttpPort() + "/$3");
+      LOGGER.debug("Forcing http URL: {} to {}", url, newUrl);
+    }
+    if (StringUtils.isNotEmpty(name)) {
+      newUrl = newUrl + "&nsiliFilename=" + name;
+    }
+    return newUrl;
   }
 
   private static UUID getUUIDFromCard(String id) {
@@ -2361,20 +2408,6 @@ public class ResultDAGConverter {
 
   public static String getValueString(Collection<Serializable> collection) {
     return collection.stream().map(Object::toString).collect(Collectors.joining(", "));
-  }
-
-  private static String getType(String metacardType) {
-    String type = NsiliProductType.DOCUMENT.getSpecName();
-
-    String lowerType = metacardType.toLowerCase();
-    for (NsiliProductType productTypeValue : NsiliProductType.values()) {
-      if (productTypeValue.getSpecName().equalsIgnoreCase(lowerType)) {
-        type = productTypeValue.getSpecName();
-        break;
-      }
-    }
-
-    return type;
   }
 
   private static String getCompressionTechValue(String mediaCompressionType) {
@@ -2616,5 +2649,55 @@ public class ResultDAGConverter {
     }
 
     return cbrnAlarmClassification;
+  }
+
+  /*
+   * TODO (CAL-520): Expand this to support all NSIL types that map to DCMI "Text":
+   * CBRN
+   * GEOGRAPHIC AREA OF INTEREST
+   * GMTI
+   * INTELLIGENCE REQUIREMENT
+   * MESSAGE
+   * OPERATIONAL ROLES
+   * ORBAT
+   * REPORT
+   * SYSTEM ASSIGNMENTS
+   * SYSTEM SPECIFICATIONS
+   * SYSTEM DEPLOYMENT STATUS
+   * TACTICAL SYMBOL
+   */
+  private static String translateType(Metacard metacard) {
+    String type = "Text";
+    Attribute attribute = metacard.getAttribute(Core.DATATYPE);
+    if (attribute != null) {
+      type = String.valueOf(attribute.getValue());
+    }
+
+    String result = typeConversionMap.get(type);
+
+    // If result is "DOCUMENT", try to refine based on mime type or attributes
+    String mimeType = "";
+    if (StringUtils.isNotBlank(result) && NsiliProductType.DOCUMENT.getSpecName().equals(result)) {
+      if (metacard.getAttribute(Isr.CHEMICAL_BIOLOGICAL_RADIOLOGICAL_NUCLEAR_CATEGORY) != null) {
+        // CBRN message must have a mandatory category - so this should be present
+        result = NsiliProductType.CBRN.getSpecName();
+      } else { // try by the mime type
+        attribute = metacard.getAttribute(Media.TYPE);
+        if (attribute != null) {
+          mimeType = String.valueOf(attribute.getValue());
+        }
+
+        if (StringUtils.equals("text/plain", mimeType)) {
+          result = NsiliProductType.MESSAGE.getSpecName();
+        }
+      }
+    } else if (result == null) {
+      result = NsiliProductType.DOCUMENT.getSpecName();
+    }
+    return result;
+  }
+
+  public static void setForceHttp(boolean force) {
+    forceHttp = force;
   }
 }
