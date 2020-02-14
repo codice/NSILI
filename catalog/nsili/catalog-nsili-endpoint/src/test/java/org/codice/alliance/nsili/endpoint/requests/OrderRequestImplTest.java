@@ -55,6 +55,7 @@ import org.codice.alliance.nsili.endpoint.NsiliTestCommon;
 import org.codice.alliance.nsili.endpoint.managers.AccessManagerImpl;
 import org.codice.alliance.nsili.endpoint.managers.EmailConfiguration;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.omg.CORBA.BAD_OPERATION;
 import org.omg.PortableServer.POAPackage.WrongAdapter;
@@ -252,6 +253,7 @@ public class OrderRequestImplTest extends NsiliTestCommon {
   }
 
   @Test
+  @Ignore
   public void testMultipleUncompressedOrder() throws SystemFault, ProcessingFault {
     OrderContents order = getMultipleUncompressedTestOrder();
 
