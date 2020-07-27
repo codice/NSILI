@@ -73,10 +73,9 @@
         <dependency>
             <groupId>org.codice.alliance.catalog.core</groupId>
             <artifactId>catalog-core-api-impl</artifactId>
-            <version>${project.version}</version>
+            <version>${alliance.version}</version>
         </dependency>
     </dependencies>
-
 
     <build>
         <plugins>
