@@ -30,8 +30,8 @@
     <feature name="catalog-email" version="${project.version}"
              description="Alliance Email Sending Service">
         <bundle>mvn:org.apache.commons/commons-lang3/${commons-lang3.version}</bundle>
-        <bundle>mvn:org.codice.alliance.catalog.core/catalog-email-api/${project.version}</bundle>
-        <bundle>mvn:org.codice.alliance.catalog.core/catalog-email-impl/${project.version}</bundle>
+        <bundle>mvn:org.codice.alliance.catalog.core/catalog-email-api/${alliance.version}</bundle>
+        <bundle>mvn:org.codice.alliance.catalog.core/catalog-email-impl/${alliance.version}</bundle>
     </feature>
 
     <feature name="catalog-nsili-source" version="${project.version}"
@@ -40,7 +40,7 @@
         <bundle>
             mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.xstream/1.4.9_1
         </bundle>
-        <bundle>mvn:org.codice.alliance.catalog.core/catalog-core-api/${project.version}</bundle>
+        <bundle>mvn:org.codice.alliance.catalog.core/catalog-core-api/${alliance.version}</bundle>
         <bundle>mvn:org.codice.alliance.nsili/catalog-nsili-source/${project.version}</bundle>
     </feature>
 
@@ -49,7 +49,7 @@
         <feature>catalog-nsili-orb-impl</feature>
         <feature>catalog-email</feature>
         <bundle>mvn:org.apache.commons/commons-lang3/${commons-lang3.version}</bundle>
-        <bundle>mvn:org.codice.alliance.catalog.core/catalog-core-api/${project.version}</bundle>
+        <bundle>mvn:org.codice.alliance.catalog.core/catalog-core-api/${alliance.version}</bundle>
         <bundle>mvn:org.codice.alliance.nsili/catalog-nsili-endpoint/${project.version}</bundle>
         <bundle>mvn:org.codice.alliance.nsili/catalog-nsili-sourcestoquery-ui/${project.version}</bundle>
     </feature>
